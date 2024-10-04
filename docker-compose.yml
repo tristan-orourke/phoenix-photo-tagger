@@ -12,8 +12,6 @@ services:
     depends_on:
       - db
     # user: "1000:1000"
-    # tty: true
-    # command: ["mix",  "ecto.create"]
   db:
     image: postgres:17.0
     environment:

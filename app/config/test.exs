@@ -17,7 +17,7 @@ config :photo_tagger, PhotoTagger.Repo,
 # you can enable the server option below.
 config :photo_tagger, PhotoTaggerWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "PaIWoXp1vv1roRixWaOrDiuuSKRvWtwu4heCMaVJU7b8oDrYnzHxfxxO14/Lib9v",
+  secret_key_base: "FEfOgfXQEXK5Ycbg6zDurBC9bas8PcCBWb+mP3rKHv0+b7UtOJCglnOWom2d0LxL",
   server: false
 
 # In test we don't send emails

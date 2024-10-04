@@ -7,7 +7,7 @@ defmodule PhotoTaggerWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_photo_tagger_key",
-    signing_salt: "C7WwLKX5",
+    signing_salt: "TD7RmXAv",
     same_site: "Lax"
   ]
 

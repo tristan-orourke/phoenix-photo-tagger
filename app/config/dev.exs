@@ -23,7 +23,7 @@ config :photo_tagger, PhotoTaggerWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "P0W/PxF3H25ZBWGOStgIOFBWFxLm93koFDOq0C8fdCs6PTymHAyZCfSsC6zxAX7y",
+  secret_key_base: "uDxZ4l/WP4lRmAEp2LHECqJbuRa812Kpk18SzYicFb61yysSbl1N/x96Kk8eAAvi",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:photo_tagger, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:photo_tagger, ~w(--watch)]}

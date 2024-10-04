@@ -7,10 +7,4 @@ defmodule PhotoTaggerWeb.PageHTML do
   use PhotoTaggerWeb, :html
 
   embed_templates "page_html/*"
-
-  def hello(assigns) do
-    ~H"""
-    Hello world!
-    """
-  end
 end

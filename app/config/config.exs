@@ -20,7 +20,7 @@ config :photo_tagger, PhotoTaggerWeb.Endpoint,
     layout: false
   ],
   pubsub_server: PhotoTagger.PubSub,
-  live_view: [signing_salt: "5P58+yA2"]
+  live_view: [signing_salt: "sIMxBmGz"]
 
 # Configures the mailer
 #
