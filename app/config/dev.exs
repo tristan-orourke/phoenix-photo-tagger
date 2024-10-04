@@ -4,7 +4,7 @@ import Config
 config :photo_tagger, PhotoTagger.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "db",
+  hostname: "db", # This is the name of the docker service
   database: "photo_tagger_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -19,7 +19,7 @@ config :photo_tagger, PhotoTagger.Repo,
 config :photo_tagger, PhotoTaggerWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {0, 0, 0, 0}, port: 4000],
+  http: [ip: {0, 0, 0, 0}, port: 4000], # This had to be changed to 0,0,0,0 to work from within a docker container
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
