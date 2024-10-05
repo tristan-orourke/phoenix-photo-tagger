@@ -1,0 +1,8 @@
+<.header>
+  New Photo
+  <:subtitle>Use this form to manage photo records in your database.</:subtitle>
+</.header>
+
+<.photo_form changeset={@changeset} action={~p"/photos"} />
+
+<.back navigate={~p"/photos"}>Back to photos</.back>

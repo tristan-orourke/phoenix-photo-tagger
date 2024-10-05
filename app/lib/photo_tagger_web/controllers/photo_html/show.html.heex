@@ -1,0 +1,15 @@
+<.header>
+  Photo <%= @photo.id %>
+  <:subtitle>This is a photo record from your database.</:subtitle>
+  <:actions>
+    <.link href={~p"/photos/#{@photo}/edit"}>
+      <.button>Edit photo</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="Name"><%= @photo.name %></:item>
+</.list>
+
+<.back navigate={~p"/photos"}>Back to photos</.back>

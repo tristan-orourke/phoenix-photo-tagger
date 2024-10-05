@@ -1,4 +1,4 @@
-defmodule PhotoTagger.Photo do
+defmodule PhotoTagger.Gallery.Photo do
   use Ecto.Schema
   import Ecto.Changeset
 

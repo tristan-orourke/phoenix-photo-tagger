@@ -18,6 +18,7 @@ defmodule PhotoTaggerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    resources "/photos", PhotoController
   end
 
   # Other scopes may use custom stacks.
