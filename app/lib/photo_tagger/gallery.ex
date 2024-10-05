@@ -50,6 +50,7 @@ defmodule PhotoTagger.Gallery do
 
   """
   def create_photo(attrs \\ %{}) do
+    attrs = Map.put(attrs, "name", attrs["image"].filename)
     %Photo{}
     |> Photo.changeset(attrs)
     |> Repo.insert()

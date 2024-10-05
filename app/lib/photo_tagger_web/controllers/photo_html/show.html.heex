@@ -10,6 +10,11 @@
 
 <.list>
   <:item title="Name"><%= @photo.name %></:item>
+  <:item title="Folder"><%= @photo.folder %></:item>
+  <:item title="Image">
+    <img src={ PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :small)}/>
+  </:item>
+
 </.list>
 
 <.back navigate={~p"/photos"}>Back to photos</.back>

@@ -28,6 +28,7 @@ defmodule PhotoTaggerWeb.PhotoController do
 
   def show(conn, %{"id" => id}) do
     photo = Gallery.get_photo!(id)
+    IO.inspect(photo)
     render(conn, :show, photo: photo)
   end
 
