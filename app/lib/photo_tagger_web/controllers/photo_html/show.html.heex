@@ -11,10 +11,16 @@
 <.list>
   <:item title="Name"><%= @photo.name %></:item>
   <:item title="Folder"><%= @photo.folder %></:item>
-  <:item title="Image">
-    <img src={ PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :small)}/>
+  <:item title="Tags">
+    <ul>
+      <%= for tag <- @photo.tags do %>
+        <li><%= tag.name %></li>
+      <% end %>
+    </ul>
   </:item>
-
+  <:item title="Image">
+    <img src={PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :small)} />
+  </:item>
 </.list>
 
 <.back navigate={~p"/photos"}>Back to photos</.back>

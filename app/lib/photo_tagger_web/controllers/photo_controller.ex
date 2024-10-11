@@ -1,6 +1,7 @@
 defmodule PhotoTaggerWeb.PhotoController do
   use PhotoTaggerWeb, :controller
 
+  alias PhotoTagger.Repo
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
 
@@ -28,12 +29,14 @@ defmodule PhotoTaggerWeb.PhotoController do
 
   def show(conn, %{"id" => id}) do
     photo = Gallery.get_photo!(id)
+    photo = Repo.preload(photo, :tags)
     IO.inspect(photo)
     render(conn, :show, photo: photo)
   end
 
   def edit(conn, %{"id" => id}) do
     photo = Gallery.get_photo!(id)
+    photo = Repo.preload(photo, :tags)
     changeset = Gallery.change_photo(photo)
     render(conn, :edit, photo: photo, changeset: changeset)
   end
@@ -59,5 +62,23 @@ defmodule PhotoTaggerWeb.PhotoController do
     conn
     |> put_flash(:info, "Photo deleted successfully.")
     |> redirect(to: ~p"/photos")
+  end
+
+  def add_tag(conn, %{"id" => id, "tag" => tag}) do
+    photo = Gallery.get_photo!(id)
+    {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
+
+    conn
+    |> put_flash(:info, "Tag added successfully.")
+    |> redirect(to: ~p"/photos/#{photo}/edit")
+  end
+
+  def remove_tag(conn, %{"id" => id, "tag" => tag}) do
+    photo = Gallery.get_photo!(id)
+    Gallery.remove_tag_from_photo(photo, tag)
+
+    conn
+    |> put_flash(:info, "Tag removed successfully.")
+    |> redirect(to: ~p"/photos/#{photo}/edit")
   end
 end

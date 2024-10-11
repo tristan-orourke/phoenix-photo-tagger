@@ -17,7 +17,7 @@ services:
       - ../app:/app:cached
 
       # This lets you avoid setting up Git again in the container
-      - ~/.gitconfig:/root/.gitconfig
+      # - ~/.gitconfig:/root/.gitconfig
     depends_on:
       - db
 

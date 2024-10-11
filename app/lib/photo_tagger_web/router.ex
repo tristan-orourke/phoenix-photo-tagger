@@ -19,6 +19,8 @@ defmodule PhotoTaggerWeb.Router do
 
     get "/", PageController, :home
     resources "/photos", PhotoController
+    post "/photos/:id/tags", PhotoController, :add_tag
+    delete "/photos/:id/tags/:tag", PhotoController, :remove_tag
   end
 
   # Other scopes may use custom stacks.

@@ -8,7 +8,11 @@
 </.header>
 
 <.table id="photos" rows={@photos} row_click={&JS.navigate(~p"/photos/#{&1}")}>
-  <:col :let={photo} label="Name"><%= photo.name %></:col>
+  <:col :let={photo} label="Name">
+    <.link navigate={~p"/photos/#{photo}"}>
+      <%= photo.name %>
+    </.link>
+  </:col>
   <:action :let={photo}>
     <div class="sr-only">
       <.link navigate={~p"/photos/#{photo}"}>Show</.link>

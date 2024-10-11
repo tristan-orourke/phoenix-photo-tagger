@@ -9,5 +9,6 @@ defmodule PhotoTaggerWeb.PhotoHTML do
   attr :changeset, Ecto.Changeset, required: true
   attr :action, :string, required: true
 
-  def photo_form(assigns)
+  def new_photo_form(assigns)
+  def edit_photo_form(assigns)
 end

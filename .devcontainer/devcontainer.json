@@ -19,7 +19,7 @@
           "elixir": "html",
           "phoenix-heex": "html"
         },
-        "emmet.triggerExpansionOnTab": true,
+        // "emmet.triggerExpansionOnTab": true,
         "tailwindCSS.includeLanguages": {
           "elixir": "html",
           "phoenix-heex": "html"

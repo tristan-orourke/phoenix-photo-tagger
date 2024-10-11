@@ -5,8 +5,9 @@ defmodule PhotoTagger.Gallery do
 
   import Ecto.Query, warn: false
   alias PhotoTagger.Repo
-
   alias PhotoTagger.Gallery.Photo
+  alias PhotoTagger.Gallery.Tag
+  alias PhotoTagger.Gallery.PhotoTag
 
   @doc """
   Returns the list of photos.
@@ -18,7 +19,7 @@ defmodule PhotoTagger.Gallery do
 
   """
   def list_photos do
-    Repo.all(Photo)
+      Repo.all(Photo)
   end
 
   @doc """
@@ -35,7 +36,10 @@ defmodule PhotoTagger.Gallery do
       ** (Ecto.NoResultsError)
 
   """
-  def get_photo!(id), do: Repo.get!(Photo, id)
+  def get_photo!(id) do
+      Repo.get!(Photo, id)
+    # Repo.preload(photo, :tags)
+  end
 
   @doc """
   Creates a photo.
@@ -51,6 +55,7 @@ defmodule PhotoTagger.Gallery do
   """
   def create_photo(attrs \\ %{}) do
     attrs = Map.put(attrs, "name", attrs["image"].filename)
+
     %Photo{}
     |> Photo.changeset(attrs)
     |> Repo.insert()
@@ -101,5 +106,42 @@ defmodule PhotoTagger.Gallery do
   """
   def change_photo(%Photo{} = photo, attrs \\ %{}) do
     Photo.changeset(photo, attrs)
+  end
+
+  def add_tag_to_photo(%Photo{} = photo, name) do
+    tag = get_or_create_tag(name)
+    attrs = %{photo_id: photo.id, tag_id: tag.id}
+
+    %PhotoTag{}
+    |> PhotoTag.changeset(attrs)
+    |> Repo.insert(on_conflict: :nothing)
+  end
+
+  def remove_tag_from_photo(%Photo{} = photo, name) do
+    tag = Repo.get_by(Ecto.assoc(photo, :tags), name: name)
+
+    case tag do
+      nil ->
+        {:ok, nil}
+
+      tag ->
+        Repo.get_by!(PhotoTag, photo_id: photo.id, tag_id: tag.id)
+        |> Repo.delete!()
+    end
+  end
+
+   defp get_or_create_tag(name) do
+    Repo.get_by(Tag, name: name) ||
+      maybe_insert_tag(name)
+  end
+
+  defp maybe_insert_tag(name) do
+    %Tag{}
+    |> Tag.changeset(%{name: name})
+    |> Repo.insert()
+    |> case do
+      {:ok, tag} -> tag
+      {:error, _} -> Repo.get_by!(Tag, name: name)
+    end
   end
 end
