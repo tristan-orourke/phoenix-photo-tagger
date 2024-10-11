@@ -22,6 +22,16 @@ defmodule PhotoTagger.Gallery do
       Repo.all(Photo)
   end
 
+  # FIXME: currently returns the union of all photos matching ANY tags, not the intersection. Also, some photos can be returned multiple times
+  def list_photos_by_tags([]), do: list_photos()
+  def list_photos_by_tags(tag_names) do
+    tags = Repo.all(from t in Tag, where: t.name in ^tag_names)
+    case tags do
+      [] -> []
+      tags -> Repo.all(Ecto.assoc(tags, :photos))
+    end
+  end
+
   @doc """
   Gets a single photo.
 

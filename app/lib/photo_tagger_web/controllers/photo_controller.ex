@@ -5,6 +5,14 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
 
+  def index(conn, %{"query_tags" => tags}) when is_list(tags) do
+    photos = Gallery.list_photos_by_tags(tags)
+    render(conn, :index, photos: photos)
+  end
+  def index(conn, %{"query_tags" => tags}) do
+    photos = Gallery.list_photos_by_tags([tags])
+    render(conn, :index, photos: photos)
+  end
   def index(conn, _params) do
     photos = Gallery.list_photos()
     render(conn, :index, photos: photos)
@@ -30,7 +38,6 @@ defmodule PhotoTaggerWeb.PhotoController do
   def show(conn, %{"id" => id}) do
     photo = Gallery.get_photo!(id)
     photo = Repo.preload(photo, :tags)
-    IO.inspect(photo)
     render(conn, :show, photo: photo)
   end
 
