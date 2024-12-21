@@ -19,16 +19,31 @@ defmodule PhotoTagger.Gallery do
 
   """
   def list_photos do
-      Repo.all(Photo)
+    Repo.all(Photo)
   end
 
-  # FIXME: currently returns the union of all photos matching ANY tags, not the intersection. Also, some photos can be returned multiple times
-  def list_photos_by_tags([]), do: list_photos()
-  def list_photos_by_tags(tag_names) do
-    tags = Repo.all(from t in Tag, where: t.name in ^tag_names)
+  # Returns all photos that have ALL the specified tags
+  def list_photos_by_all_tags([]), do: list_photos()
+  def list_photos_by_all_tags(tag_names) do
+    tags = Repo.all(from(t in Tag, where: t.name in ^tag_names))
+
     case tags do
-      [] -> []
-      tags -> Repo.all(Ecto.assoc(tags, :photos))
+      [] ->
+        []
+
+      tags ->
+        photo_ids =
+          from(p in Photo,
+            join: pt in "photos_tags",
+            on: pt.photo_id == p.id,
+            where: pt.tag_id in ^Enum.map(tags, & &1.id),
+            group_by: p.id,
+            having: count(pt.tag_id) == ^length(tag_names),
+            select: p.id
+          )
+          |> Repo.all()
+
+        Repo.all(from(p in Photo, where: p.id in ^photo_ids))
     end
   end
 
@@ -47,7 +62,7 @@ defmodule PhotoTagger.Gallery do
 
   """
   def get_photo!(id) do
-      Repo.get!(Photo, id)
+    Repo.get!(Photo, id)
     # Repo.preload(photo, :tags)
   end
 
@@ -140,7 +155,7 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-   defp get_or_create_tag(name) do
+  defp get_or_create_tag(name) do
     Repo.get_by(Tag, name: name) ||
       maybe_insert_tag(name)
   end

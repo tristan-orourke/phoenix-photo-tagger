@@ -6,11 +6,11 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery.Photo
 
   def index(conn, %{"query_tags" => tags}) when is_list(tags) do
-    photos = Gallery.list_photos_by_tags(tags)
+    photos = Gallery.list_photos_by_all_tags(tags)
     render(conn, :index, photos: photos)
   end
   def index(conn, %{"query_tags" => tags}) do
-    photos = Gallery.list_photos_by_tags([tags])
+    photos = Gallery.list_photos_by_all_tags([tags])
     render(conn, :index, photos: photos)
   end
   def index(conn, _params) do
