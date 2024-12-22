@@ -24,6 +24,7 @@ defmodule PhotoTagger.Gallery do
 
   # Returns all photos that have ALL the specified tags
   def list_photos_by_all_tags([]), do: list_photos()
+
   def list_photos_by_all_tags(tag_names) do
     tags = Repo.all(from(t in Tag, where: t.name in ^tag_names))
 
@@ -34,7 +35,7 @@ defmodule PhotoTagger.Gallery do
       tags ->
         photo_ids =
           from(p in Photo,
-            join: pt in "photos_tags",
+            join: pt in PhotoTag,
             on: pt.photo_id == p.id,
             where: pt.tag_id in ^Enum.map(tags, & &1.id),
             group_by: p.id,
@@ -168,5 +169,25 @@ defmodule PhotoTagger.Gallery do
       {:ok, tag} -> tag
       {:error, _} -> Repo.get_by!(Tag, name: name)
     end
+  end
+
+  def list_folders_include_tags() do
+    Repo.all(
+      from(p in Photo,
+        join: pt in PhotoTag,
+        on: pt.photo_id == p.id,
+        join: t in Tag,
+        on: pt.tag_id == t.id,
+        group_by: p.folder,
+        select: %{
+          name: p.folder,
+          tags: fragment("array_agg(DISTINCT ?)", t.name)
+        }
+      )
+    )
+  end
+
+  def list_tags() do
+    Repo.all(Tag)
   end
 end

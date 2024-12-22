@@ -17,7 +17,7 @@ defmodule PhotoTaggerWeb.Router do
   scope "/", PhotoTaggerWeb do
     pipe_through :browser
 
-    get "/", PhotoController, :index
+    get "/", PhotoController, :folders
     resources "/photos", PhotoController
     post "/photos/:id/tags", PhotoController, :add_tag
     delete "/photos/:id/tags/:tag", PhotoController, :remove_tag

@@ -5,6 +5,11 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
 
+  def folders(conn, _params) do
+    folders = Gallery.list_folders_include_tags()
+    render(conn, :folder_list, folders: folders)
+  end
+
   def index(conn, %{"query_tags" => tags}) when is_list(tags) do
     photos = Gallery.list_photos_by_all_tags(tags)
     render(conn, :index, photos: photos)
