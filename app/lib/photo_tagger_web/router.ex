@@ -17,10 +17,17 @@ defmodule PhotoTaggerWeb.Router do
   scope "/", PhotoTaggerWeb do
     pipe_through :browser
 
-    get "/", PhotoController, :folders
     resources "/photos", PhotoController
     post "/photos/:id/tags", PhotoController, :add_tag
     delete "/photos/:id/tags/:tag", PhotoController, :remove_tag
+
+    get "/", PhotoController, :main
+    get "/folders", PhotoController, :main
+    get "/folders/:folder", PhotoController, :main
+    get "/photos", PhotoController, :main
+    get "/photos/:photo_id", PhotoController, :main
+    get "/folders/:folder/photos", PhotoController, :main
+    get "/folders/:folder/photos/:photo_id", PhotoController, :main
   end
 
   # Other scopes may use custom stacks.

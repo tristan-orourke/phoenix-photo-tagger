@@ -13,6 +13,7 @@ defmodule PhotoTaggerWeb.PhotoController do
         {folder, []} -> Gallery.list_photos_by_folder(folder)
         {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
       end
+    filtered_photos = Repo.preload(filtered_photos, :tags)
 
     photo =
       case photo_id do
@@ -25,39 +26,51 @@ defmodule PhotoTaggerWeb.PhotoController do
       end
 
     recommended_tags =
-      Enum.reduce(filtered, MapSet.new(), fn photo, acc ->
+      Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
         MapSet.union(acc, MapSet.new(photo.tags))
       end)
       |> MapSet.to_list()
 
+    all_folders = Gallery.list_folders_include_tags()
+    all_tags = Gallery.list_tags() |> Enum.map(&(&1.name))
+
     %{
       folder: folder,
-      folders: Gallery.list_folders_include_tags(),
+      all_folders: all_folders,
       tags: tags,
+      all_tags: all_tags,
       photo: photo,
       filtered_photos: filtered_photos,
       recommended_tags: recommended_tags
     }
   end
 
+  def main(conn, params) do
+    tags = Map.get(params, "query_tags", [])
+    tags = if is_list(tags), do: tags, else: [tags]
+
+    state = expand_state(%{folder: Map.get(params, "folder"), tags: tags, photo_id: Map.get(params, "photo_id")})
+    render(conn, :main, state)
+  end
+
   def folders(conn, _params) do
-    folders = Gallery.list_folders_include_tags()
-    render(conn, :folder_list, folders: folders)
+    state = expand_state(%{folder: nil, tags: [], photo_id: nil})
+    render(conn, :main, state)
   end
 
   def index(conn, %{"query_tags" => tags}) when is_list(tags) do
-    photos = Gallery.list_photos_by_all_tags(tags)
-    render(conn, :index, photos: photos)
+    state = expand_state(%{folder: nil, tags: tags, photo_id: nil})
+    render(conn, :main, state)
   end
 
-  def index(conn, %{"query_tags" => tags}) do
-    photos = Gallery.list_photos_by_all_tags([tags])
-    render(conn, :index, photos: photos)
+  def index(conn, %{"query_tags" => tag}) do
+    state = expand_state(%{folder: nil, tags: [tag], photo_id: nil})
+    render(conn, :main, state)
   end
 
   def index(conn, _params) do
-    photos = Gallery.list_photos()
-    render(conn, :index, photos: photos)
+    state = expand_state(%{folder: nil, tags: [], photo_id: nil})
+    render(conn, :main, state)
   end
 
   def new(conn, _params) do
@@ -78,9 +91,8 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def show(conn, %{"id" => id}) do
-    photo = Gallery.get_photo!(id)
-    photo = Repo.preload(photo, :tags)
-    render(conn, :show, photo: photo)
+    state = expand_state(%{folder: nil, tags: [], photo_id: id})
+    render(conn, :main, state)
   end
 
   def edit(conn, %{"id" => id}) do
