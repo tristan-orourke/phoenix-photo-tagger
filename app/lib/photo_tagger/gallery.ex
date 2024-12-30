@@ -22,10 +22,15 @@ defmodule PhotoTagger.Gallery do
     Repo.all(Photo)
   end
 
-  # Returns all photos that have ALL the specified tags
-  def list_photos_by_all_tags([]), do: list_photos()
+  def list_photos_by_folder(folder) do
+    Repo.all(from(p in Photo, where: p.folder == ^folder))
+  end
 
-  def list_photos_by_all_tags(tag_names) do
+  defp photos_ids_by_tags([]) do
+    Repo.all(from(p in Photo, select: p.id))
+  end
+
+  defp photos_ids_by_tags(tag_names) do
     tags = Repo.all(from(t in Tag, where: t.name in ^tag_names))
 
     case tags do
@@ -44,8 +49,21 @@ defmodule PhotoTagger.Gallery do
           )
           |> Repo.all()
 
-        Repo.all(from(p in Photo, where: p.id in ^photo_ids))
+        photo_ids
     end
+  end
+
+  # Returns all photos that have ALL the specified tags
+  def list_photos_by_all_tags([]), do: list_photos()
+
+  def list_photos_by_all_tags(tag_names) do
+    photo_ids = photos_ids_by_tags(tag_names)
+    Repo.all(from(p in Photo, where: p.id in ^photo_ids))
+  end
+
+  def list_photos_by_folder_and_tags(folder, tag_names) do
+    photo_ids = photos_ids_by_tags(tag_names)
+    Repo.all(from(p in Photo, where: p.id in ^photo_ids, where: p.folder == ^folder))
   end
 
   @doc """
@@ -64,7 +82,6 @@ defmodule PhotoTagger.Gallery do
   """
   def get_photo!(id) do
     Repo.get!(Photo, id)
-    # Repo.preload(photo, :tags)
   end
 
   @doc """
