@@ -37,6 +37,9 @@ defmodule PhotoTaggerWeb.PhotoHTML do
             <%= for tag <- @all_tags do %>
               <li>
                 <.link class={"#{@folder == nil && tag in @tags && "font-bold"}"} href={toggle_tag_href(nil, nil, [], tag)}><%= tag %></.link>
+                <%= if @folder == nil do %>
+                    <.link href={toggle_tag_href(nil, nil, @tags, tag)}><%= if(tag in @tags, do: "-", else: "+") %></.link>
+                  <% end %>
               </li>
             <% end %>
           </ul>
@@ -48,6 +51,9 @@ defmodule PhotoTaggerWeb.PhotoHTML do
               <%= for tag <- folder.tags do %>
                 <li>
                   <.link class={"#{@folder == folder.name && tag in @tags && "font-bold"}"} href={toggle_tag_href(folder.name, nil, [], tag)}><%= tag %></.link>
+                  <%= if @folder == folder.name do %>
+                    <.link href={toggle_tag_href(folder.name, nil, @tags, tag)}><%= if(tag in @tags, do: "-", else: "+") %></.link>
+                  <% end %>
                 </li>
               <% end %>
             </ul>
