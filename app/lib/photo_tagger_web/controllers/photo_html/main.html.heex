@@ -1,9 +1,9 @@
 <div class="grid grid-cols-7 gap-4">
   <div class="col-span-1">
-    <.folders all_folders={@all_folders} all_tags={@all_tags}folder={@folder} tags={@tags} />
+    <.folders all_folders={@all_folders} all_tags={@all_tags} folder={@folder} tags={@tags} />
   </div>
   <div class="col-span-4">
-    <.gallery photos={@filtered_photos} />
+    <.gallery photos={@filtered_photos} folder={@folder} tags={@tags} />
   </div>
   <div class="col-span-2">
     <%= if @photo do %>

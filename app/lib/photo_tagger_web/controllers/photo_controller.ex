@@ -53,26 +53,6 @@ defmodule PhotoTaggerWeb.PhotoController do
     render(conn, :main, state)
   end
 
-  def folders(conn, _params) do
-    state = expand_state(%{folder: nil, tags: [], photo_id: nil})
-    render(conn, :main, state)
-  end
-
-  def index(conn, %{"query_tags" => tags}) when is_list(tags) do
-    state = expand_state(%{folder: nil, tags: tags, photo_id: nil})
-    render(conn, :main, state)
-  end
-
-  def index(conn, %{"query_tags" => tag}) do
-    state = expand_state(%{folder: nil, tags: [tag], photo_id: nil})
-    render(conn, :main, state)
-  end
-
-  def index(conn, _params) do
-    state = expand_state(%{folder: nil, tags: [], photo_id: nil})
-    render(conn, :main, state)
-  end
-
   def new(conn, _params) do
     changeset = Gallery.change_photo(%Photo{})
     render(conn, :new, changeset: changeset)
@@ -88,11 +68,6 @@ defmodule PhotoTaggerWeb.PhotoController do
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, :new, changeset: changeset)
     end
-  end
-
-  def show(conn, %{"id" => id}) do
-    state = expand_state(%{folder: nil, tags: [], photo_id: id})
-    render(conn, :main, state)
   end
 
   def edit(conn, %{"id" => id}) do
