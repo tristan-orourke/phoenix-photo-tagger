@@ -103,7 +103,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
 
   def photo(assigns) do
     ~H"""
-    <.list>
+    <.list class="pb-4">
       <:item title="Name"><%= @photo.name %></:item>
       <:item title="Folder">
         <.link class={"#{@folder == @photo.folder && "font-bold"}"} href={build_url(@photo.folder, @photo, @tags)}><%= @photo.folder %></.link>
@@ -138,6 +138,9 @@ defmodule PhotoTaggerWeb.PhotoHTML do
       </:item>
       <:item title="Image">
         <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
+      </:item>
+      <:item title="Original file">
+        <.link href={ImageUploader.url({@photo.image, @photo}, :original)}><%= @photo.name %></.link>
       </:item>
     </.list>
     """

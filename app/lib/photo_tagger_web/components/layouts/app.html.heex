@@ -1,17 +1,20 @@
-<div class="m-2">
-  <.header>
-    Photo Tagger
-    <:actions>
-      <.link href={~p"/photos/new"}>
-        <.button>Upload Photos</.button>
-      </.link>
-    </:actions>
-  </.header>
-</div>
-
-<main class="px-4 py-5 sm:px-6 lg:px-8 h-screen">
-  <div class="mx-auto h-full">
-    <.flash_group flash={@flash} />
-    <%= @inner_content %>
+<div class="h-screen flex flex-col">
+  <div class="p-2 ">
+    <.header>
+      Photo Tagger
+      <:actions>
+        <.link href={~p"/photos/new"}>
+          <.button>Upload Photos</.button>
+        </.link>
+      </:actions>
+    </.header>
   </div>
-</main>
+
+  <div class="">
+    <.flash_group flash={@flash} />
+  </div>
+  
+  <main class="px-4 py-5 mx-auto sm:px-6 lg:px-8 overflow-y-auto overscroll-none">
+    <%= @inner_content %>
+  </main>
+</div>
