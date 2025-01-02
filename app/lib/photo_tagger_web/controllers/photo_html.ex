@@ -89,6 +89,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
   end
 
   attr(:photo, :map, required: true)
+  attr(:tags, :list, default: [])
 
   def photo(assigns) do
     ~H"""
@@ -98,7 +99,9 @@ defmodule PhotoTaggerWeb.PhotoHTML do
       <:item title="Tags">
         <ul>
           <%= for tag <- @photo.tags do %>
-            <li><%= tag.name %></li>
+            <li>
+              <.link class={"#{tag.name in @tags && "font-bold"}"} href={toggle_tag_href(@photo.folder, @photo, @tags, tag.name)}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.link>
+            </li>
           <% end %>
         </ul>
       </:item>
