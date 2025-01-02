@@ -1,12 +1,13 @@
 defmodule PhotoTaggerWeb.PhotoHTML do
   use PhotoTaggerWeb, :html
-  import PhotoTaggerWeb.PhotoController, only: [build_url: 3]
+  import PhotoTaggerWeb.PhotoController, only: [build_url: 3, build_url: 4]
+  alias PhotoTagger.Uploaders.ImageUploader
 
   embed_templates("photo_html/*")
 
-  attr(:folder, :string, required: true)
-  attr(:photo, :map, required: true)
-  attr(:tags, :list, required: true)
+  attr(:folder, :string, default: nil)
+  attr(:photo, :map, default: nil)
+  attr(:tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
   slot(:inner_block)
 
@@ -85,7 +86,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
                 class="w-40 h-40 object-cover"
-                src={PhotoTagger.Uploaders.ImageUploader.url({photo.image, photo}, :small)}
+                src={ImageUploader.url({photo.image, photo}, :small)}
               />
             </.link>
           </li>
@@ -96,32 +97,44 @@ defmodule PhotoTaggerWeb.PhotoHTML do
   end
 
   attr(:photo, :map, required: true)
+  attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
+  attr(:recommended_tags, :list, default: [])
 
   def photo(assigns) do
     ~H"""
     <.list>
       <:item title="Name"><%= @photo.name %></:item>
-      <:item title="Folder"><%= @photo.folder %></:item>
+      <:item title="Folder">
+        <.link class={"#{@folder == @photo.folder && "font-bold"}"} href={build_url(@photo.folder, @photo, @tags)}><%= @photo.folder %></.link>
+      </:item>
       <:item title="Tags">
         <ul>
           <%= for tag <- @photo.tags do %>
             <li>
-              <.toggle_tag_button folder={@photo.folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
+              <.toggle_tag_button folder={@folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
             </li>
           <% end %>
         </ul>
       </:item>
       <:item title="Add tags">
-        <.simple_form :let={f} for={%{"tag" => ""}} action={~p"/photos/#{@photo}/tags"} method="post">
-          <.input field={f[:tag]} type="text" label="New tag" />
+        <%= for tag <- @recommended_tags do %>
+          <%= if tag not in @photo.tags do %>
+            <.form for={%{"tag" => ""}} action={build_url(@folder, @photo, @tags, "/tags")} method="post">
+              <input class="hidden" type="text" name="tag" value={tag.name} />
+              <button class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800" type="submit"><%= tag.name %></button>
+            </.form>
+          <% end %>
+        <% end %>
+        <.simple_form :let={f} for={%{"tag" => ""}} action={build_url(@folder, @photo, @tags, "/tags")} method="post">
+          <.input field={f[:tag]} type="text" label="Other" />
           <:actions>
-            <.button>Add tag</.button>
+            <.button type="submit">Add tag</.button>
           </:actions>
         </.simple_form>
       </:item>
       <:item title="Image">
-        <img src={PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :small)} />
+        <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
       </:item>
     </.list>
     """

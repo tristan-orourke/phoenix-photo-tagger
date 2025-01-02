@@ -7,7 +7,7 @@
   </div>
   <div class="col-span-2 overflow-y-auto">
     <%= if @photo do %>
-      <.photo photo={@photo} tags={@tags} />
+      <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
     <% end %>
   </div>
 </div>

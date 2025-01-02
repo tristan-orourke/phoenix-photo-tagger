@@ -5,14 +5,14 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
 
-  def build_url(folder, photo, tags) do
+  def build_url(folder, photo, tags, tail \\ nil) do
     uri = URI.new!("/")
     uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
     uri = if(photo, do: URI.append_path(uri, "/photos/#{photo.id}"), else: uri)
+    uri = if(tail, do: URI.append_path(uri, tail), else: uri)
 
     query = Plug.Conn.Query.encode(%{query_tags: tags})
-    # uri = if(Enum.empty?(tags_list), do: URI.append_query(uri, query), else: uri)
-    uri = URI.append_query(uri, query)
+    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, query), else: uri)
 
     URI.to_string(uri)
   end
@@ -125,7 +125,7 @@ defmodule PhotoTaggerWeb.PhotoController do
     tags = Enum.uniq(tags ++ [tag])
 
     conn
-    |> put_flash(:info, "Tag added successfully.")
+    # |> put_flash(:info, "Tag added successfully.")
     |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
   end
 
