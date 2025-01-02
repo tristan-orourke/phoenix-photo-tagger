@@ -72,15 +72,33 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def create(conn, %{"photo" => photo_params}) do
-    case Gallery.create_photo(photo_params) do
-      {:ok, photo} ->
-        conn
-        |> put_flash(:info, "Photo created successfully.")
-        |> redirect(to: ~p"/photos/#{photo}")
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, :new, changeset: changeset)
+    %{"folder" => folder, "images" => images} = photo_params
+    results = Enum.map(images, fn image -> Gallery.create_photo(%{"folder" => folder, "image" => image}) end)
+    if Enum.all?(results, fn {:ok, _} -> true; _ -> false end) do
+      url = build_url(folder, List.first(results) |> elem(1), [])
+      conn
+      |> put_flash(:info, "Photos created successfully.")
+      |> redirect(to: url)
+    else
+      successful_photos = for {:ok, photo} <- results, do: photo
+      failed_photos = for {:error, changeset} <- results, do: changeset.changes.name
+      #{Keyword.get(changeset.errors, :image) |> elem(0)}"
+      url = if(Enum.empty?(successful_photos), do: build_url(folder, nil, []), else: build_url(folder, List.first(successful_photos), []))
+      successful_photo_names = Enum.map(successful_photos, &(&1.name)) |> Enum.join(", ")
+      conn = if(Enum.empty?(successful_photos), do: conn, else: conn |> put_flash(:info, "Some photos created successfully: #{successful_photo_names}"))
+      conn
+      |> put_flash(:error, "Some photos failed to save: #{Enum.join(failed_photos, ", ")}")
+      |> redirect(to: url)
     end
+    # case Gallery.create_photo(photo_params) do
+    #   {:ok, photo} ->
+    #     conn
+    #     |> put_flash(:info, "Photo created successfully.")
+    #     |> redirect(to: ~p"/photos/#{photo}")
+
+    #   {:error, %Ecto.Changeset{} = changeset} ->
+    #     render(conn, :new, changeset: changeset)
+    # end
   end
 
   def edit(conn, %{"id" => id}) do

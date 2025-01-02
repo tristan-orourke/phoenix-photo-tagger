@@ -381,6 +381,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
           @errors == [] && "border-zinc-300 focus:border-zinc-400",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
+        multiple={@multiple}
         {@rest}
       />
       <.error :for={msg <- @errors}><%= msg %></.error>
