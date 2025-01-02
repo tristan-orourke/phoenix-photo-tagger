@@ -113,19 +113,27 @@ defmodule PhotoTaggerWeb.PhotoController do
     |> redirect(to: ~p"/photos")
   end
 
-  def add_tag_main(conn, params) do
-    tags = Map.get(params, "query_tags", [])
-    tags = if is_list(tags), do: tags, else: [tags]
-
-    photo_id = Map.fetch!(params, "photo_id")
-    tag = Map.fetch!(params, "tag")
+  def add_tag_main(conn, %{"photo_id" => photo_id, "tag" => tag} = params) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
 
+    tags = Map.get(params, "query_tags", [])
+    tags = if is_list(tags), do: tags, else: [tags]
     tags = Enum.uniq(tags ++ [tag])
 
     conn
-    # |> put_flash(:info, "Tag added successfully.")
+    |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
+  end
+
+  def remove_tag_main(conn, %{"photo_id" => photo_id, "tag" => tag} = params) do
+    photo = Gallery.get_photo!(photo_id)
+    {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
+
+    tags = Map.get(params, "query_tags", [])
+    tags = if is_list(tags), do: tags, else: [tags]
+    tags = Enum.filter(tags, &(&1 != tag))
+
+    conn
     |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
   end
 

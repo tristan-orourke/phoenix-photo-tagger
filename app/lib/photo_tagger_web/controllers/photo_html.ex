@@ -111,8 +111,11 @@ defmodule PhotoTaggerWeb.PhotoHTML do
       <:item title="Tags">
         <ul>
           <%= for tag <- @photo.tags do %>
-            <li>
+            <li >
               <.toggle_tag_button folder={@folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
+              <.form class="inline"  action={build_url(@folder, @photo, @tags, "/tags/#{tag.name}")} method="delete">
+                <button type="submit"><.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900"/></button>
+              </.form>
             </li>
           <% end %>
         </ul>

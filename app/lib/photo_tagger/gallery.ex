@@ -168,8 +168,9 @@ defmodule PhotoTagger.Gallery do
         {:ok, nil}
 
       tag ->
-        Repo.get_by!(PhotoTag, photo_id: photo.id, tag_id: tag.id)
-        |> Repo.delete!()
+        {:ok,
+         Repo.get_by!(PhotoTag, photo_id: photo.id, tag_id: tag.id)
+         |> Repo.delete!()}
     end
   end
 
