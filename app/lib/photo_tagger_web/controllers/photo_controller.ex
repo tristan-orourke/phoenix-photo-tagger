@@ -5,6 +5,18 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
 
+  def build_url(folder, photo, tags) do
+    uri = URI.new!("/")
+    uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
+    uri = if(photo, do: URI.append_path(uri, "/photos/#{photo.id}"), else: uri)
+
+    query = Plug.Conn.Query.encode(%{query_tags: tags})
+    # uri = if(Enum.empty?(tags_list), do: URI.append_query(uri, query), else: uri)
+    uri = URI.append_query(uri, query)
+
+    URI.to_string(uri)
+  end
+
   def expand_state(%{folder: folder, tags: tags, photo_id: photo_id}) do
     filtered_photos =
       case {folder, tags} do
@@ -50,7 +62,8 @@ defmodule PhotoTaggerWeb.PhotoController do
     tags = if is_list(tags), do: tags, else: [tags]
 
     state = expand_state(%{folder: Map.get(params, "folder"), tags: tags, photo_id: Map.get(params, "photo_id")})
-    render(conn, :main, state)
+    conn
+    |> render(:main, state)
   end
 
   def new(conn, _params) do
@@ -99,6 +112,23 @@ defmodule PhotoTaggerWeb.PhotoController do
     |> put_flash(:info, "Photo deleted successfully.")
     |> redirect(to: ~p"/photos")
   end
+
+  def add_tag_main(conn, params) do
+    tags = Map.get(params, "query_tags", [])
+    tags = if is_list(tags), do: tags, else: [tags]
+
+    photo_id = Map.fetch!(params, "photo_id")
+    tag = Map.fetch!(params, "tag")
+    photo = Gallery.get_photo!(photo_id)
+    {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
+
+    tags = Enum.uniq(tags ++ [tag])
+
+    conn
+    |> put_flash(:info, "Tag added successfully.")
+    |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
+  end
+
 
   def add_tag(conn, %{"id" => id, "tag" => tag}) do
     photo = Gallery.get_photo!(id)

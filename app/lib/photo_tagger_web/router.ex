@@ -18,7 +18,6 @@ defmodule PhotoTaggerWeb.Router do
     pipe_through :browser
 
     resources "/photos", PhotoController, only: [:new, :create, :edit, :update, :delete]
-    post "/photos/:id/tags", PhotoController, :add_tag
     delete "/photos/:id/tags/:tag", PhotoController, :remove_tag
 
     get "/", PhotoController, :main
@@ -26,8 +25,10 @@ defmodule PhotoTaggerWeb.Router do
     get "/folders/:folder", PhotoController, :main
     get "/photos", PhotoController, :main
     get "/photos/:photo_id", PhotoController, :main
+    post "/photos/:photo_id/tags", PhotoController, :add_tag_main
     get "/folders/:folder/photos", PhotoController, :main
     get "/folders/:folder/photos/:photo_id", PhotoController, :main
+    post "/folder/:folder/photos/:photo_id/tags", PhotoController, :add_tag_main
   end
 
   # Other scopes may use custom stacks.
