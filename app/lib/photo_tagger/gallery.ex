@@ -192,9 +192,9 @@ defmodule PhotoTagger.Gallery do
   def list_folders_include_tags() do
     Repo.all(
       from(p in Photo,
-        join: pt in PhotoTag,
+        left_join: pt in PhotoTag,
         on: pt.photo_id == p.id,
-        join: t in Tag,
+        left_join: t in Tag,
         on: pt.tag_id == t.id,
         group_by: p.folder,
         select: %{
@@ -203,6 +203,10 @@ defmodule PhotoTagger.Gallery do
         }
       )
     )
+    # Filter out any tags that are nil or empty strings
+    |> Enum.map(fn folder ->
+      %{folder | tags: Enum.filter(folder.tags, fn tag -> tag != nil && tag != "" end)}
+    end)
   end
 
   def list_tags() do
