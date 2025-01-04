@@ -1,0 +1,32 @@
+FROM elixir:1.17.3
+
+# Build Args
+ARG PHOENIX_VERSION=1.7.14
+
+# Dependencies
+RUN apt update \
+  && apt upgrade -y \
+  && apt install -y bash curl git build-essential inotify-tools
+
+# App Directory
+ENV APP_HOME /app
+WORKDIR $APP_HOME
+
+# Phoenix
+RUN mix local.hex --force
+RUN mix archive.install --force hex phx_new ${PHOENIX_VERSION}
+RUN mix local.rebar --force
+
+# set build ENV
+# ENV MIX_ENV="prod"
+
+# install mix dependencies
+COPY app/mix.exs app/mix.lock ./
+RUN mix deps.get --only $MIX_ENV
+RUN mkdir config
+
+# App Port
+# EXPOSE 4000
+
+# Default Command
+CMD ["mix", "phx.server"]
