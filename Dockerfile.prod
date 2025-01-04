@@ -22,8 +22,8 @@ RUN mix local.rebar --force
 
 # install mix dependencies
 COPY app/mix.exs app/mix.lock ./
-RUN mix deps.get --only $MIX_ENV
-RUN mkdir config
+# RUN mix deps.get --only $MIX_ENV
+RUN mix deps.get
 
 # App Port
 # EXPOSE 4000
