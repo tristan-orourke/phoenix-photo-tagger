@@ -9,8 +9,7 @@ RUN apt update \
   && apt install -y bash curl git build-essential inotify-tools
 
 # App Directory
-ENV APP_HOME /app
-WORKDIR $APP_HOME
+WORKDIR /app
 
 # Phoenix
 RUN mix local.hex --force
@@ -18,12 +17,12 @@ RUN mix archive.install --force hex phx_new ${PHOENIX_VERSION}
 RUN mix local.rebar --force
 
 # set build ENV
-# ENV MIX_ENV="prod"
+ENV MIX_ENV="prod"
 
 # install mix dependencies
-COPY app/mix.exs app/mix.lock ./
-# RUN mix deps.get --only $MIX_ENV
-RUN mix deps.get
+COPY mix.exs mix.lock ./
+RUN mix deps.get --only $MIX_ENV
+# RUN mix deps.get
 
 # App Port
 # EXPOSE 4000
