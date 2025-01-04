@@ -38,7 +38,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
     ~H"""
     <div>
       <h2 class>Folders</h2>
-      <ul>
+      <ul class="space-y-2">
         <li>
           <.link class={"#{@folder == nil && "font-bold"}"} href={build_url(nil, nil, [])}>All folders</.link>
           <ul class="list-disc list-inside">
