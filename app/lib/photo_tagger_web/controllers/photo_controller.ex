@@ -4,6 +4,7 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Repo
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
+  require Logger
 
   def build_url(folder, photo, tags, tail \\ nil) do
     uri = URI.new!("/")
@@ -172,5 +173,25 @@ defmodule PhotoTaggerWeb.PhotoController do
     conn
     |> put_flash(:info, "Tag removed successfully.")
     |> redirect(to: ~p"/photos/#{photo}/edit")
+  end
+
+  def edit_folders(conn, _params) do
+    folders = Gallery.list_folders()
+    render(conn, :edit_folders, folders: folders)
+  end
+
+  def rename_folder(conn, %{"folder" => folder, "new_name" => new_name}) do
+    result = Gallery.rename_folder(folder, new_name)
+    case result do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Folder renamed successfully.")
+        |> redirect(to: ~p"/edit-folders")
+
+      {:error, _failed_op, _failed_value, _changes_so_far} ->
+        conn
+        |> put_flash(:error, "Failed to rename folder")
+        |> redirect(to: ~p"/edit-folders")
+    end
   end
 end

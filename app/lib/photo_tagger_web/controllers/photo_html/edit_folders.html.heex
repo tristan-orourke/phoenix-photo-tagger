@@ -1,0 +1,18 @@
+<.header>
+  Edit Folders
+  <:subtitle>Rename folders.</:subtitle>
+</.header>
+
+<ul>
+  <%= for folder <- @folders do %>
+    <li>
+      <.form for={%{}} action={~p"/folders/#{folder}/rename"} method="post">
+        <%= folder %>
+        <.input name="new_name" type="text" label="New name" value="" />
+        <.button type="submit">Rename folder</.button>
+      </.form>
+    </li>
+  <% end %>
+</ul>
+
+<.back navigate={~p"/photos"}>Back to photos</.back>

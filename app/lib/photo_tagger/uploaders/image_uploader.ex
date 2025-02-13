@@ -2,6 +2,8 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
   use Waffle.Definition
   use Waffle.Ecto.Definition
 
+  require Logger
+
   @versions [:original, :small]
   @extensions ~w(.jpg .jpeg .gif .png)
 
@@ -20,7 +22,8 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
   end
 
   # Override the persisted filenames:
-  def filename(:original, {file, _scope}) do
+  def filename(:original, {file, scope}) do
+    Logger.debug(scope)
     file.file_name
   end
   def filename(version, {file, _scope}) do

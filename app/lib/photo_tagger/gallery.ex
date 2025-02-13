@@ -8,6 +8,7 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Gallery.Tag
   alias PhotoTagger.Gallery.PhotoTag
+  require Logger
 
   @doc """
   Returns the list of photos.
@@ -189,6 +190,10 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
+  def list_folders() do
+    Repo.all(from(p in Photo, group_by: p.folder, select: p.folder))
+  end
+
   def list_folders_include_tags() do
     Repo.all(
       from(p in Photo,
@@ -211,5 +216,22 @@ defmodule PhotoTagger.Gallery do
 
   def list_tags() do
     Repo.all(Tag)
+  end
+
+  def rename_folder(folder, new_folder) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update_all(:photos, from(p in Photo, where: p.folder == ^folder), set: [folder: new_folder])
+    |> Ecto.Multi.run(:rename_folder, fn _repo, _changes ->
+        old_path = Path.join([PhotoTaggerWeb.static_paths(), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
+        new_path = Path.join([PhotoTaggerWeb.static_paths(), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: new_folder}})])
+
+        Logger.debug("Renaming folder: #{old_path} -> #{new_path}")
+
+        case File.rename(old_path, new_path) do
+          :ok -> {:ok, new_path}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
+    |> Repo.transaction()
   end
 end
