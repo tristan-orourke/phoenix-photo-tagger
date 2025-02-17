@@ -23,7 +23,6 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   # Override the persisted filenames:
   def filename(:original, {file, scope}) do
-    Logger.debug(scope)
     file.file_name
   end
   def filename(version, {file, _scope}) do

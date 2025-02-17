@@ -188,9 +188,9 @@ defmodule PhotoTaggerWeb.PhotoController do
         |> put_flash(:info, "Folder renamed successfully.")
         |> redirect(to: ~p"/edit-folders")
 
-      {:error, _failed_op, _failed_value, _changes_so_far} ->
+      {:error, failed_op, failed_value, _changes_so_far} ->
         conn
-        |> put_flash(:error, "Failed to rename folder")
+        |> put_flash(:error, "Failed to rename folder! Error #{failed_value} in step #{failed_op}.")
         |> redirect(to: ~p"/edit-folders")
     end
   end

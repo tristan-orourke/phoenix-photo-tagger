@@ -218,14 +218,16 @@ defmodule PhotoTagger.Gallery do
     Repo.all(Tag)
   end
 
+  defp get_folder_path(folder) do
+    Path.join([Application.get_env(:waffle, :storage_dir_prefix), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
+  end
+
   def rename_folder(folder, new_folder) do
     Ecto.Multi.new()
     |> Ecto.Multi.update_all(:photos, from(p in Photo, where: p.folder == ^folder), set: [folder: new_folder])
     |> Ecto.Multi.run(:rename_folder, fn _repo, _changes ->
-        old_path = Path.join([PhotoTaggerWeb.static_paths(), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
-        new_path = Path.join([PhotoTaggerWeb.static_paths(), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: new_folder}})])
-
-        Logger.debug("Renaming folder: #{old_path} -> #{new_path}")
+        old_path = get_folder_path(folder)
+        new_path = get_folder_path(new_folder)
 
         case File.rename(old_path, new_path) do
           :ok -> {:ok, new_path}
