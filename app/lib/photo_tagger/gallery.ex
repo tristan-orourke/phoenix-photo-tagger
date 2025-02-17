@@ -236,4 +236,18 @@ defmodule PhotoTagger.Gallery do
       end)
     |> Repo.transaction()
   end
+
+  def delete_folder(folder) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.delete_all(:photos, from(p in Photo, where: p.folder == ^folder))
+    |> Ecto.Multi.run(:delete_folder, fn _repo, _changes ->
+        path = get_folder_path(folder)
+
+        case File.rm_rf(path) do
+          :ok -> {:ok, path}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
+    |> Repo.transaction()
+  end
 end

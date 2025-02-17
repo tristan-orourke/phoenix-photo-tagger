@@ -194,4 +194,19 @@ defmodule PhotoTaggerWeb.PhotoController do
         |> redirect(to: ~p"/edit-folders")
     end
   end
+
+  def delete_folder(conn, %{"folder" => folder}) do
+    result = Gallery.delete_folder(folder)
+    case result do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Folder deleted successfully.")
+        |> redirect(to: ~p"/edit-folders")
+
+      {:error, failed_op, failed_value, _changes_so_far} ->
+        conn
+        |> put_flash(:error, "Failed to delete folder! Error #{failed_value} in step #{failed_op}.")
+        |> redirect(to: ~p"/edit-folders")
+    end
+  end
 end
