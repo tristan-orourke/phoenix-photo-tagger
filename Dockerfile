@@ -1,4 +1,4 @@
-FROM elixir:1.17.3
+FROM elixir:1.18.2
 
 # Build Args
 ARG PHOENIX_VERSION=1.7.14
@@ -8,15 +8,20 @@ RUN apt update \
   && apt upgrade -y \
   && apt install -y bash curl git build-essential inotify-tools
 
-# Phoenix
-RUN mix local.hex --force
-RUN mix archive.install --force hex phx_new ${PHOENIX_VERSION}
-RUN mix local.rebar --force
-
 # App Directory
 ENV APP_HOME /app
-RUN mkdir -p $APP_HOME
+COPY ./app $APP_HOME
 WORKDIR $APP_HOME
+
+# Phoenix
+# RUN mix local.hex --force
+# RUN mix archive.install --force hex phx_new ${PHOENIX_VERSION}
+# RUN mix local.rebar --force
+
+# Install Dependencies
+RUN mix deps.get
+RUN mix assets.setup
+RUN mix assets.build
 
 # App Port
 # EXPOSE 4000

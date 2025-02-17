@@ -4,13 +4,15 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ./app:/app
+      - uploads:/app/priv/static/uploads
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=db
     depends_on:
       - db
+    working_dir: /app
+    command: bash -c "mix ecto.setup && mix phx.server"
     # user: "1000:1000"
   db:
     image: postgres:17.0
@@ -22,3 +24,4 @@ services:
 
 volumes:
   database:
+  uploads:
