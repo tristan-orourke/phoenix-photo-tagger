@@ -24,6 +24,7 @@ defmodule PhotoTaggerWeb.Router do
     get "/folders/:folder", PhotoController, :main
     get "/edit-folders", PhotoController, :edit_folders
     post "/folders/:folder/rename", PhotoController, :rename_folder
+    delete "/folders/:folder", PhotoController, :delete_folder
     get "/photos", PhotoController, :main
     get "/photos/:photo_id", PhotoController, :main
     post "/photos/:photo_id/tags", PhotoController, :add_tag_main
