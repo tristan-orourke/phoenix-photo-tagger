@@ -104,7 +104,11 @@ defmodule PhotoTaggerWeb.PhotoHTML do
   def photo(assigns) do
     ~H"""
     <.list class="pb-4">
-      <:item title="Name"><%= @photo.name %></:item>
+      <:item title="Image">
+        <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
+          <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
+        </.link>
+      </:item>
       <:item title="Folder">
         <.link class={"#{@folder == @photo.folder && "font-bold"}"} href={build_url(@photo.folder, @photo, @tags)}><%= @photo.folder %></.link>
       </:item>
@@ -136,11 +140,16 @@ defmodule PhotoTaggerWeb.PhotoHTML do
           </:actions>
         </.simple_form>
       </:item>
-      <:item title="Image">
-        <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
+      <:item title="Download file">
+        <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
       </:item>
-      <:item title="Original file">
-        <.link href={ImageUploader.url({@photo.image, @photo}, :original)}><%= @photo.name %></.link>
+      <:item title="Edit">
+        <.form action={~p"/photos/#{@photo.id}"} method="put">
+          <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
+          <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
+          <.button class="mt-4">Save</.button>
+        </.form>
+        <%!-- <.link href={~p"/photos/#{@photo.id}/edit"}>Edit photo</.link> --%>
       </:item>
     </.list>
     """

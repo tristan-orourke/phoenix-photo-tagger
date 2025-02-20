@@ -68,7 +68,7 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def new(conn, _params) do
-    changeset = Gallery.change_photo(%Photo{})
+    changeset = Gallery.new_photo_changeset(%Photo{})
     render(conn, :new, changeset: changeset)
   end
 
@@ -105,7 +105,7 @@ defmodule PhotoTaggerWeb.PhotoController do
   def edit(conn, %{"id" => id}) do
     photo = Gallery.get_photo!(id)
     photo = Repo.preload(photo, :tags)
-    changeset = Gallery.change_photo(photo)
+    changeset = Gallery.update_photo_changeset(photo)
     render(conn, :edit, photo: photo, changeset: changeset)
   end
 
@@ -118,8 +118,10 @@ defmodule PhotoTaggerWeb.PhotoController do
         |> put_flash(:info, "Photo updated successfully.")
         |> redirect(to: ~p"/photos/#{photo}")
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, :edit, photo: photo, changeset: changeset)
+      {:error, failed_op, failed_value, changeset} ->
+        conn
+        |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
+        |> redirect(to: ~p"/photos/#{photo}")
     end
   end
 

@@ -99,9 +99,9 @@ defmodule PhotoTagger.Gallery do
   """
   def create_photo(attrs \\ %{}) do
     attrs = Map.put(attrs, "name", attrs["image"].filename)
-
+    Logger.debug("Creating photo with file: #{inspect(attrs["image"])}")
     %Photo{}
-    |> Photo.changeset(attrs)
+    |> Photo.changeset_create(attrs)
     |> Repo.insert()
   end
 
@@ -118,9 +118,15 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
-    photo
-    |> Photo.changeset(attrs)
-    |> Repo.update()
+    changeset = Photo.changeset_update(photo, attrs)
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:photo, changeset)
+    |> Ecto.Multi.run(:update_file, fn repo, changes ->
+        Logger.debug("Updating photo, repo: #{inspect(repo)}")
+        Logger.debug("Updating photo, changes: #{inspect(changes)}")
+        {:error, "Not implemented"}
+      end)
+    |> Repo.transaction()
   end
 
   @doc """
@@ -144,12 +150,16 @@ defmodule PhotoTagger.Gallery do
 
   ## Examples
 
-      iex> change_photo(photo)
+      iex> new_photo_changeset(photo)
       %Ecto.Changeset{data: %Photo{}}
 
   """
-  def change_photo(%Photo{} = photo, attrs \\ %{}) do
-    Photo.changeset(photo, attrs)
+  def new_photo_changeset(%Photo{} = photo, attrs \\ %{}) do
+    Photo.changeset_create(photo, attrs)
+  end
+
+  def update_photo_changeset(%Photo{} = photo, attrs \\ %{}) do
+    Photo.changeset_update(photo, attrs)
   end
 
   def add_tag_to_photo(%Photo{} = photo, name) do

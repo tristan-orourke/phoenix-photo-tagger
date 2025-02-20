@@ -51,9 +51,9 @@ defmodule PhotoTagger.GalleryTest do
       assert_raise Ecto.NoResultsError, fn -> Gallery.get_photo!(photo.id) end
     end
 
-    test "change_photo/1 returns a photo changeset" do
+    test "new_photo_changeset/1 returns a photo changeset" do
       photo = photo_fixture()
-      assert %Ecto.Changeset{} = Gallery.change_photo(photo)
+      assert %Ecto.Changeset{} = Gallery.new_photo_changeset(photo)
     end
   end
 end

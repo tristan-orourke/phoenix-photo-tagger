@@ -20,46 +20,17 @@ defmodule PhotoTagger.Gallery.Photo do
   # end
 
   @doc false
-  def changeset(photo, attrs) do
+  def changeset_create(photo, attrs) do
     photo
     |> cast(attrs, [:name, :folder])
     |> cast_attachments(attrs, [:image], allow_urls: true)
     |> validate_required([:name, :folder, :image])
-    |> unique_constraint(:name)
+    |> unique_constraint([:name, :folder])
   end
 
-  # defp get_or_insert_tag(name) do
-  #   Repo.insert!(
-  #     %Tag{name: name},
-  #     on_conflict: [set: [name: name]],
-  #     conflict_target: :name
-  #   )
-  # end
-
-  # defp insert_and_get_all_tags([]) do
-  #   []
-  # end
-  # defp insert_and_get_all_tags(names) do
-  #   timestamp =
-  #     NaiveDateTime.utc_now()
-  #     |> NaiveDateTime.truncate(:second)
-
-  #   placeholders = %{timestamp: timestamp}
-
-  #   maps =
-  #     Enum.map(names, &%{
-  #       name: &1,
-  #       inserted_at: {:placeholder, :timestamp},
-  #       updated_at: {:placeholder, :timestamp}
-  #     })
-
-  #   Repo.insert_all(
-  #     Tag,
-  #     maps,
-  #     placeholders: placeholders,
-  #     on_conflict: :nothing
-  #   )
-
-  #   Repo.all(from t in Tag, where: t.name in ^names)
-  # end
+  def changeset_update(photo, attrs) do
+    photo
+    |> cast(attrs, [:name, :folder])
+    |> unique_constraint([:name, :folder])
+  end
 end
