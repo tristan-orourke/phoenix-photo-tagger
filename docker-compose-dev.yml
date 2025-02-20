@@ -5,7 +5,6 @@ services:
       - "4000:4000"
     volumes:
       - ./app:/app
-      - uploads:/app/priv/static/uploads
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

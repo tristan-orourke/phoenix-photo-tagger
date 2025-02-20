@@ -8,6 +8,7 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Gallery.Tag
   alias PhotoTagger.Gallery.PhotoTag
+  alias PhotoTagger.Uploaders.ImageUploader
   require Logger
 
   @doc """
@@ -98,6 +99,9 @@ defmodule PhotoTagger.Gallery do
 
   """
   def create_photo(attrs \\ %{}) do
+    filename = attrs["image"].filename
+    Logger.debug("Filename with basename #{Path.basename(filename)}")
+    Logger.debug("Filename with basename #{Path.basename(filename)}")
     attrs = Map.put(attrs, "name", attrs["image"].filename)
     Logger.debug("Creating photo with file: #{inspect(attrs["image"])}")
     %Photo{}
@@ -119,12 +123,29 @@ defmodule PhotoTagger.Gallery do
   """
   def update_photo(%Photo{} = photo, attrs) do
     changeset = Photo.changeset_update(photo, attrs)
+    new_name = if(Map.has_key?(attrs, :name), do: attrs[:name], else: photo.name)
+    Logger.debug("Photo in update photo #{inspect(photo)}")
+    new_image = %{photo.image | file_name: new_name}
+    # TODO: Avoid manipulating changeset directly
+    changeset = Map.put(changeset, :changes, Map.put(changeset.changes, :image, new_image))
+    Logger.debug("Updating photo with changes: #{inspect(changeset)}")
+
+    # changeset = if(Map.has_key?(attrs, :name), do: Map.put(changeset, :changes, Map.put(changeset.changes, :name, attrs[:name])), else: changeset)
+    # Logger.debug("Updating photo with changes: #{inspect(changeset)}")
     Ecto.Multi.new()
     |> Ecto.Multi.update(:photo, changeset)
-    |> Ecto.Multi.run(:update_file, fn repo, changes ->
-        Logger.debug("Updating photo, repo: #{inspect(repo)}")
-        Logger.debug("Updating photo, changes: #{inspect(changes)}")
-        {:error, "Not implemented"}
+    |> Ecto.Multi.run(:update_file, fn _repo, changes ->
+        old_path = Path.join([get_folder_path(photo.folder), ImageUploader.filename(:original, {photo.image, photo})])
+        new_path = Path.join([get_folder_path(changes.photo.folder), changes.photo.image.file_name])
+
+        Logger.debug("Old path imageuploader: #{old_path}")
+        Logger.debug("New path: #{new_path}")
+        {:error, :not_implemented}
+
+        case File.rename(old_path, new_path) do
+          :ok -> {:ok, changes}
+          {:error, reason} -> {:error, reason}
+        end
       end)
     |> Repo.transaction()
   end
@@ -229,7 +250,7 @@ defmodule PhotoTagger.Gallery do
   end
 
   defp get_folder_path(folder) do
-    Path.join([Application.get_env(:waffle, :storage_dir_prefix), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
+    Path.join([Application.get_env(:waffle, :storage_dir_prefix), ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
   end
 
   def rename_folder(folder, new_folder) do

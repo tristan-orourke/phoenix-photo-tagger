@@ -25,10 +25,11 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   # Override the persisted filenames:
   def filename(:original, {file, scope}) do
-    file.file_name
+    Path.basename(file.file_name, Path.extname(file.file_name))
   end
   def filename(version, {file, _scope}) do
-    "#{file.file_name}.#{version}"
+    basename = Path.basename(file.file_name, Path.extname(file.file_name))
+    "#{basename}.#{version}"
   end
 
   # Override the storage directory:
