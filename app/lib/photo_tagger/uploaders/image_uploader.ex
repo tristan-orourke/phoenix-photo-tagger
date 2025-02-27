@@ -8,6 +8,7 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
   @extensions ~w(.jpg .jpeg .gif .png)
 
   def valid_extensions, do: @extensions
+  def versions, do: @versions
 
   # Whitelist file extensions:
   def validate({file, _}) do

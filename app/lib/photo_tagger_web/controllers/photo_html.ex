@@ -147,6 +147,8 @@ defmodule PhotoTaggerWeb.PhotoHTML do
         <.form action={~p"/photos/#{@photo.id}"} method="put">
           <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
           <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
+          <.input name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
+          <.input name="photo[description]" type="textarea" label="Description" value={@photo.description} />
           <.button class="mt-4">Save</.button>
         </.form>
         <%!-- <.link href={~p"/photos/#{@photo.id}/edit"}>Edit photo</.link> --%>

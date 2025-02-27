@@ -99,14 +99,19 @@ defmodule PhotoTagger.Gallery do
 
   """
   def create_photo(attrs \\ %{}) do
-    filename = attrs["image"].filename
-    Logger.debug("Filename with basename #{Path.basename(filename)}")
-    Logger.debug("Filename with basename #{Path.basename(filename)}")
     attrs = Map.put(attrs, "name", attrs["image"].filename)
-    Logger.debug("Creating photo with file: #{inspect(attrs["image"])}")
     %Photo{}
     |> Photo.changeset_create(attrs)
     |> Repo.insert()
+  end
+
+  defp photo_full_path(%Photo{} = photo, version \\ :original) do
+    # TODO if the image_uploader transform function changes, it might not be .jpg
+    ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".jpg")
+    Path.join([
+      get_folder_path(photo.folder),
+      ImageUploader.filename(version, {photo.image, photo}) <> ext
+    ])
   end
 
   @doc """
@@ -122,31 +127,32 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
-    changeset = Photo.changeset_update(photo, attrs)
-    new_name = if(Map.has_key?(attrs, :name), do: attrs[:name], else: photo.name)
-    Logger.debug("Photo in update photo #{inspect(photo)}")
-    new_image = %{photo.image | file_name: new_name}
-    # TODO: Avoid manipulating changeset directly
-    changeset = Map.put(changeset, :changes, Map.put(changeset.changes, :image, new_image))
-    Logger.debug("Updating photo with changes: #{inspect(changeset)}")
 
-    # changeset = if(Map.has_key?(attrs, :name), do: Map.put(changeset, :changes, Map.put(changeset.changes, :name, attrs[:name])), else: changeset)
-    # Logger.debug("Updating photo with changes: #{inspect(changeset)}")
+    # If the name is being updated, update the image file_name as well
+    attrs = if(Map.has_key?(attrs, "name"), do:
+      Map.put(attrs, "image", Map.replace(photo.image, :file_name, attrs["name"])),
+      else: attrs)
+    changeset = Photo.changeset_update(photo, attrs)
+
     Ecto.Multi.new()
     |> Ecto.Multi.update(:photo, changeset)
     |> Ecto.Multi.run(:update_file, fn _repo, changes ->
-        old_path = Path.join([get_folder_path(photo.folder), ImageUploader.filename(:original, {photo.image, photo})])
-        new_path = Path.join([get_folder_path(changes.photo.folder), changes.photo.image.file_name])
-
-        Logger.debug("Old path imageuploader: #{old_path}")
-        Logger.debug("New path: #{new_path}")
-        {:error, :not_implemented}
-
-        case File.rename(old_path, new_path) do
-          :ok -> {:ok, changes}
-          {:error, reason} -> {:error, reason}
-        end
+      Enum.map(ImageUploader.versions(), fn version ->
+        old_path = photo_full_path(photo, version)
+        new_path = photo_full_path(changes.photo, version)
+        {old_path, new_path}
       end)
+      |> Enum.filter(fn {old_path, new_path} -> old_path != new_path end)
+      # TODO: Before trying to move files, check that they all exist
+      |> Enum.reduce({:ok, changes}, fn
+        _paths, {:error, changes} -> {:error, changes} # Stop processing if there was an error
+        {old_path, new_path}, {:ok, changes} ->
+          case File.rename(old_path, new_path) do
+            :ok -> {:ok, changes}
+            {:error, reason} -> {:error, reason}
+          end
+      end)
+    end)
     |> Repo.transaction()
   end
 

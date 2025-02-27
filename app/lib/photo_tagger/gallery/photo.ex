@@ -9,6 +9,8 @@ defmodule PhotoTagger.Gallery.Photo do
     field :name, :string
     field :folder, :string
     field :image, PhotoTagger.Uploaders.ImageUploader.Type
+    field :description, :string
+    field :notes, :string
 
     timestamps(type: :utc_datetime)
     many_to_many :tags, Tag, join_through: "photos_tags", unique: true, preload_order: [asc: :name]
@@ -22,7 +24,7 @@ defmodule PhotoTagger.Gallery.Photo do
   @doc false
   def changeset_create(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :folder])
+    |> cast(attrs, [:name, :folder, :description, :notes])
     |> cast_attachments(attrs, [:image], allow_urls: true)
     |> validate_required([:name, :folder, :image])
     |> unique_constraint([:name, :folder])
@@ -30,7 +32,7 @@ defmodule PhotoTagger.Gallery.Photo do
 
   def changeset_update(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :folder])
+    |> cast(attrs, [:name, :image, :folder, :description, :notes])
     |> unique_constraint([:name, :folder])
   end
 end

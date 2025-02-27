@@ -116,12 +116,12 @@ defmodule PhotoTaggerWeb.PhotoController do
       {:ok, photo} ->
         conn
         |> put_flash(:info, "Photo updated successfully.")
-        |> redirect(to: ~p"/photos/#{photo}")
+        |> redirect(to: ~p"/photos/#{id}")
 
       {:error, failed_op, failed_value, changeset} ->
         conn
         |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
-        |> redirect(to: ~p"/photos/#{photo}")
+        |> redirect(to: ~p"/photos/#{id}")
     end
   end
 
