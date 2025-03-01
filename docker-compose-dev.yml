@@ -1,5 +1,5 @@
 services:
-  app:
+  dev_app:
     build: .
     ports:
       - "4000:4000"
@@ -14,7 +14,7 @@ services:
     working_dir: /app
     command: bash -c "mix setup && mix phx.server"
     # user: "1000:1000"
-  db:
+  dev_db:
     image: postgres:17.0
     environment:
       - POSTGRES_USER=postgres
@@ -23,4 +23,4 @@ services:
     - "database:/var/lib/postgresql/data"
 
 volumes:
-  database:
+  dev_database:
