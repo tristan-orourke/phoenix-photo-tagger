@@ -151,7 +151,13 @@ defmodule PhotoTaggerWeb.PhotoHTML do
           <.input name="photo[description]" type="textarea" label="Description" value={@photo.description} />
           <.button class="mt-4">Save</.button>
         </.form>
-        <%!-- <.link href={~p"/photos/#{@photo.id}/edit"}>Edit photo</.link> --%>
+      </:item>
+      <:item title="Delete">
+        <.form action={~p"/photos/#{@photo.id}"} method="delete"
+          onsubmit={"return confirm('Are you sure you want to permanently delete this photo?')"}
+        >
+          <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
+        </.form>
       </:item>
     </.list>
     """

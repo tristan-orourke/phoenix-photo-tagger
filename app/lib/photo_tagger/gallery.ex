@@ -169,6 +169,7 @@ defmodule PhotoTagger.Gallery do
 
   """
   def delete_photo(%Photo{} = photo) do
+    ImageUploader.delete({photo.image, photo})
     Repo.delete(photo)
   end
 
