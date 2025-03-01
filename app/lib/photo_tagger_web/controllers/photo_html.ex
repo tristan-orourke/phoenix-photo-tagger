@@ -1,6 +1,6 @@
 defmodule PhotoTaggerWeb.PhotoHTML do
   use PhotoTaggerWeb, :html
-  import PhotoTaggerWeb.PhotoController, only: [build_url: 3, build_url: 4]
+  import PhotoTaggerWeb.PhotoController, only: [build_url: 3, build_url: 4, build_cannonical_photo_url: 3, build_cannonical_photo_url: 4]
   alias PhotoTagger.Uploaders.ImageUploader
 
   embed_templates("photo_html/*")
@@ -104,7 +104,11 @@ defmodule PhotoTaggerWeb.PhotoHTML do
   def photo(assigns) do
     ~H"""
     <.list class="pb-4">
-      <:item title="Name"><%= @photo.name %></:item>
+      <:item title="Image">
+        <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
+          <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
+        </.link>
+      </:item>
       <:item title="Folder">
         <.link class={"#{@folder == @photo.folder && "font-bold"}"} href={build_url(@photo.folder, @photo, @tags)}><%= @photo.folder %></.link>
       </:item>
@@ -113,7 +117,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
           <%= for tag <- @photo.tags do %>
             <li >
               <.toggle_tag_button folder={@folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
-              <.form class="inline"  action={build_url(@folder, @photo, @tags, "/tags/#{tag.name}")} method="delete">
+              <.form class="inline"  action={build_cannonical_photo_url(@folder, @photo, @tags, "/tags/#{tag.name}")} method="delete">
                 <button type="submit"><.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900"/></button>
               </.form>
             </li>
@@ -123,24 +127,37 @@ defmodule PhotoTaggerWeb.PhotoHTML do
       <:item title="Add tags">
         <%= for tag <- @recommended_tags do %>
           <%= if tag not in @photo.tags do %>
-            <.form for={%{"tag" => ""}} action={build_url(@folder, @photo, @tags, "/tags")} method="post">
+            <.form for={%{"tag" => ""}} action={build_cannonical_photo_url(@folder, @photo, @tags, "/tags")} method="post">
               <input class="hidden" type="text" name="tag" value={tag.name} />
               <button class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800" type="submit"><%= tag.name %></button>
             </.form>
           <% end %>
         <% end %>
-        <.simple_form :let={f} for={%{"tag" => ""}} action={build_url(@folder, @photo, @tags, "/tags")} method="post">
+        <.simple_form :let={f} for={%{"tag" => ""}} action={build_cannonical_photo_url(@folder, @photo, @tags, "/tags")} method="post">
           <.input field={f[:tag]} type="text" label="Other" />
           <:actions>
             <.button type="submit">Add tag</.button>
           </:actions>
         </.simple_form>
       </:item>
-      <:item title="Image">
-        <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
+      <:item title="Download file">
+        <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
       </:item>
-      <:item title="Original file">
-        <.link href={ImageUploader.url({@photo.image, @photo}, :original)}><%= @photo.name %></.link>
+      <:item title="Edit">
+        <.form action={build_cannonical_photo_url(@folder, @photo, @tags)} method="put">
+          <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
+          <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
+          <.input name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
+          <.input name="photo[description]" type="textarea" label="Description" value={@photo.description} />
+          <.button class="mt-4">Save</.button>
+        </.form>
+      </:item>
+      <:item title="Delete">
+        <.form action={build_cannonical_photo_url(@folder, @photo, @tags)} method="delete"
+          onsubmit={"return confirm('Are you sure you want to permanently delete this photo?')"}
+        >
+          <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
+        </.form>
       </:item>
     </.list>
     """

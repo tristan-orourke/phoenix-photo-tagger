@@ -8,6 +8,7 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Gallery.Tag
   alias PhotoTagger.Gallery.PhotoTag
+  alias PhotoTagger.Uploaders.ImageUploader
   require Logger
 
   @doc """
@@ -99,10 +100,18 @@ defmodule PhotoTagger.Gallery do
   """
   def create_photo(attrs \\ %{}) do
     attrs = Map.put(attrs, "name", attrs["image"].filename)
-
     %Photo{}
-    |> Photo.changeset(attrs)
+    |> Photo.changeset_create(attrs)
     |> Repo.insert()
+  end
+
+  defp photo_full_path(%Photo{} = photo, version \\ :original) do
+    # TODO if the image_uploader transform function changes, it might not be .jpg
+    ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".jpg")
+    Path.join([
+      get_folder_path(photo.folder),
+      ImageUploader.filename(version, {photo.image, photo}) <> ext
+    ])
   end
 
   @doc """
@@ -118,9 +127,33 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
-    photo
-    |> Photo.changeset(attrs)
-    |> Repo.update()
+
+    # If the name is being updated, update the image file_name as well
+    attrs = if(Map.has_key?(attrs, "name"), do:
+      Map.put(attrs, "image", Map.replace(photo.image, :file_name, attrs["name"])),
+      else: attrs)
+    changeset = Photo.changeset_update(photo, attrs)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:photo, changeset)
+    |> Ecto.Multi.run(:update_file, fn _repo, changes ->
+      Enum.map(ImageUploader.versions(), fn version ->
+        old_path = photo_full_path(photo, version)
+        new_path = photo_full_path(changes.photo, version)
+        {old_path, new_path}
+      end)
+      |> Enum.filter(fn {old_path, new_path} -> old_path != new_path end)
+      # TODO: Before trying to move files, check that they all exist
+      |> Enum.reduce({:ok, changes}, fn
+        _paths, {:error, changes} -> {:error, changes} # Stop processing if there was an error
+        {old_path, new_path}, {:ok, changes} ->
+          case File.rename(old_path, new_path) do
+            :ok -> {:ok, changes}
+            {:error, reason} -> {:error, reason}
+          end
+      end)
+    end)
+    |> Repo.transaction()
   end
 
   @doc """
@@ -136,6 +169,7 @@ defmodule PhotoTagger.Gallery do
 
   """
   def delete_photo(%Photo{} = photo) do
+    ImageUploader.delete({photo.image, photo})
     Repo.delete(photo)
   end
 
@@ -144,12 +178,16 @@ defmodule PhotoTagger.Gallery do
 
   ## Examples
 
-      iex> change_photo(photo)
+      iex> new_photo_changeset(photo)
       %Ecto.Changeset{data: %Photo{}}
 
   """
-  def change_photo(%Photo{} = photo, attrs \\ %{}) do
-    Photo.changeset(photo, attrs)
+  def new_photo_changeset(%Photo{} = photo, attrs \\ %{}) do
+    Photo.changeset_create(photo, attrs)
+  end
+
+  def update_photo_changeset(%Photo{} = photo, attrs \\ %{}) do
+    Photo.changeset_update(photo, attrs)
   end
 
   def add_tag_to_photo(%Photo{} = photo, name) do
@@ -219,7 +257,7 @@ defmodule PhotoTagger.Gallery do
   end
 
   defp get_folder_path(folder) do
-    Path.join([Application.get_env(:waffle, :storage_dir_prefix), PhotoTagger.Uploaders.ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
+    Path.join([Application.get_env(:waffle, :storage_dir_prefix), ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
   end
 
   def rename_folder(folder, new_folder) do

@@ -31,8 +31,6 @@ defmodule PhotoTaggerWeb.Router do
     delete "/photos/:photo_id/tags/:tag", PhotoController, :remove_tag_main
     get "/folders/:folder/photos", PhotoController, :main
     get "/folders/:folder/photos/:photo_id", PhotoController, :main
-    post "/folders/:folder/photos/:photo_id/tags", PhotoController, :add_tag_main
-    delete "/folders/:folder/photos/:photo_id/tags/:tag", PhotoController, :remove_tag_main
   end
 
   # Other scopes may use custom stacks.

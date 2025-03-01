@@ -18,6 +18,19 @@ defmodule PhotoTaggerWeb.PhotoController do
     URI.to_string(uri)
   end
 
+  def build_cannonical_photo_url(folder, photo, tags, tail \\ nil) do
+    uri = URI.new!("/photos/#{photo.id}")
+    uri = if(tail, do: URI.append_path(uri, tail), else: uri)
+
+    tags_query = Plug.Conn.Query.encode(%{query_tags: tags})
+    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, tags_query), else: uri)
+
+    folder_query = Plug.Conn.Query.encode(%{folder: folder})
+    uri = if(folder, do: URI.append_query(uri, folder_query), else: uri)
+
+    URI.to_string(uri)
+  end
+
   def expand_state(%{folder: folder, tags: tags, photo_id: photo_id}) do
     filtered_photos =
       case {folder, tags} do
@@ -68,7 +81,7 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def new(conn, _params) do
-    changeset = Gallery.change_photo(%Photo{})
+    changeset = Gallery.new_photo_changeset(%Photo{})
     render(conn, :new, changeset: changeset)
   end
 
@@ -105,31 +118,41 @@ defmodule PhotoTaggerWeb.PhotoController do
   def edit(conn, %{"id" => id}) do
     photo = Gallery.get_photo!(id)
     photo = Repo.preload(photo, :tags)
-    changeset = Gallery.change_photo(photo)
+    changeset = Gallery.update_photo_changeset(photo)
     render(conn, :edit, photo: photo, changeset: changeset)
   end
 
-  def update(conn, %{"id" => id, "photo" => photo_params}) do
+  def update(conn, %{"id" => id, "photo" => photo_params} = params) do
     photo = Gallery.get_photo!(id)
+
+    tags = Map.get(params, "query_tags", [])
+    tags = if is_list(tags), do: tags, else: [tags]
+    url = build_url(Map.get(params, "folder"), photo, tags)
 
     case Gallery.update_photo(photo, photo_params) do
       {:ok, photo} ->
         conn
         |> put_flash(:info, "Photo updated successfully.")
-        |> redirect(to: ~p"/photos/#{photo}")
+        |> redirect(to: url)
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, :edit, photo: photo, changeset: changeset)
+      {:error, failed_op, failed_value, changeset} ->
+        conn
+        |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
+        |> redirect(to: url)
     end
   end
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{"id" => id} = params) do
     photo = Gallery.get_photo!(id)
     {:ok, _photo} = Gallery.delete_photo(photo)
 
+    tags = Map.get(params, "query_tags", [])
+    tags = if is_list(tags), do: tags, else: [tags]
+    url = build_url(Map.get(params, "folder"), nil, tags)
+
     conn
     |> put_flash(:info, "Photo deleted successfully.")
-    |> redirect(to: ~p"/photos")
+    |> redirect(to: url)
   end
 
   def add_tag_main(conn, %{"photo_id" => photo_id, "tag" => tag} = params) do
