@@ -19,7 +19,7 @@ ENV MIX_ENV="prod"
 # install dependencies and compile assets
 RUN mix deps.get
 RUN mix assets.setup
-RUN mix assets.build
+RUN mix assets.deploy
 
 # App Port
 # EXPOSE 4000
