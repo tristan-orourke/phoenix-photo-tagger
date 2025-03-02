@@ -56,9 +56,10 @@ defmodule PhotoTaggerWeb.PhotoController do
         MapSet.union(acc, MapSet.new(photo.tags))
       end)
       |> MapSet.to_list()
+      |> Enum.sort_by(& &1.name)
 
     all_folders = Gallery.list_folders_include_tags()
-    all_tags = Gallery.list_tags() |> Enum.map(&(&1.name))
+    all_tags = Gallery.list_tags()
 
     %{
       folder: folder,
@@ -76,6 +77,9 @@ defmodule PhotoTaggerWeb.PhotoController do
     tags = if is_list(tags), do: tags, else: [tags]
 
     state = expand_state(%{folder: Map.get(params, "folder"), tags: tags, photo_id: Map.get(params, "photo_id")})
+    Logger.debug("all_tags: #{inspect(state.all_tags |> Enum.map(&(&1.name)))}")
+    Logger.debug("recommended_tags: #{inspect(state.recommended_tags |> Enum.map(&(&1.name)))}")
+
     conn
     |> render(:main, state)
   end

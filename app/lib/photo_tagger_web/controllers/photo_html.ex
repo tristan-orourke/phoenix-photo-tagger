@@ -42,7 +42,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
         <li>
           <.link class={"#{@folder == nil && "font-bold"}"} href={build_url(nil, nil, [])}>All folders</.link>
           <ul class="list-disc list-inside">
-            <%= for tag <- @all_tags do %>
+            <%= for %{name: tag} <- @all_tags do %>
               <li>
                 <.link class={"#{@folder == nil && tag in @tags && "font-bold"}"} href={build_url(nil, nil, [tag])}><%= tag %></.link>
                 <%= if @folder == nil do %>

@@ -253,7 +253,7 @@ defmodule PhotoTagger.Gallery do
   end
 
   def list_tags() do
-    Repo.all(Tag)
+    Repo.all(from t in Tag, order_by: [asc: t.name])
   end
 
   defp get_folder_path(folder) do
