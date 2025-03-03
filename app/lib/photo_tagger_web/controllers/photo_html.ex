@@ -45,7 +45,8 @@ defmodule PhotoTaggerWeb.PhotoHTML do
         <ul class="list-disc list-inside">
           <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
             cond do
-              tag in @recommended_tag_names -> 1 # show recommended tags first
+              tag in @tags -> 0 # show currently selected tags first
+              tag in @recommended_tag_names -> 1 # then recommended tags
               true -> 2 # then all other tags
             end
           end) do %>
