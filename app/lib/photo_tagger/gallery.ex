@@ -278,6 +278,7 @@ defmodule PhotoTagger.Gallery do
   def delete_folder(folder) do
     Ecto.Multi.new()
     |> Ecto.Multi.delete_all(:photos, from(p in Photo, where: p.folder == ^folder))
+    |> Ecto.Multi.delete_all(:tags, from(t in Tag, where: fragment("? NOT IN (SELECT tag_id FROM photos_tags)", t.id)))
     |> Ecto.Multi.run(:delete_folder, fn _repo, _changes ->
         File.rm_rf(get_folder_path(folder))
       end)
