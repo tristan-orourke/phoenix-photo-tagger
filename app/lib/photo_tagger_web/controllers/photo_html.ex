@@ -19,11 +19,11 @@ defmodule PhotoTaggerWeb.PhotoHTML do
         true -> assigns.tags ++ [assigns.toggled_tag]
       end
     assigns = assign(assigns, :href, build_url(assigns.folder, assigns.photo, tags_list))
-        #{if(@toggled_tag in @tags, do: "bg-red-500 text-black hover:text-black", else: "bg-green-500 text-white hover:text-white")}
     ~H"""
       <.link class={"
         #{@toggled_tag in @tags && "font-bold"}
-        rounded-full px-1"} href={@href}>
+        #{if(@toggled_tag in @tags, do: "bg-red-400 text-black hover:text-black", else: "bg-green-500 text-white hover:text-white")}
+        rounded-full px-1 no-underline"} href={@href}>
         <%= render_slot(@inner_block) %>
       </.link>
     """
@@ -31,6 +31,7 @@ defmodule PhotoTaggerWeb.PhotoHTML do
 
   attr(:all_folders, :list, required: true)
   attr(:all_tags, :list, required: true)
+  attr(:recommended_tags, :list, required: true)
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
 
@@ -56,7 +57,14 @@ defmodule PhotoTaggerWeb.PhotoHTML do
           <li>
             <.link class={"#{folder.name == @folder && "font-bold"}"} href={build_url(folder.name, nil, [])}><%= folder.name %></.link>
             <ul class="list-disc list-inside">
-              <%= for tag <- folder.tags do %>
+              <%= for tag <- Enum.sort_by(folder.tags, fn tag ->
+                recommended_tags = Enum.map(@recommended_tags, & &1.name)
+                cond do
+                  tag in @tags -> 0 # Currently selected tags should appear first
+                  tag in recommended_tags -> 1 # followed by recommended tags
+                  true -> 2 # then all other tags
+                end
+              end) do %>
                 <li>
                   <.link class={"#{@folder == folder.name && tag in @tags && "font-bold"}"} href={build_url(folder.name, nil, [tag])}><%= tag %></.link>
                   <%= if @folder == folder.name do %>
