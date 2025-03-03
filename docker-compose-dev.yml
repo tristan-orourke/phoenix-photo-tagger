@@ -2,7 +2,7 @@ services:
   dev_app:
     build: .
     ports:
-      - "4000:4000"
+      - 4001:4000
     volumes:
       - ./app:/app
     environment:
@@ -10,7 +10,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=db
     depends_on:
-      - db
+      - dev_db
     working_dir: /app
     command: bash -c "mix setup && mix phx.server"
     # user: "1000:1000"
@@ -20,7 +20,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     volumes:
-    - "database:/var/lib/postgresql/data"
+    - dev_database:/var/lib/postgresql/data
 
 volumes:
   dev_database:
