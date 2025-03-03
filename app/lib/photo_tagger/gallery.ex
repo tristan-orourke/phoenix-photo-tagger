@@ -213,6 +213,10 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
+  def get_tag_by_name!(name) do
+    Repo.get_by!(Tag, name: name)
+  end
+
   defp get_or_create_tag(name) do
     Repo.get_by(Tag, name: name) ||
       maybe_insert_tag(name)
@@ -283,5 +287,14 @@ defmodule PhotoTagger.Gallery do
         File.rm_rf(get_folder_path(folder))
       end)
     |> Repo.transaction()
+  end
+
+  def update_tag(%Tag{} = tag, attrs) do
+    Tag.changeset(tag, attrs)
+    |> Repo.update()
+  end
+
+  def delete_tag(%Tag{} = tag) do
+    Repo.delete(tag)
   end
 end
