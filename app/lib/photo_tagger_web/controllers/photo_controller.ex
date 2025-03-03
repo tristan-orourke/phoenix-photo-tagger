@@ -165,7 +165,6 @@ defmodule PhotoTaggerWeb.PhotoController do
 
     tags = Map.get(params, "query_tags", [])
     tags = if is_list(tags), do: tags, else: [tags]
-    tags = Enum.uniq(tags ++ [tag])
 
     conn
     |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
