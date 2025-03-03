@@ -43,10 +43,16 @@ defmodule PhotoTaggerWeb.PhotoHTML do
         <li>
           <.link class={"#{@folder == nil && "font-bold"}"} href={build_url(nil, nil, [])}>All folders</.link>
           <ul class="list-disc list-inside">
-            <%= for %{name: tag} <- @all_tags do %>
+            <% recommended_tag_names = Enum.map(@recommended_tags, & &1.name) %>
+            <%= for %{name: tag} <- Enum.sort_by(@all_tags, fn %{name: tag} ->
+              cond do
+                tag in recommended_tag_names -> 1 # show recommended tags first
+                true -> 2 # then all other tags
+              end
+            end) do %>
               <li>
                 <.link class={"#{@folder == nil && tag in @tags && "font-bold"}"} href={build_url(nil, nil, [tag])}><%= tag %></.link>
-                <%= if @folder == nil do %>
+                <%= if @folder == nil and tag in recommended_tag_names do %>
                     <.toggle_tag_button folder={nil} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
                   <% end %>
               </li>
@@ -57,11 +63,16 @@ defmodule PhotoTaggerWeb.PhotoHTML do
           <li>
             <.link class={"#{folder.name == @folder && "font-bold"}"} href={build_url(folder.name, nil, [])}><%= folder.name %></.link>
             <ul class="list-disc list-inside">
-              <%= for tag <- folder.tags do %>
-                <% recommended_tag_names = Enum.map(@recommended_tags, & &1.name) %>
+              <% recommended_tag_names = Enum.map(@recommended_tags, & &1.name) %>
+              <%= for tag <- Enum.sort_by(folder.tags, fn tag ->
+                cond do
+                  tag in recommended_tag_names -> 1 # show recommended tags first
+                  true -> 2 # then all other tags
+                end
+              end) do %>
                 <li>
                   <.link class={"#{@folder == folder.name && tag in @tags && "font-bold"}"} href={build_url(folder.name, nil, [tag])}><%= tag %></.link>
-                  <%= if @folder == folder.name && tag in recommended_tag_names do %>
+                  <%= if @folder == folder.name and tag in recommended_tag_names do %>
                     <.toggle_tag_button folder={folder.name} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
                   <% end %>
                 </li>
