@@ -57,17 +57,16 @@ defmodule PhotoTaggerWeb.PhotoHTML do
           <li>
             <.link class={"#{folder.name == @folder && "font-bold"}"} href={build_url(folder.name, nil, [])}><%= folder.name %></.link>
             <ul class="list-disc list-inside">
+              <% recommended_tag_names = Enum.map(@recommended_tags, & &1.name) %>
               <%= for tag <- Enum.sort_by(folder.tags, fn tag ->
-                recommended_tags = Enum.map(@recommended_tags, & &1.name)
                 cond do
-                  tag in @tags -> 0 # Currently selected tags should appear first
-                  tag in recommended_tags -> 1 # followed by recommended tags
+                  tag in recommended_tag_names -> 1 # show recommended tags first
                   true -> 2 # then all other tags
                 end
               end) do %>
                 <li>
                   <.link class={"#{@folder == folder.name && tag in @tags && "font-bold"}"} href={build_url(folder.name, nil, [tag])}><%= tag %></.link>
-                  <%= if @folder == folder.name do %>
+                  <%= if @folder == folder.name and tag in recommended_tag_names do %>
                     <.toggle_tag_button folder={folder.name} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
                   <% end %>
                 </li>
