@@ -42,3 +42,4 @@ import "phoenix_html"
 // >> liveSocket.disableLatencySim()
 // window.liveSocket = liveSocket
 
+import "./remember_scroll_positions.js"
