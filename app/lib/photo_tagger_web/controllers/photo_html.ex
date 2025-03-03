@@ -29,6 +29,40 @@ defmodule PhotoTaggerWeb.PhotoHTML do
     """
   end
 
+  attr(:nav_tags, :list, required: true)
+  attr(:recommended_tags, :list, required: true)
+  attr(:nav_folder, :string, default: nil)
+  attr(:current_folder, :string, default: nil)
+  attr(:tags, :list, default: [])
+  def folder_nav_item(assigns) do
+    assigns = assign(assigns, :is_current_folder, assigns.current_folder == assigns.nav_folder)
+    assigns = assign(assigns, :recommended_tag_names, Enum.map(assigns.recommended_tags, & &1.name))
+    ~H"""
+      <li>
+        <.link class={"#{@is_current_folder && "font-bold"}"} href={build_url(@nav_folder, nil, [])}>
+          <%= if(@nav_folder, do: @nav_folder, else: "All folders") %>
+        </.link>
+        <ul class="list-disc list-inside">
+          <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
+            cond do
+              tag in @recommended_tag_names -> 1 # show recommended tags first
+              true -> 2 # then all other tags
+            end
+          end) do %>
+            <li>
+              <.link class={"#{@is_current_folder && tag in @tags && "font-bold"}"} href={build_url(@nav_folder, nil, [tag])}><%= tag %></.link>
+              <%= if @is_current_folder and tag in @recommended_tag_names do %>
+                  <.toggle_tag_button folder={@nav_folder} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
+                <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </li>
+    """
+  end
+
+
+
   attr(:all_folders, :list, required: true)
   attr(:all_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
@@ -40,45 +74,9 @@ defmodule PhotoTaggerWeb.PhotoHTML do
     <div>
       <h2 class>Folders</h2>
       <ul class="space-y-2">
-        <li>
-          <.link class={"#{@folder == nil && "font-bold"}"} href={build_url(nil, nil, [])}>All folders</.link>
-          <ul class="list-disc list-inside">
-            <% recommended_tag_names = Enum.map(@recommended_tags, & &1.name) %>
-            <%= for %{name: tag} <- Enum.sort_by(@all_tags, fn %{name: tag} ->
-              cond do
-                tag in recommended_tag_names -> 1 # show recommended tags first
-                true -> 2 # then all other tags
-              end
-            end) do %>
-              <li>
-                <.link class={"#{@folder == nil && tag in @tags && "font-bold"}"} href={build_url(nil, nil, [tag])}><%= tag %></.link>
-                <%= if @folder == nil and tag in recommended_tag_names do %>
-                    <.toggle_tag_button folder={nil} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
-                  <% end %>
-              </li>
-            <% end %>
-          </ul>
-        </li>
+        <.folder_nav_item current_folder={@folder} nav_folder={nil} nav_tags={Enum.map(@all_tags, & &1.name)} recommended_tags={@recommended_tags} tags={@tags} />
         <%= for folder <- @all_folders do %>
-          <li>
-            <.link class={"#{folder.name == @folder && "font-bold"}"} href={build_url(folder.name, nil, [])}><%= folder.name %></.link>
-            <ul class="list-disc list-inside">
-              <% recommended_tag_names = Enum.map(@recommended_tags, & &1.name) %>
-              <%= for tag <- Enum.sort_by(folder.tags, fn tag ->
-                cond do
-                  tag in recommended_tag_names -> 1 # show recommended tags first
-                  true -> 2 # then all other tags
-                end
-              end) do %>
-                <li>
-                  <.link class={"#{@folder == folder.name && tag in @tags && "font-bold"}"} href={build_url(folder.name, nil, [tag])}><%= tag %></.link>
-                  <%= if @folder == folder.name and tag in recommended_tag_names do %>
-                    <.toggle_tag_button folder={folder.name} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
-                  <% end %>
-                </li>
-              <% end %>
-            </ul>
-          </li>
+          <.folder_nav_item current_folder={@folder} nav_folder={folder.name} nav_tags={folder.tags} recommended_tags={@recommended_tags} tags={@tags} />
         <% end %>
       </ul>
     </div>
