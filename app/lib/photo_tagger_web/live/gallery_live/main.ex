@@ -167,7 +167,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <%= for tag <- @photo.tags do %>
             <li >
               <.toggle_tag_button folder={@folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
-              <.form class="inline"  action={build_cannonical_photo_url(@folder, @photo, @tags, "/tags/#{tag.name}")} method="delete">
+              <.form class="inline" phx-submit="remove_tag">
+                <input class="hidden" type="text" name="photo_id" value={@photo.id} />
+                <input class="hidden" type="text" name="tag" value={tag.name} />
                 <button type="submit"><.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900"/></button>
               </.form>
             </li>
@@ -226,6 +228,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
+    {:noreply, refresh_socket(socket)}
+  end
+
+  def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
+    photo = Gallery.get_photo!(photo_id)
+    {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
     {:noreply, refresh_socket(socket)}
   end
 
