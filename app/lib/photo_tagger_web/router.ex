@@ -19,18 +19,18 @@ defmodule PhotoTaggerWeb.Router do
 
     resources "/photos", PhotoController, only: [:new, :create, :edit, :update, :delete]
 
-    get "/", PhotoController, :main
-    get "/folders", PhotoController, :main
-    get "/folders/:folder", PhotoController, :main
+    live "/", GalleryLive.Main
+    live "/folders", GalleryLive.Main
+    live "/folders/:folder", GalleryLive.Main
     get "/edit-folders", PhotoController, :edit_folders
     post "/folders/:folder/rename", PhotoController, :rename_folder
     delete "/folders/:folder", PhotoController, :delete_folder
-    get "/photos", PhotoController, :main
-    get "/photos/:photo_id", PhotoController, :main
+    live "/photos", GalleryLive.Main
+    live "/photos/:photo_id", GalleryLive.Main
     post "/photos/:photo_id/tags", PhotoController, :add_tag_main
     delete "/photos/:photo_id/tags/:tag", PhotoController, :remove_tag_main
-    get "/folders/:folder/photos", PhotoController, :main
-    get "/folders/:folder/photos/:photo_id", PhotoController, :main
+    live "/folders/:folder/photos", GalleryLive.Main
+    live "/folders/:folder/photos/:photo_id", GalleryLive.Main
     get "/edit-tags", PhotoController, :edit_tags
     put "/tags/:tag", PhotoController, :update_tag
     delete "/tags/:tag", PhotoController, :delete_tag
