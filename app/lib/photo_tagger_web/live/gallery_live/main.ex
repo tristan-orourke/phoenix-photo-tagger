@@ -208,9 +208,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </.form>
       </:item>
       <:item title="Delete">
-        <.form action={build_cannonical_photo_url(@folder, @photo, @tags)} method="delete"
+        <.form phx-submit="delete_photo"
           onsubmit={"return confirm('Are you sure you want to permanently delete this photo?')"}
         >
+          <input class="hidden" type="text" name="id" value={@photo.id} />
           <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
         </.form>
       </:item>
@@ -252,6 +253,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
         }
     end
+  end
+
+  def handle_event("delete_photo", %{"id" => id}, socket) do
+    photo = Gallery.get_photo!(id)
+    {:ok, _photo} = Gallery.delete_photo(photo)
+    {:noreply, push_patch(socket, to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
+      |> put_flash(:info, "Photo deleted successfully.")
+    }
   end
 
 end
