@@ -177,13 +177,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Add tags">
         <%= for tag <- @recommended_tags do %>
           <%= if tag not in @photo.tags do %>
-            <.form for={%{"tag" => ""}} action={build_cannonical_photo_url(@folder, @photo, @tags, "/tags")} method="post">
+            <.form for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+              <input class="hidden" type="text" name="photo_id" value={@photo.id} />
               <input class="hidden" type="text" name="tag" value={tag.name} />
               <button class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800" type="submit"><%= tag.name %></button>
             </.form>
           <% end %>
         <% end %>
-        <.simple_form :let={f} for={%{"tag" => ""}} action={build_cannonical_photo_url(@folder, @photo, @tags, "/tags")} method="post">
+        <.simple_form :let={f} for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
           <.input field={f[:tag]} type="text" label="Other" />
           <:actions>
             <.button type="submit">Add tag</.button>
@@ -211,6 +213,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
     </.list>
     """
+  end
+
+  def refresh_socket(socket) do
+    folder = socket.assigns.folder
+    tags = socket.assigns.tags
+    photo_id = if(socket.assigns.photo, do: socket.assigns.photo.id, else: nil)
+    expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
+    assign(socket, expanded_state)
+  end
+
+  def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
+    photo = Gallery.get_photo!(photo_id)
+    {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
+    {:noreply, refresh_socket(socket)}
   end
 
 end
