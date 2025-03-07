@@ -198,7 +198,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
       </:item>
       <:item title="Edit">
-        <.form action={build_cannonical_photo_url(@folder, @photo, @tags)} method="put">
+        <.form phx-submit="update_photo">
+          <input class="hidden" type="text" name="id" value={@photo.id} />
           <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
           <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
           <.input name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
@@ -235,6 +236,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
     {:noreply, refresh_socket(socket)}
+  end
+
+  def handle_event("update_photo", %{"id" => id, "photo" => photo_params}, socket) do
+    photo = Gallery.get_photo!(id)
+
+    case Gallery.update_photo(photo, photo_params) do
+      {:ok, photo} ->
+        {:noreply, refresh_socket(socket)
+          |> put_flash(:info, "Photo updated successfully.")
+        }
+
+      {:error, failed_op, failed_value, changeset} ->
+        {:noreply, refresh_socket(socket)
+          |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
+        }
+    end
   end
 
 end
