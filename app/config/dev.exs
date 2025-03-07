@@ -4,7 +4,7 @@ import Config
 config :photo_tagger, PhotoTagger.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "db", # This is the name of the docker service
+  hostname: "dev_db", # This is the name of the docker service
   database: "photo_tagger_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
