@@ -40,6 +40,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
+
+    update_photo_form =
+      Gallery.update_photo_changeset(expanded_state.photo)
+      |> Phoenix.Component.to_form()
+    expanded_state = %{expanded_state | update_photo_form: update_photo_form}
+    Logger.debug(expanded_state)
     {:noreply, assign(socket, expanded_state)}
   end
 
@@ -212,13 +218,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
       </:item>
       <:item title="Edit">
-        <.form id="update-photo-form" phx-submit="update_photo">
-          <input id="update-photo-id" class="hidden" type="text" name="id" value={@photo.id} />
-          <.input id="update-photo-name" name="photo[name]" type="text" label="Name" value={@photo.name}/>
-          <.input id="update-photo-folder" name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
-          <.input id="update-photo-notes" name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
-          <.input id="update-photo-description" name="photo[description]" type="textarea" label="Description" value={@photo.description} />
-          <.button id="update-photo-submit" class="mt-4">Save</.button>
+        <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
+          <input class="hidden" type="text" name="id" value={@update_photo_form.id} />
+          <.input field={@update_photo_form.name} name="photo[name]" type="text" label="Name"/>
+          <.input field={@update_photo_form.folder} name="photo[folder]" type="text" label="Folder"/>
+          <.input field={@update_photo_form.notes} name="photo[notes]" type="textarea" label="Notes"/>
+          <.input field={@update_photo_form.description} name="photo[description]" type="textarea" label="Description"/>
+          <.button class="mt-4">Save</.button>
         </.form>
       </:item>
       <:item title="Delete">
