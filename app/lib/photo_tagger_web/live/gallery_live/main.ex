@@ -177,7 +177,24 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </ul>
       </:item>
       <:item title="Add tags">
-        <div class="flex flex-wrap">
+        <div>
+          <.form for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+            <input class="hidden" type="text" name="photo_id" value={@photo.id} />
+            <div class="flex items-center space-x-4">
+              <%!-- TODO: convert this simple inline form to a component --%>
+              <%!-- <.label for="add_any_tag">Add tag</.label> --%>
+              <input
+                type="text"
+                name="tag"
+                id="add_any_tag"
+                Placeholder="Add tag"
+                class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+              />
+              <.button type="submit">Submit</.button>
+            </div>
+          </.form>
+        </div>
+        <div class="flex flex-wrap mt-2">
         <%= for tag <- @recommended_tags do %>
           <%= if tag not in @photo.tags do %>
             <div class="mr-2">
@@ -190,13 +207,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <% end %>
         <% end %>
         </div>
-        <.simple_form :let={f} for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
-          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
-          <.input field={f[:tag]} type="text" label="Other" />
-          <:actions>
-            <.button type="submit">Add tag</.button>
-          </:actions>
-        </.simple_form>
       </:item>
       <:item title="Download file">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
