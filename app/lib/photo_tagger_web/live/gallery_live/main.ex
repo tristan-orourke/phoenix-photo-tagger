@@ -212,13 +212,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
       </:item>
       <:item title="Edit">
-        <.form phx-submit="update_photo">
-          <input class="hidden" type="text" name="id" value={@photo.id} />
-          <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
-          <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
-          <.input name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
-          <.input name="photo[description]" type="textarea" label="Description" value={@photo.description} />
-          <.button class="mt-4">Save</.button>
+        <.form id="update-photo-form" phx-submit="update_photo">
+          <input id="update-photo-id" class="hidden" type="text" name="id" value={@photo.id} />
+          <.input id="update-photo-name" name="photo[name]" type="text" label="Name" value={@photo.name}/>
+          <.input id="update-photo-folder" name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
+          <.input id="update-photo-notes" name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
+          <.input id="update-photo-description" name="photo[description]" type="textarea" label="Description" value={@photo.description} />
+          <.button id="update-photo-submit" class="mt-4">Save</.button>
         </.form>
       </:item>
       <:item title="Delete">
