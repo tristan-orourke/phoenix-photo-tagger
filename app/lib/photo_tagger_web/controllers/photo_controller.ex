@@ -18,19 +18,6 @@ defmodule PhotoTaggerWeb.PhotoController do
     URI.to_string(uri)
   end
 
-  def build_cannonical_photo_url(folder, photo, tags, tail \\ nil) do
-    uri = URI.new!("/photos/#{photo.id}")
-    uri = if(tail, do: URI.append_path(uri, tail), else: uri)
-
-    tags_query = Plug.Conn.Query.encode(%{query_tags: tags})
-    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, tags_query), else: uri)
-
-    folder_query = Plug.Conn.Query.encode(%{folder: folder})
-    uri = if(folder, do: URI.append_query(uri, folder_query), else: uri)
-
-    URI.to_string(uri)
-  end
-
   def expand_state(%{folder: folder, tags: tags, photo_id: photo_id}) do
     filtered_photos =
       case {folder, tags} do
