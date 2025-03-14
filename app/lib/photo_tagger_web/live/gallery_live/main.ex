@@ -3,10 +3,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   require Logger
 
   alias PhotoTagger.Gallery
+  alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Uploaders.ImageUploader
   import PhotoTaggerWeb.PhotoController, only: [
-    build_url: 3, build_url: 4,
-    build_cannonical_photo_url: 3, build_cannonical_photo_url: 4,
+    build_url: 3,
     expand_state: 1
   ]
 
@@ -44,7 +44,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   attr(:folder, :string, default: nil)
-  attr(:photo, :map, default: nil)
+  attr(:photo, Photo, default: nil)
   attr(:tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
   slot(:inner_block)
@@ -91,7 +91,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <li>
               <.link class={"#{@is_current_folder && tag in @tags && "font-bold"}"} patch={build_url(@nav_folder, nil, [tag])}><%= tag %></.link>
               <%= if @is_current_folder and tag in @recommended_tag_names do %>
-                  <.toggle_tag_button folder={@nav_folder} photo={nil} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
+                  <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
                 <% end %>
             </li>
           <% end %>
@@ -113,7 +113,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div>
       <h2 class>Folders</h2>
       <ul class="space-y-2">
-        <.folder_nav_item current_folder={@folder} nav_folder={nil} nav_tags={Enum.map(@all_tags, & &1.name)} recommended_tags={@recommended_tags} tags={@tags} />
+        <.folder_nav_item current_folder={@folder} nav_tags={Enum.map(@all_tags, & &1.name)} recommended_tags={@recommended_tags} tags={@tags} />
         <%= for folder <- @all_folders do %>
           <.folder_nav_item current_folder={@folder} nav_folder={folder.name} nav_tags={folder.tags} recommended_tags={@recommended_tags} tags={@tags} />
         <% end %>
@@ -153,7 +153,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def photo(assigns) do
     ~H"""
-    <.list class="pb-4">
+    <.list>
       <:item title="Image">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
           <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
@@ -199,7 +199,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Edit">
         <.form phx-submit="update_photo">
-          <input class="hidden" type="text" name="id" value={@photo.id} />
+          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
           <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
           <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
           <.input name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
@@ -211,7 +211,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.form phx-submit="delete_photo"
           onsubmit={"return confirm('Are you sure you want to permanently delete this photo?')"}
         >
-          <input class="hidden" type="text" name="id" value={@photo.id} />
+          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
           <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
         </.form>
       </:item>
@@ -239,23 +239,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply, refresh_socket(socket)}
   end
 
-  def handle_event("update_photo", %{"id" => id, "photo" => photo_params}, socket) do
+  def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
     photo = Gallery.get_photo!(id)
 
     case Gallery.update_photo(photo, photo_params) do
-      {:ok, photo} ->
+      {:ok, _photo} ->
         {:noreply, refresh_socket(socket)
           |> put_flash(:info, "Photo updated successfully.")
         }
 
-      {:error, failed_op, failed_value, changeset} ->
+      {:error, failed_op, failed_value, _changeset} ->
         {:noreply, refresh_socket(socket)
           |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
         }
     end
   end
 
-  def handle_event("delete_photo", %{"id" => id}, socket) do
+  def handle_event("delete_photo", %{"photo_id" => id}, socket) do
     photo = Gallery.get_photo!(id)
     {:ok, _photo} = Gallery.delete_photo(photo)
     {:noreply, push_patch(socket, to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
