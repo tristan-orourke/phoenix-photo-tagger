@@ -72,18 +72,6 @@ defmodule PhotoTaggerWeb.PhotoController do
     }
   end
 
-  def main(conn, params) do
-    tags = Map.get(params, "query_tags", [])
-    tags = if is_list(tags), do: tags, else: [tags]
-
-    state = expand_state(%{folder: Map.get(params, "folder"), tags: tags, photo_id: Map.get(params, "photo_id")})
-    Logger.debug("all_tags: #{inspect(state.all_tags |> Enum.map(&(&1.name)))}")
-    Logger.debug("recommended_tags: #{inspect(state.recommended_tags |> Enum.map(&(&1.name)))}")
-
-    conn
-    |> render(:main, state)
-  end
-
   def new(conn, _params) do
     changeset = Gallery.new_photo_changeset(%Photo{})
     render(conn, :new, changeset: changeset)
@@ -124,80 +112,5 @@ defmodule PhotoTaggerWeb.PhotoController do
     photo = Repo.preload(photo, :tags)
     changeset = Gallery.update_photo_changeset(photo)
     render(conn, :edit, photo: photo, changeset: changeset)
-  end
-
-  def update(conn, %{"id" => id, "photo" => photo_params} = params) do
-    photo = Gallery.get_photo!(id)
-
-    tags = Map.get(params, "query_tags", [])
-    tags = if is_list(tags), do: tags, else: [tags]
-    url = build_url(Map.get(params, "folder"), photo, tags)
-
-    case Gallery.update_photo(photo, photo_params) do
-      {:ok, _photo} ->
-        conn
-        |> put_flash(:info, "Photo updated successfully.")
-        |> redirect(to: url)
-
-      {:error, failed_op, failed_value, _changeset} ->
-        conn
-        |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
-        |> redirect(to: url)
-    end
-  end
-
-  def delete(conn, %{"id" => id} = params) do
-    photo = Gallery.get_photo!(id)
-    {:ok, _photo} = Gallery.delete_photo(photo)
-
-    tags = Map.get(params, "query_tags", [])
-    tags = if is_list(tags), do: tags, else: [tags]
-    url = build_url(Map.get(params, "folder"), nil, tags)
-
-    conn
-    |> put_flash(:info, "Photo deleted successfully.")
-    |> redirect(to: url)
-  end
-
-  def add_tag_main(conn, %{"photo_id" => photo_id, "tag" => tag} = params) do
-    photo = Gallery.get_photo!(photo_id)
-    {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
-
-    tags = Map.get(params, "query_tags", [])
-    tags = if is_list(tags), do: tags, else: [tags]
-
-    conn
-    |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
-  end
-
-  def remove_tag_main(conn, %{"photo_id" => photo_id, "tag" => tag} = params) do
-    photo = Gallery.get_photo!(photo_id)
-    {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
-
-    tags = Map.get(params, "query_tags", [])
-    tags = if is_list(tags), do: tags, else: [tags]
-    tags = Enum.filter(tags, &(&1 != tag))
-
-    conn
-    |> redirect(to: build_url(Map.get(params, "folder"), photo, tags))
-  end
-
-
-  def add_tag(conn, %{"id" => id, "tag" => tag}) do
-    photo = Gallery.get_photo!(id)
-    {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
-
-    conn
-    |> put_flash(:info, "Tag added successfully.")
-    |> redirect(to: ~p"/photos/#{photo}/edit")
-  end
-
-  def remove_tag(conn, %{"id" => id, "tag" => tag}) do
-    photo = Gallery.get_photo!(id)
-    Gallery.remove_tag_from_photo(photo, tag)
-
-    conn
-    |> put_flash(:info, "Tag removed successfully.")
-    |> redirect(to: ~p"/photos/#{photo}/edit")
   end
 end

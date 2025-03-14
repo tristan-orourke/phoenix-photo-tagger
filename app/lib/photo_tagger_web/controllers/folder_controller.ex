@@ -8,7 +8,7 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :edit_folders, folders: folders)
   end
 
-  def rename_folder(conn, %{"folder" => folder, "new_name" => new_name}) do
+  def rename(conn, %{"folder" => folder, "new_name" => new_name}) do
     result = Gallery.rename_folder(folder, new_name)
     case result do
       {:ok, _} ->
