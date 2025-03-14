@@ -134,12 +134,12 @@ defmodule PhotoTaggerWeb.PhotoController do
     url = build_url(Map.get(params, "folder"), photo, tags)
 
     case Gallery.update_photo(photo, photo_params) do
-      {:ok, photo} ->
+      {:ok, _photo} ->
         conn
         |> put_flash(:info, "Photo updated successfully.")
         |> redirect(to: url)
 
-      {:error, failed_op, failed_value, changeset} ->
+      {:error, failed_op, failed_value, _changeset} ->
         conn
         |> put_flash(:error, "Failed to update photo. Error #{failed_value} in step #{failed_op}.")
         |> redirect(to: url)
@@ -199,61 +199,5 @@ defmodule PhotoTaggerWeb.PhotoController do
     conn
     |> put_flash(:info, "Tag removed successfully.")
     |> redirect(to: ~p"/photos/#{photo}/edit")
-  end
-
-  def edit_folders(conn, _params) do
-    folders = Gallery.list_folders()
-    render(conn, :edit_folders, folders: folders)
-  end
-
-  def rename_folder(conn, %{"folder" => folder, "new_name" => new_name}) do
-    result = Gallery.rename_folder(folder, new_name)
-    case result do
-      {:ok, _} ->
-        conn
-        |> put_flash(:info, "Folder renamed successfully.")
-        |> redirect(to: ~p"/edit-folders")
-
-      {:error, failed_op, failed_value, _changes_so_far} ->
-        conn
-        |> put_flash(:error, "Failed to rename folder! Error #{failed_value} in step #{failed_op}.")
-        |> redirect(to: ~p"/edit-folders")
-    end
-  end
-
-  def delete_folder(conn, %{"folder" => folder}) do
-    result = Gallery.delete_folder(folder)
-    case result do
-      {:ok, _} ->
-        conn
-        |> put_flash(:info, "Folder deleted successfully.")
-        |> redirect(to: ~p"/edit-folders")
-
-      {:error, failed_op, failed_value, _changes_so_far} ->
-        conn
-        |> put_flash(:error, "Failed to delete folder! Error #{failed_value} in step #{failed_op}.")
-        |> redirect(to: ~p"/edit-folders")
-    end
-  end
-
-  def edit_tags(conn, _params) do
-    tags = Gallery.list_tags()
-    render(conn, :edit_tags, tags: tags)
-  end
-
-  def update_tag(conn, %{"tag" => tag_name, "tag_updates" => tag_params}) do
-    tag = Gallery.get_tag_by_name!(tag_name)
-    {:ok, _tag} = Gallery.update_tag(tag, tag_params)
-    conn
-    |> put_flash(:info, "Tag updated successfully.")
-    |> redirect(to: ~p"/edit-tags")
-  end
-
-  def delete_tag(conn, %{"tag" => tag_name}) do
-    tag = Gallery.get_tag_by_name!(tag_name)
-    {:ok, _tag} = Gallery.delete_tag(tag)
-    conn
-    |> put_flash(:info, "Tag deleted successfully.")
-    |> redirect(to: ~p"/edit-tags")
   end
 end

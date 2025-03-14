@@ -22,18 +22,18 @@ defmodule PhotoTaggerWeb.Router do
     live "/", GalleryLive.Main
     live "/folders", GalleryLive.Main
     live "/folders/:folder", GalleryLive.Main
-    get "/edit-folders", PhotoController, :edit_folders
-    post "/folders/:folder/rename", PhotoController, :rename_folder
-    delete "/folders/:folder", PhotoController, :delete_folder
+    get "/edit-folders", FolderController, :edit_folders
+    post "/folders/:folder/rename", FolderController, :rename
+    delete "/folders/:folder", FolderController, :delete
     live "/photos", GalleryLive.Main
     live "/photos/:photo_id", GalleryLive.Main
     post "/photos/:photo_id/tags", PhotoController, :add_tag_main
     delete "/photos/:photo_id/tags/:tag", PhotoController, :remove_tag_main
     live "/folders/:folder/photos", GalleryLive.Main
     live "/folders/:folder/photos/:photo_id", GalleryLive.Main
-    get "/edit-tags", PhotoController, :edit_tags
-    put "/tags/:tag", PhotoController, :update_tag
-    delete "/tags/:tag", PhotoController, :delete_tag
+    get "/edit-tags", TagController, :edit_tags
+    put "/tags/:tag", TagController, :update
+    delete "/tags/:tag", TagController, :delete
   end
 
   # Other scopes may use custom stacks.
