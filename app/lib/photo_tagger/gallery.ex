@@ -105,7 +105,7 @@ defmodule PhotoTagger.Gallery do
     |> Repo.insert()
   end
 
-  defp photo_full_path(%Photo{} = photo, version \\ :original) do
+  defp photo_full_path(%Photo{} = photo, version) do
     # TODO if the image_uploader transform function changes, it might not be .jpg
     ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".jpg")
     Path.join([
