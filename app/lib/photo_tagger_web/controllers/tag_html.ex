@@ -1,0 +1,45 @@
+defmodule PhotoTaggerWeb.TagHTML do
+  use PhotoTaggerWeb, :html
+
+  def edit_tags(assigns) do
+    ~H"""
+    <.header>
+      Edit Tags
+    </.header>
+
+    <ul>
+      <%= for %{ name: tag } <- @tags do %>
+        <li class="mb-8">
+          <p class="font-bold"><%= tag %></p>
+          <div class="ml-4">
+            <div>
+              <.form for={%{}} action={~p"/tags/#{tag}"} method="put">
+                <div class="flex items-center space-x-4">
+                  <.label for={"tag_#{tag}"}>Name</.label>
+                  <input
+                    type="text"
+                    name="tag_updates[name]"
+                    id={"tag_#{tag}"}
+                    placeholder={tag}
+                    class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+                  />
+                  <.button type="submit">Rename tag</.button>
+                </div>
+              </.form>
+            </div>
+            <div class="mt-8">
+              <.form for={%{}} action={~p"/tags/#{tag}"} method="delete"
+                onsubmit={"return confirm('Are you sure you want to delete the tag named \"#{tag}\"? This will permanently remove the tag from any photos it is already attached to.')"}
+              >
+                <.button type="submit" class="bg-red-600 text-white"><%= "Delete #{tag}" %></.button>
+              </.form>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+
+    <.back navigate={~p"/photos"}>Back to photos</.back>
+    """
+  end
+end

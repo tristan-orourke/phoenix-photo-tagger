@@ -17,7 +17,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import PhotoTaggerWeb.Gettext
+  use Gettext, backend: PhotoTaggerWeb.Gettext
 
   alias PhotoTagger.ClassHelper
 
