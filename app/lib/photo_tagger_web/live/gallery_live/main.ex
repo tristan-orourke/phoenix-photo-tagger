@@ -8,6 +8,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   import PhotoTaggerWeb.PhotoController, only: [
     build_url: 3,
   ]
+  require Logger
 
   def render(assigns) do
     ~H"""
@@ -259,7 +260,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Edit">
         <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
-          <input class="hidden" type="text" name="id" value={@update_photo_form.id} />
+          <input class="hidden" type="text" name="photo_id" value={@update_photo_form.id} />
           <.input field={@update_photo_form.name} name="photo[name]" type="text" label="Name"/>
           <.input field={@update_photo_form.folder} name="photo[folder]" type="text" label="Folder"/>
           <.input field={@update_photo_form.notes} name="photo[notes]" type="textarea" label="Notes"/>
