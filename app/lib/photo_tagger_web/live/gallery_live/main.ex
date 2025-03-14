@@ -1,13 +1,12 @@
 defmodule PhotoTaggerWeb.GalleryLive.Main do
   use PhotoTaggerWeb, :live_view
-  require Logger
 
+  alias PhotoTagger.Repo
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Uploaders.ImageUploader
   import PhotoTaggerWeb.PhotoController, only: [
     build_url: 3,
-    expand_state: 1
   ]
 
   def render(assigns) do
@@ -41,6 +40,47 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
     {:noreply, assign(socket, expanded_state)}
+  end
+
+  def expand_state(%{folder: folder, tags: tags, photo_id: photo_id}) do
+    filtered_photos =
+      case {folder, tags} do
+        {nil, []} -> Gallery.list_photos()
+        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
+        {folder, []} -> Gallery.list_photos_by_folder(folder)
+        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+      end
+    filtered_photos = Repo.preload(filtered_photos, :tags)
+
+    photo =
+      case photo_id do
+        nil ->
+          nil
+
+        id ->
+          p = Gallery.get_photo!(id)
+          Repo.preload(p, :tags)
+      end
+
+    recommended_tags =
+      Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
+        MapSet.union(acc, MapSet.new(photo.tags))
+      end)
+      |> MapSet.to_list()
+      |> Enum.sort_by(& &1.name)
+
+    all_folders = Gallery.list_folders_include_tags()
+    all_tags = Gallery.list_tags()
+
+    %{
+      folder: folder,
+      all_folders: all_folders,
+      tags: tags,
+      all_tags: all_tags,
+      photo: photo,
+      filtered_photos: filtered_photos,
+      recommended_tags: recommended_tags
+    }
   end
 
   attr(:folder, :string, default: nil)
