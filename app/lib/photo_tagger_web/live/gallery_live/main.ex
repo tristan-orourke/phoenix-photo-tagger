@@ -1,6 +1,7 @@
 defmodule PhotoTaggerWeb.GalleryLive.Main do
   use PhotoTaggerWeb, :live_view
 
+  alias Phoenix.Component
   alias PhotoTagger.Repo
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
@@ -20,7 +21,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div class="col-span-2 overflow-y-auto">
           <%= if @photo do %>
-            <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
+            <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} update_photo_form={@update_photo_form} />
           <% end %>
         </div>
       </div>
@@ -39,6 +40,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
+
     {:noreply, assign(socket, expanded_state)}
   end
 
@@ -72,6 +74,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     all_folders = Gallery.list_folders_include_tags()
     all_tags = Gallery.list_tags()
 
+    update_photo_form = if(photo, do: photo, else: %Photo{})
+      |> Gallery.update_photo_changeset()
+      |> Component.to_form()
+
     %{
       folder: folder,
       all_folders: all_folders,
@@ -79,7 +85,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       all_tags: all_tags,
       photo: photo,
       filtered_photos: filtered_photos,
-      recommended_tags: recommended_tags
+      recommended_tags: recommended_tags,
+      update_photo_form: update_photo_form
     }
   end
 
@@ -207,7 +214,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <%= for tag <- @photo.tags do %>
             <li class="mr-2">
               <.toggle_tag_button folder={@folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
-              <.form class="inline" phx-submit="remove_tag">
+              <.form class="inline" for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})} phx-submit="remove_tag">
                 <input class="hidden" type="text" name="photo_id" value={@photo.id} />
                 <input class="hidden" type="text" name="tag" value={tag.name} />
                 <button type="submit"><.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900"/></button>
@@ -218,7 +225,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Add tags">
         <div>
-          <.form for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+          <.form for={Component.to_form(%{"tag" => "", "photo_id" => @photo.id})} phx-submit="add_tag">
             <input class="hidden" type="text" name="photo_id" value={@photo.id} />
             <div class="flex items-center space-x-4">
               <%!-- TODO: convert this simple inline form to a component --%>
@@ -238,7 +245,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= for tag <- @recommended_tags do %>
           <%= if tag not in @photo.tags do %>
             <div class="mr-2">
-              <.form for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+              <.form for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})} phx-submit="add_tag">
                 <input class="hidden" type="text" name="photo_id" value={@photo.id} />
                 <input class="hidden" type="text" name="tag" value={tag.name} />
                 <button class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800" type="submit"><%= tag.name %></button>
@@ -252,17 +259,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download><%= @photo.name %></.link>
       </:item>
       <:item title="Edit">
-        <.form phx-submit="update_photo">
-          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
-          <.input name="photo[name]" type="text" label="Name" value={@photo.name}/>
-          <.input name="photo[folder]" type="text" label="Folder" value={@photo.folder} />
-          <.input name="photo[notes]" type="textarea" label="Notes" value={@photo.notes} />
-          <.input name="photo[description]" type="textarea" label="Description" value={@photo.description} />
+        <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
+          <input class="hidden" type="text" name="photo_id" value={@update_photo_form.data.id} />
+          <.input field={@update_photo_form[:name]} name="photo[name]" type="text" label="Name"/>
+          <.input field={@update_photo_form[:folder]} name="photo[folder]" type="text" label="Folder"/>
+          <.input field={@update_photo_form[:notes]} name="photo[notes]" type="textarea" label="Notes"/>
+          <.input field={@update_photo_form[:description]} name="photo[description]" type="textarea" label="Description"/>
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
       <:item title="Delete">
         <.form phx-submit="delete_photo"
+          for={Component.to_form(%{"photo_id" => @photo.id})}
           onsubmit={"return confirm('Are you sure you want to permanently delete this photo?')"}
         >
           <input class="hidden" type="text" name="photo_id" value={@photo.id} />
