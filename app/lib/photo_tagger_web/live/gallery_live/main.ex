@@ -22,7 +22,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div class="col-span-2 overflow-y-auto">
           <%= if @photo do %>
-            <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
+            <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} update_photo_form={@update_photo_form} />
           <% end %>
         </div>
       </div>
@@ -263,11 +263,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Edit">
         <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
-          <input class="hidden" type="text" name="photo_id" value={@update_photo_form.id} />
-          <.input field={@update_photo_form.name} name="photo[name]" type="text" label="Name"/>
-          <.input field={@update_photo_form.folder} name="photo[folder]" type="text" label="Folder"/>
-          <.input field={@update_photo_form.notes} name="photo[notes]" type="textarea" label="Notes"/>
-          <.input field={@update_photo_form.description} name="photo[description]" type="textarea" label="Description"/>
+          <input class="hidden" type="text" name="photo_id" value={@update_photo_form.data.id} />
+          <.input field={@update_photo_form[:name]} name="photo[name]" type="text" label="Name"/>
+          <.input field={@update_photo_form[:folder]} name="photo[folder]" type="text" label="Folder"/>
+          <.input field={@update_photo_form[:notes]} name="photo[notes]" type="textarea" label="Notes"/>
+          <.input field={@update_photo_form[:description]} name="photo[description]" type="textarea" label="Description"/>
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
