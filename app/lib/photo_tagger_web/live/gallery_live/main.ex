@@ -1,6 +1,7 @@
 defmodule PhotoTaggerWeb.GalleryLive.Main do
   use PhotoTaggerWeb, :live_view
 
+  alias Phoenix.Component
   alias PhotoTagger.Repo
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
@@ -41,11 +42,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
 
-    update_photo_form =
-      Gallery.update_photo_changeset(expanded_state.photo)
-      |> Phoenix.Component.to_form()
-    expanded_state = %{expanded_state | update_photo_form: update_photo_form}
-    Logger.debug(expanded_state)
     {:noreply, assign(socket, expanded_state)}
   end
 
@@ -79,6 +75,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     all_folders = Gallery.list_folders_include_tags()
     all_tags = Gallery.list_tags()
 
+    update_photo_form = if(photo, do: photo, else: %Photo{})
+      |> Gallery.update_photo_changeset()
+      |> Component.to_form()
+
+    Logger.debug("update_photo_form: #{inspect(update_photo_form)}")
+
     %{
       folder: folder,
       all_folders: all_folders,
@@ -86,7 +88,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       all_tags: all_tags,
       photo: photo,
       filtered_photos: filtered_photos,
-      recommended_tags: recommended_tags
+      recommended_tags: recommended_tags,
+      update_photo_form: update_photo_form
     }
   end
 
@@ -214,7 +217,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <%= for tag <- @photo.tags do %>
             <li class="mr-2">
               <.toggle_tag_button folder={@folder} photo={@photo} tags={@tags} toggled_tag={tag.name}><%= if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name %></.toggle_tag_button>
-              <.form class="inline" phx-submit="remove_tag">
+              <.form class="inline" for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})} phx-submit="remove_tag">
                 <input class="hidden" type="text" name="photo_id" value={@photo.id} />
                 <input class="hidden" type="text" name="tag" value={tag.name} />
                 <button type="submit"><.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900"/></button>
@@ -225,7 +228,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Add tags">
         <div>
-          <.form for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+          <.form for={Component.to_form(%{"tag" => "", "photo_id" => @photo.id})} phx-submit="add_tag">
             <input class="hidden" type="text" name="photo_id" value={@photo.id} />
             <div class="flex items-center space-x-4">
               <%!-- TODO: convert this simple inline form to a component --%>
@@ -245,7 +248,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= for tag <- @recommended_tags do %>
           <%= if tag not in @photo.tags do %>
             <div class="mr-2">
-              <.form for={%{"tag" => "", "photo_id" => ""}} phx-submit="add_tag">
+              <.form for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})} phx-submit="add_tag">
                 <input class="hidden" type="text" name="photo_id" value={@photo.id} />
                 <input class="hidden" type="text" name="tag" value={tag.name} />
                 <button class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800" type="submit"><%= tag.name %></button>
@@ -270,6 +273,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Delete">
         <.form phx-submit="delete_photo"
+          for={Component.to_form(%{"photo_id" => @photo.id})}
           onsubmit={"return confirm('Are you sure you want to permanently delete this photo?')"}
         >
           <input class="hidden" type="text" name="photo_id" value={@photo.id} />
