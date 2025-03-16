@@ -9,7 +9,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   import PhotoTaggerWeb.PhotoController, only: [
     build_url: 3,
   ]
-  require Logger
 
   def render(assigns) do
     ~H"""
@@ -78,8 +77,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     update_photo_form = if(photo, do: photo, else: %Photo{})
       |> Gallery.update_photo_changeset()
       |> Component.to_form()
-
-    Logger.debug("update_photo_form: #{inspect(update_photo_form)}")
 
     %{
       folder: folder,
