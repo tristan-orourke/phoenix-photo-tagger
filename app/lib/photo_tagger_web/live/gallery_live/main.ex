@@ -9,6 +9,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   import PhotoTaggerWeb.PhotoController, only: [
     build_url: 3,
   ]
+  import PhotoTaggerWeb.Components.Accordion
 
   def render(assigns) do
     ~H"""
@@ -124,25 +125,36 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assigns = assign(assigns, :recommended_tag_names, Enum.map(assigns.recommended_tags, & &1.name))
     ~H"""
       <li>
-        <.link class={"#{@is_current_folder && "font-bold"}"} patch={build_url(@nav_folder, nil, [])}>
-          <%= if(@nav_folder, do: @nav_folder, else: "All folders") %>
-        </.link>
-        <ul class="list-disc list-inside">
-          <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
-            cond do
-              tag in @tags -> 0 # show currently selected tags first
-              tag in @recommended_tag_names -> 1 # then recommended tags
-              true -> 2 # then all other tags
-            end
-          end) do %>
-            <li>
-              <.link class={"#{@is_current_folder && tag in @tags && "font-bold"}"} patch={build_url(@nav_folder, nil, [tag])}><%= tag %></.link>
-              <%= if @is_current_folder and tag in @recommended_tag_names do %>
-                  <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
-                <% end %>
-            </li>
-          <% end %>
-        </ul>
+        <.accordion id={if(assigns.nav_folder, do: "accordion-#{assigns.nav_folder}", else: "accordion-all-folders")}>
+          <:trigger>
+            <p class={"#{@is_current_folder && "font-bold"}"}>
+              <%= if(@nav_folder, do: @nav_folder, else: "All folders") %>
+            </p>
+          </:trigger>
+          <:panel>
+            <ul class="list-disc list-inside">
+              <li>
+                <.link class={"#{Enum.empty?(@tags) && "font-bold"}"} patch={build_url(@nav_folder, nil, [])}>
+                  All tags
+                </.link>
+              </li>
+              <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
+                cond do
+                  tag in @tags -> 0 # show currently selected tags first
+                  tag in @recommended_tag_names -> 1 # then recommended tags
+                  true -> 2 # then all other tags
+                end
+              end) do %>
+                <li>
+                  <.link class={"#{@is_current_folder && tag in @tags && "font-bold"}"} patch={build_url(@nav_folder, nil, [tag])}><%= tag %></.link>
+                  <%= if @is_current_folder and tag in @recommended_tag_names do %>
+                      <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
+                    <% end %>
+                </li>
+              <% end %>
+            </ul>
+          </:panel>
+        </.accordion>
       </li>
     """
   end
@@ -158,7 +170,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def folders(assigns) do
     ~H"""
     <div>
-      <h2 class>Folders</h2>
+      <h2>Folders</h2>
       <ul class="space-y-2">
         <.folder_nav_item current_folder={@folder} nav_tags={Enum.map(@all_tags, & &1.name)} recommended_tags={@recommended_tags} tags={@tags} />
         <%= for folder <- @all_folders do %>
