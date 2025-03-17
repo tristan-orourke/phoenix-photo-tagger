@@ -11,17 +11,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     build_url: 3,
   ]
   import PhotoTaggerWeb.Components.Accordion
+  import Logger
 
   def render(assigns) do
     ~H"""
       <div class="grid grid-cols-7 gap-4 h-full">
-        <div class="col-span-1 overflow-y-auto">
+        <div id="folders-section" class="col-span-1 overflow-y-auto">
           <.folders all_folders={@all_folders} all_tags={@all_tags} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
         </div>
-        <div class="col-span-4 overflow-y-auto">
+        <div id="gallery-section" class="col-span-4 overflow-y-auto">
           <.gallery photos={@filtered_photos} folder={@folder} tags={@tags} />
         </div>
-        <div class="col-span-2 overflow-y-auto">
+        <div id="photo-section" class="col-span-2 overflow-y-auto">
           <%= if @photo do %>
             <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} update_photo_form={@update_photo_form} />
           <% end %>
@@ -42,6 +43,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
+
+    if expanded_state.photo != Map.get(socket.assigns, :photo) do
+      Logger.debug("Scrolling to top")
+      # JS.dispatch("photo_tagger:scroll_to_top", to: "#photo-section")
+      socket = push_event(socket, "scroll_to_top", %{selector: "#photo-section"})
+    end
 
     {:noreply, assign(socket, expanded_state)}
   end
