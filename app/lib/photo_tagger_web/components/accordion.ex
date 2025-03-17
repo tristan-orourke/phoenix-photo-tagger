@@ -48,13 +48,13 @@ defmodule PhotoTaggerWeb.Components.Accordion do
           >
             {render_slot(trigger)}
             <.icon
-              class="accordion-trigger-icon h-5 w-5 absolute right-4 transition-all ease-in-out duration-300 top-1/2 -translate-y-1/2"
+              class="accordion-trigger-icon h-5 w-5 absolute right-4 transition-all ease-in-out duration-100 top-1/2 -translate-y-1/2"
               name={trigger[:icon_name] || "hero-chevron-down"}
             />
           </button>
         </h3>
         <div
-          class="accordion-panel grid grid-rows-[0fr] data-[expanded]:grid-rows-[1fr] transition-all transform ease-in duration-200"
+          class="accordion-panel grid grid-rows-[0fr] data-[expanded]:grid-rows-[1fr] transition-all transform ease-in duration-100"
           data-expanded={panel[:default_expanded]}
           id={panel_id(@id, idx)}
           role="region"

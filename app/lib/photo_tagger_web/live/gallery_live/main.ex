@@ -6,6 +6,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Uploaders.ImageUploader
+  alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.PhotoController, only: [
     build_url: 3,
   ]
@@ -123,11 +124,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def folder_nav_item(assigns) do
     assigns = assign(assigns, :is_current_folder, assigns.current_folder == assigns.nav_folder)
     assigns = assign(assigns, :recommended_tag_names, Enum.map(assigns.recommended_tags, & &1.name))
+    assigns = assign(assigns, :id, if(assigns.nav_folder, do: HtmlHelpers.escape_html_id("accordion-#{assigns.nav_folder}"), else: "accordion-all-folders"))
     ~H"""
       <li>
-        <.accordion id={if(assigns.nav_folder, do: "accordion-#{assigns.nav_folder}", else: "accordion-all-folders")}>
+        <.accordion id={@id}>
           <:trigger>
-            <p class={"#{@is_current_folder && "font-bold"}"}>
+            <p class={"text-left #{@is_current_folder && "font-bold"}"}>
               <%= if(@nav_folder, do: @nav_folder, else: "All folders") %>
             </p>
           </:trigger>
@@ -135,7 +137,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <ul class="list-disc list-inside">
               <li>
                 <.link class={"#{Enum.empty?(@tags) && "font-bold"}"} patch={build_url(@nav_folder, nil, [])}>
-                  All tags
+                  All photos
                 </.link>
               </li>
               <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
