@@ -173,7 +173,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <div>
       <h2>Folders</h2>
-      <ul class="space-y-2">
+      <ul class="space-y-2 mt-2">
         <.folder_nav_item current_folder={@folder} nav_tags={Enum.map(@all_tags, & &1.name)} recommended_tags={@recommended_tags} tags={@tags} />
         <%= for folder <- @all_folders do %>
           <.folder_nav_item current_folder={@folder} nav_folder={folder.name} nav_tags={folder.tags} recommended_tags={@recommended_tags} tags={@tags} />
