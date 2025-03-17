@@ -136,7 +136,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <:panel default_expanded={@is_current_folder}>
             <ul class="list-disc list-inside">
               <li>
-                <.link class={"#{Enum.empty?(@tags) && "font-bold"}"} patch={build_url(@nav_folder, nil, [])}>
+                <.link class={"#{Enum.empty?(@tags) && @is_current_folder && "font-bold"}"} patch={build_url(@nav_folder, nil, [])}>
                   All photos
                 </.link>
               </li>
