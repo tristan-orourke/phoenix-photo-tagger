@@ -21,11 +21,11 @@ defmodule PhotoTagger.Gallery do
 
   """
   def list_photos do
-    Repo.all(Photo)
+    Repo.all(from(p in Photo, order_by: [desc: p.inserted_at], order_by: [asc: p.name]))
   end
 
   def list_photos_by_folder(folder) do
-    Repo.all(from(p in Photo, where: p.folder == ^folder))
+    Repo.all(from(p in Photo, where: p.folder == ^folder, order_by: [desc: p.inserted_at], order_by: [asc: p.name]))
   end
 
   defp photos_ids_by_tags([]) do
@@ -42,6 +42,8 @@ defmodule PhotoTagger.Gallery do
       tags ->
         photo_ids =
           from(p in Photo,
+            order_by: [desc: p.inserted_at],
+            order_by: [asc: p.name],
             join: pt in PhotoTag,
             on: pt.photo_id == p.id,
             where: pt.tag_id in ^Enum.map(tags, & &1.id),
@@ -60,7 +62,7 @@ defmodule PhotoTagger.Gallery do
 
   def list_photos_by_all_tags(tag_names) do
     photo_ids = photos_ids_by_tags(tag_names)
-    Repo.all(from(p in Photo, where: p.id in ^photo_ids))
+    Repo.all(from(p in Photo, where: p.id in ^photo_ids, order_by: [desc: p.inserted_at], order_by: [asc: p.name]))
   end
 
   def list_photos_by_folder_and_tags(folder, tag_names) do
