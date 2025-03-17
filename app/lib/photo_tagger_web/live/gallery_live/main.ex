@@ -133,7 +133,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <%= if(@nav_folder, do: @nav_folder, else: "All folders") %>
             </p>
           </:trigger>
-          <:panel>
+          <:panel default_expanded={@is_current_folder}>
             <ul class="list-disc list-inside">
               <li>
                 <.link class={"#{Enum.empty?(@tags) && "font-bold"}"} patch={build_url(@nav_folder, nil, [])}>
@@ -147,7 +147,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   true -> 2 # then all other tags
                 end
               end) do %>
-                <li>
+                <li >
                   <.link class={"#{@is_current_folder && tag in @tags && "font-bold"}"} patch={build_url(@nav_folder, nil, [tag])}><%= tag %></.link>
                   <%= if @is_current_folder and tag in @recommended_tag_names do %>
                       <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}><%= if(tag in @tags, do: "-", else: "+") %></.toggle_tag_button>
