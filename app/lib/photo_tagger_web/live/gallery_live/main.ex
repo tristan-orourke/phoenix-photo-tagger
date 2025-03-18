@@ -44,13 +44,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
 
+    # Reset scroll position of a section if the relevent params change
     socket = if(expanded_state.photo != Map.get(socket.assigns, :photo),
       do: push_event(socket, "scroll_to_top", %{selector: "#photo-section"}),
       else: socket
     )
-
     socket = if(expanded_state.folder != Map.get(socket.assigns, :folder),
       do: push_event(socket, "scroll_into_view", %{selector: "##{folder_accordion_id(expanded_state.folder)}"}),
+      else: socket
+    )
+    socket = if(expanded_state.folder != Map.get(socket.assigns, :folder) or Enum.sort(expanded_state.tags) != Enum.sort(Map.get(socket.assigns, :tags, [])),
+      do: push_event(socket, "scroll_to_top", %{selector: "#gallery-section"}),
       else: socket
     )
 
