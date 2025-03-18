@@ -6,5 +6,8 @@ window.addEventListener("phx:scroll_to_top", (event) => {
 });
 
 window.addEventListener("phx:scroll_into_view", (event) => {
-    event.target.scrollIntoView();
+    const el = document.querySelector(event.detail.selector);
+    if(el) {
+        el.scrollIntoView();
+    }
 })
