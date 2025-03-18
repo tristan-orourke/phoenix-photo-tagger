@@ -86,7 +86,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         MapSet.union(acc, MapSet.new(photo.tags))
       end)
       |> MapSet.to_list()
-      |> Enum.sort_by(& &1.name)
+      |> Enum.sort_by(& String.downcase(&1.name))
 
     all_folders = Gallery.list_folders_include_tags()
     all_tags = Gallery.list_tags()

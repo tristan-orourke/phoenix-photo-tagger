@@ -77,18 +77,21 @@ defmodule PhotoTaggerWeb.Components.Accordion do
   defp panel_id(id, idx), do: "#{id}_panel#{idx}"
 
   defp handle_click(%{controlled: controlled, id: id}, idx) do
+    e_id = Phoenix.HTML.css_escape(id)
+    e_trigger_id = trigger_id(id, idx) |> Phoenix.HTML.css_escape()
+    e_panel_id = panel_id(id, idx) |> Phoenix.HTML.css_escape()
     op =
       {"aria-expanded", "true", "false"}
-      |> JS.toggle_attribute(to: "##{trigger_id(id, idx)}")
-      |> JS.toggle_attribute({"data-expanded", ""}, to: "##{panel_id(id, idx)}")
+      |> JS.toggle_attribute(to: "##{e_trigger_id}")
+      |> JS.toggle_attribute({"data-expanded", ""}, to: "##{e_panel_id}")
 
     if controlled do
       op
       |> JS.set_attribute({"aria-expanded", "false"},
-        to: "##{id} .accordion-trigger:not(##{trigger_id(id, idx)})"
+        to: "##{e_id} .accordion-trigger:not(##{e_trigger_id})"
       )
       |> JS.remove_attribute("data-expanded",
-        to: "##{id} .accordion-panel:not(##{panel_id(id, idx)})"
+        to: "##{e_id} .accordion-panel:not(##{e_panel_id})"
       )
     else
       op
