@@ -11,17 +11,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     build_url: 3,
   ]
   import PhotoTaggerWeb.Components.Accordion
+  import Logger
 
   def render(assigns) do
     ~H"""
       <div class="grid grid-cols-7 gap-4 h-full">
-        <div class="col-span-1 overflow-y-auto">
+        <div id="folders-section" class="col-span-1 overflow-y-auto">
           <.folders all_folders={@all_folders} all_tags={@all_tags} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
         </div>
-        <div class="col-span-4 overflow-y-auto">
+        <div id="gallery-section" class="col-span-4 overflow-y-auto">
           <.gallery photos={@filtered_photos} folder={@folder} tags={@tags} />
         </div>
-        <div class="col-span-2 overflow-y-auto">
+        <div id="photo-section" class="col-span-2 overflow-y-auto">
           <%= if @photo do %>
             <.photo photo={@photo} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} update_photo_form={@update_photo_form} />
           <% end %>
@@ -42,6 +43,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
+
+    # Reset scroll position of a section if the relevent params change
+    socket = if(expanded_state.photo != Map.get(socket.assigns, :photo),
+      do: push_event(socket, "scroll_to_top", %{selector: "#photo-section"}),
+      else: socket
+    )
+    socket = if(expanded_state.folder != Map.get(socket.assigns, :folder),
+      do: push_event(socket, "scroll_into_view", %{selector: "##{folder_accordion_id(expanded_state.folder)}"}),
+      else: socket
+    )
+    socket = if(expanded_state.folder != Map.get(socket.assigns, :folder) or Enum.sort(expanded_state.tags) != Enum.sort(Map.get(socket.assigns, :tags, [])),
+      do: push_event(socket, "scroll_to_top", %{selector: "#gallery-section"}),
+      else: socket
+    )
 
     {:noreply, assign(socket, expanded_state)}
   end
@@ -116,6 +131,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
+  defp folder_accordion_id(folder) do
+    if folder do
+      HtmlHelpers.escape_html_id("accordion-#{folder}")
+    else
+      "accordion-all-folders"
+    end
+  end
+
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:nav_folder, :string, default: nil)
@@ -124,10 +147,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def folder_nav_item(assigns) do
     assigns = assign(assigns, :is_current_folder, assigns.current_folder == assigns.nav_folder)
     assigns = assign(assigns, :recommended_tag_names, Enum.map(assigns.recommended_tags, & &1.name))
-    assigns = assign(assigns, :id, if(assigns.nav_folder, do: HtmlHelpers.escape_html_id("accordion-#{assigns.nav_folder}"), else: "accordion-all-folders"))
     ~H"""
       <li>
-        <.accordion id={@id}>
+        <.accordion id={folder_accordion_id(@nav_folder)}>
           <:trigger>
             <p class={"text-left #{@is_current_folder && "font-bold"}"}>
               <%= if(@nav_folder, do: @nav_folder, else: "All folders") %>
