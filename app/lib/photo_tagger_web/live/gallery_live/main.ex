@@ -44,10 +44,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id})
 
-    if expanded_state.photo != Map.get(socket.assigns, :photo) do
-      Logger.debug("Scrolling to top")
-      # JS.dispatch("photo_tagger:scroll_to_top", to: "#photo-section")
-      socket = push_event(socket, "scroll_to_top", %{selector: "#photo-section"})
+    socket = cond do
+      expanded_state.photo != Map.get(socket.assigns, :photo) -> push_event(socket, "scroll_to_top", %{selector: "#photo-section"})
+      true -> socket
     end
 
     {:noreply, assign(socket, expanded_state)}
