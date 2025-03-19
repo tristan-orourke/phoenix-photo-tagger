@@ -5,15 +5,10 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
 
-  def build_url(folder, photo, tags, tail \\ nil) do
+  def build_url(folder, photo) do
     uri = URI.new!("/")
     uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
     uri = if(photo, do: URI.append_path(uri, "/photos/#{photo.id}"), else: uri)
-    uri = if(tail, do: URI.append_path(uri, tail), else: uri)
-
-    query = Plug.Conn.Query.encode(%{query_tags: tags})
-    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, query), else: uri)
-
     URI.to_string(uri)
   end
 
@@ -26,7 +21,7 @@ defmodule PhotoTaggerWeb.PhotoController do
     %{"folder" => folder, "images" => images} = photo_params
     results = Enum.map(images, fn image -> Gallery.create_photo(%{"folder" => folder, "image" => image}) end)
     if Enum.all?(results, fn {:ok, _} -> true; _ -> false end) do
-      url = build_url(folder, List.first(results) |> elem(1), [])
+      url = build_url(folder, List.first(results) |> elem(1))
       conn
       |> put_flash(:info, "Photos created successfully.")
       |> redirect(to: url)
@@ -34,7 +29,7 @@ defmodule PhotoTaggerWeb.PhotoController do
       successful_photos = for {:ok, photo} <- results, do: photo
       failed_photos = for {:error, changeset} <- results, do: changeset.changes.name
       #{Keyword.get(changeset.errors, :image) |> elem(0)}"
-      url = if(Enum.empty?(successful_photos), do: build_url(folder, nil, []), else: build_url(folder, List.first(successful_photos), []))
+      url = if(Enum.empty?(successful_photos), do: build_url(folder, nil), else: build_url(folder, List.first(successful_photos)))
       successful_photo_names = Enum.map(successful_photos, &(&1.name)) |> Enum.join(", ")
       conn = if(Enum.empty?(successful_photos), do: conn, else: conn |> put_flash(:info, "Some photos created successfully: #{successful_photo_names}"))
       conn
