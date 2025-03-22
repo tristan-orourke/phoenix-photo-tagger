@@ -11,22 +11,18 @@ defmodule PhotoTagger.Gallery.Photo do
     field :image, PhotoTagger.Uploaders.ImageUploader.Type
     field :description, :string
     field :notes, :string
+    field :image_last_modified, :utc_datetime
 
     timestamps(type: :utc_datetime)
     many_to_many :tags, Tag, join_through: "photos_tags", unique: true, preload_order: [asc: :name]
   end
 
-  # def changeset(photo, attrs = %{"add_tag" => tag}) do
-  #   changeset(photo, Map.delete(attrs, "add_tag"))
-  #     |>
-  # end
-
   @doc false
   def changeset_create(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :folder, :description, :notes])
+    |> cast(attrs, [:name, :folder, :description, :notes, :image_last_modified])
     |> cast_attachments(attrs, [:image], allow_urls: true)
-    |> validate_required([:name, :folder, :image])
+    |> validate_required([:name, :folder, :image, :image_last_modified])
     |> unique_constraint([:name, :folder])
   end
 
