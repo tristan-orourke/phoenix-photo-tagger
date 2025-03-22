@@ -9,7 +9,6 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.Tag
   alias PhotoTagger.Gallery.PhotoTag
   alias PhotoTagger.Uploaders.ImageUploader
-  require Logger
 
   @doc """
   Returns the list of photos.

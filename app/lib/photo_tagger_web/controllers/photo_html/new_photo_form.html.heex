@@ -1,10 +1,11 @@
-<.simple_form :let={f} for={@changeset} action={@action} multipart>
+<.simple_form :let={f} for={@changeset} action={@action} multipart id="new_photo_form">
   <.error :if={@changeset.action}>
     Oops, something went wrong! Please check the errors below.
   </.error>
   <%!-- <.input field={f[:name]} type="text" label="Name" /> --%>
   <.input field={f[:folder]} type="text" label="Folder" required />
   <.input field={f[:images]} type="file" label="Image" multiple required/>
+  <input class="hidden" type="text" name="photo[file_metadata]" id="new_photo_form_file_metadata" />
   <%!-- <.input
     field={f[:tags]}
     type="select"
