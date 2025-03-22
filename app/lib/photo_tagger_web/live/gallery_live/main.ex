@@ -304,6 +304,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
+      <:item title="Image last modified">
+        <p>{@photo.image_last_modified}</p>
+      </:item>
       <:item title="Delete">
         <.form phx-submit="delete_photo"
           for={Component.to_form(%{"photo_id" => @photo.id})}
