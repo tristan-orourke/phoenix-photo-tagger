@@ -240,6 +240,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
                 class="w-40 h-40 object-cover"
+                alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :small)}
               />
             </button>
@@ -261,7 +262,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <.list>
       <:item title="Image">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
-          <img src={ImageUploader.url({@photo.image, @photo}, :small)} />
+          <img img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
       </:item>
       <:item title="Folder">
@@ -365,13 +366,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <.list>
       <:item title="Selected photos">
-        <ul>
+        <ul class="flex flex-wrap gap-2 p-2">
           <%= for photo <- @photos do %>
-            <li>
-              <.link patch={build_url(@folder, [photo], @tags)}>
-                {photo.name}
-                <%!-- <img src={ImageUploader.url({photo.image, photo}, :small)} /> --%>
-              </.link>
+            <li class={"w-20 h-20"}>
+              <button class={"h-full"} phx-click="select_gallery_photo" phx-value-photo_id={photo.id}>
+                <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
+                <img
+                  class="w-20 h-20 object-cover"
+                  alt={photo.name}
+                  src={ImageUploader.url({photo.image, photo}, :small)}
+                />
+              </button>
             </li>
           <% end %>
         </ul>
