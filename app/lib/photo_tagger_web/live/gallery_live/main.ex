@@ -26,7 +26,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
             <% _ -> %>
-              <p class="text-center">Multiple photos selected!</p>
+              <.multi_photo_selection photos={@selected_photos} folder={@folder} tags={@tags} all_tags={@all_tags} recommended_tags={@recommended_tags} />
           <% end %>
         </div>
       </div>
@@ -339,6 +339,30 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </.form>
       </:item>
     </.list>
+    """
+  end
+
+
+  attr(:photos, :list, required: true)
+  attr(:folder, :string, default: nil)
+  attr(:tags, :list, default: [])
+  attr(:all_tags, :list, required: true)
+  attr(:recommended_tags, :list, default: [])
+
+  def multi_photo_selection(assigns) do
+    ~H"""
+    <div>
+      <ul>
+        <%= for photo <- @photos do %>
+          <li>
+            <.link patch={build_url(@folder, [photo], @tags)}>
+              {photo.name}
+              <%!-- <img src={ImageUploader.url({photo.image, photo}, :small)} /> --%>
+            </.link>
+          </li>
+        <% end %>
+      </ul>
+    </div>
     """
   end
 
