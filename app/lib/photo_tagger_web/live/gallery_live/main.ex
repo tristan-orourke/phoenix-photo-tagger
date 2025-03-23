@@ -350,19 +350,75 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:recommended_tags, :list, default: [])
 
   def multi_photo_selection(assigns) do
+    {tags_to_add, tags_to_remove, tags_in_limbo} = Enum.reduce(assigns.all_tags, {[], [], []}, fn tag, {add, remove, limbo} ->
+      case Enum.reduce(assigns.photos, {0, 0}, fn photo, {has_tag_count, missing_count} ->
+        case tag in photo.tags do
+          true -> {has_tag_count + 1, missing_count}
+          false -> {has_tag_count, missing_count + 1}
+        end
+      end) do
+        {_, 0} -> {tag, [tag | remove], limbo} # All photos have this tag
+        {0, _} -> {[tag | add], remove, limbo} # No photos have this tag
+        _ -> {add, remove, [tag | limbo]} # Some photos have this tag
+      end
+    end)
     ~H"""
-    <div>
-      <ul>
-        <%= for photo <- @photos do %>
-          <li>
-            <.link patch={build_url(@folder, [photo], @tags)}>
-              {photo.name}
-              <%!-- <img src={ImageUploader.url({photo.image, photo}, :small)} /> --%>
-            </.link>
-          </li>
-        <% end %>
-      </ul>
-    </div>
+    <.list>
+      <:item title="Selected photos">
+        <ul>
+          <%= for photo <- @photos do %>
+            <li>
+              <.link patch={build_url(@folder, [photo], @tags)}>
+                {photo.name}
+                <%!-- <img src={ImageUploader.url({photo.image, photo}, :small)} /> --%>
+              </.link>
+            </li>
+          <% end %>
+        </ul>
+      </:item>
+      <:item title="Remove tags">
+        <ul class="flex flex-wrap">
+          <%= for tag <- (tags_to_remove ++ tags_in_limbo) do %>
+            <li class="mr-2">
+              <.form class="inline" for={Component.to_form(%{"tag" => tag.name})} phx-submit="remove_tag_bulk">
+                <input class="hidden" type="text" name="tag" value={tag.name} />
+                <button class="border border-red-600 rounded-full hover:bg-red-100 px-1 my-1 text-red-600 hover:text-red-800" type="submit"><%= tag.name %></button>
+              </.form>
+            </li>
+          <% end %>
+        </ul>
+      </:item>
+      <:item title="Add tags">
+        <div class="mt-4">
+          <.form for={Component.to_form(%{"tag" => ""})} phx-submit="add_tag_bulk">
+            <div class="flex items-center space-x-4">
+              <%!-- TODO: convert this simple inline form to a component --%>
+              <%!-- <.label for="add_any_tag">Add tag</.label> --%>
+              <input
+                type="text"
+                name="tag"
+                id="add_any_tag"
+                Placeholder="Add tag"
+                class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+              />
+              <.button type="submit">Submit</.button>
+            </div>
+          </.form>
+        </div>
+        <div class="flex flex-wrap mt-2">
+          <%= for tag <- @recommended_tags do %>
+            <%= if (tag not in tags_to_remove) do %>
+              <div class="mr-2">
+                <.form for={Component.to_form(%{"tag" => tag.name})} phx-submit="add_tag_bulk">
+                  <input class="hidden" type="text" name="tag" value={tag.name} />
+                  <button class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800" type="submit"><%= tag.name %></button>
+                </.form>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </:item>
+    </.list>
     """
   end
 
@@ -403,6 +459,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
+    {:noreply, refresh_socket(socket)}
+  end
+
+  def handle_event("add_tag_bulk", %{"tag" => tag}, socket) do
+    selected_photos = socket.assigns.selected_photos
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
+    end)
+    {:noreply, refresh_socket(socket)}
+  end
+
+  def handle_event("remove_tag_bulk", %{"tag" => tag}, socket) do
+    selected_photos = socket.assigns.selected_photos
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
+    end)
     {:noreply, refresh_socket(socket)}
   end
 
