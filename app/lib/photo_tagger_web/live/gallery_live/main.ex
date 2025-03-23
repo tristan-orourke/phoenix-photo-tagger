@@ -233,7 +233,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def gallery(assigns) do
     ~H"""
     <div>
-      <ul class="flex flex-wrap gap-4 pt-6">
+      <ul class="flex flex-wrap gap-4 p-6">
         <%= for photo <- @photos do %>
           <li class={"w-40 h-40 #{if(Enum.member?(@selected_photos, photo), do: "outline outline-4 outline-offset-2 outline-blue-400", else: "")}"}>
             <button class={"h-full"} phx-click="select_gallery_photo" phx-value-photo_id={photo.id}>
