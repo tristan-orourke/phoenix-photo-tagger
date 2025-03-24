@@ -27,7 +27,15 @@ import "./uploadPhotoMetadata.js"
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken}
+  params: {_csrf_token: csrfToken},
+  metadata: {
+    click: (e, el) => {
+      return {
+        shift_key_pressed: e.shiftKey,
+        ctrl_key_pressed: e.ctrlKey,
+      }
+    }
+  }
 })
 
 // Show progress bar on live navigation and form submits
