@@ -80,6 +80,7 @@ defmodule PhotoTaggerWeb.Components.Accordion do
     e_id = Phoenix.HTML.css_escape(id)
     e_trigger_id = trigger_id(id, idx) |> Phoenix.HTML.css_escape()
     e_panel_id = panel_id(id, idx) |> Phoenix.HTML.css_escape()
+
     op =
       {"aria-expanded", "true", "false"}
       |> JS.toggle_attribute(to: "##{e_trigger_id}")

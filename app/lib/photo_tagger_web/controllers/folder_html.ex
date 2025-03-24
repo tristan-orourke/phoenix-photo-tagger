@@ -12,7 +12,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
     <ul>
       <%= for folder <- @folders do %>
         <li class="mb-8">
-          <p class="font-bold"><%= folder %></p>
+          <p class="font-bold">{folder}</p>
           <div class="ml-4">
             <div>
               <.form for={%{}} action={~p"/folders/#{folder}/rename"} method="post">
@@ -30,10 +30,13 @@ defmodule PhotoTaggerWeb.FolderHTML do
               </.form>
             </div>
             <div class="mt-8">
-              <.form for={%{}} action={~p"/folders/#{folder}"} method="delete"
+              <.form
+                for={%{}}
+                action={~p"/folders/#{folder}"}
+                method="delete"
                 onsubmit={"return confirm('Are you sure you want to delete the folder named \"#{folder}\"? This will permanently delete all photos in the folder.')"}
               >
-                <.button type="submit" class="bg-red-600 text-white"><%= "Delete #{folder}" %></.button>
+                <.button type="submit" class="bg-red-600 text-white">{"Delete #{folder}"}</.button>
               </.form>
             </div>
           </div>

@@ -2,7 +2,7 @@
   <%= for tag <- @photo.tags do %>
     <li>
       <.form for={%{}} action={~p"/photos/#{@photo}/tags/#{tag.name}"} method="delete">
-        <%= tag.name %>
+        {tag.name}
         <.button>Remove</.button>
       </.form>
     </li>

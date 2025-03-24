@@ -10,7 +10,7 @@
 <.table id="photos" rows={@photos} row_click={&JS.navigate(~p"/photos/#{&1}")}>
   <:col :let={photo} label="Name">
     <.link navigate={~p"/photos/#{photo}"}>
-      <%= photo.name %>
+      {photo.name}
     </.link>
   </:col>
   <:action :let={photo}>

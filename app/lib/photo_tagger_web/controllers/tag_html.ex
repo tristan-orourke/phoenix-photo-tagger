@@ -10,7 +10,7 @@ defmodule PhotoTaggerWeb.TagHTML do
     <ul>
       <%= for %{ name: tag } <- @tags do %>
         <li class="mb-8">
-          <p class="font-bold"><%= tag %></p>
+          <p class="font-bold">{tag}</p>
           <div class="ml-4">
             <div>
               <.form for={%{}} action={~p"/tags/#{tag}"} method="put">
@@ -28,10 +28,13 @@ defmodule PhotoTaggerWeb.TagHTML do
               </.form>
             </div>
             <div class="mt-8">
-              <.form for={%{}} action={~p"/tags/#{tag}"} method="delete"
+              <.form
+                for={%{}}
+                action={~p"/tags/#{tag}"}
+                method="delete"
                 onsubmit={"return confirm('Are you sure you want to delete the tag named \"#{tag}\"? This will permanently remove the tag from any photos it is already attached to.')"}
               >
-                <.button type="submit" class="bg-red-600 text-white"><%= "Delete #{tag}" %></.button>
+                <.button type="submit" class="bg-red-600 text-white">{"Delete #{tag}"}</.button>
               </.form>
             </div>
           </div>

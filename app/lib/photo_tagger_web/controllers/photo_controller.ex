@@ -20,31 +20,55 @@ defmodule PhotoTaggerWeb.PhotoController do
   def create(conn, %{"photo" => photo_params}) do
     %{"folder" => folder, "images" => images, "file_metadata" => metadata_string} = photo_params
     metadata = JSON.decode!(metadata_string)
-    photo_attrs = Enum.map(images, fn image -> %{
-      "folder" => folder,
-      "image" => image,
-      "image_last_modified" =>
-        Enum.find(metadata, &(&1["name"] == image.filename))
-        |> Map.get("lastModified")
-        |> DateTime.from_unix!(:millisecond)
-    } end)
+
+    photo_attrs =
+      Enum.map(images, fn image ->
+        %{
+          "folder" => folder,
+          "image" => image,
+          "image_last_modified" =>
+            Enum.find(metadata, &(&1["name"] == image.filename))
+            |> Map.get("lastModified")
+            |> DateTime.from_unix!(:millisecond)
+        }
+      end)
+
     results = Enum.map(photo_attrs, &Gallery.create_photo(&1))
-    if Enum.all?(results, fn {:ok, _} -> true; _ -> false end) do
+
+    if Enum.all?(results, fn
+         {:ok, _} -> true
+         _ -> false
+       end) do
       url = build_url(folder, List.first(results) |> elem(1))
+
       conn
       |> put_flash(:info, "Photos created successfully.")
       |> redirect(to: url)
     else
       successful_photos = for {:ok, photo} <- results, do: photo
       failed_photos = for {:error, changeset} <- results, do: changeset.changes.name
-      #{Keyword.get(changeset.errors, :image) |> elem(0)}"
-      url = if(Enum.empty?(successful_photos), do: build_url(folder, nil), else: build_url(folder, List.first(successful_photos)))
-      successful_photo_names = Enum.map(successful_photos, &(&1.name)) |> Enum.join(", ")
-      conn = if(Enum.empty?(successful_photos), do: conn, else: conn |> put_flash(:info, "Some photos created successfully: #{successful_photo_names}"))
+      # {Keyword.get(changeset.errors, :image) |> elem(0)}"
+      url =
+        if(Enum.empty?(successful_photos),
+          do: build_url(folder, nil),
+          else: build_url(folder, List.first(successful_photos))
+        )
+
+      successful_photo_names = Enum.map(successful_photos, & &1.name) |> Enum.join(", ")
+
+      conn =
+        if(Enum.empty?(successful_photos),
+          do: conn,
+          else:
+            conn
+            |> put_flash(:info, "Some photos created successfully: #{successful_photo_names}")
+        )
+
       conn
       |> put_flash(:error, "Some photos failed to save: #{Enum.join(failed_photos, ", ")}")
       |> redirect(to: url)
     end
+
     # case Gallery.create_photo(photo_params) do
     #   {:ok, photo} ->
     #     conn

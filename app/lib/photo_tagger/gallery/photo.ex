@@ -14,7 +14,11 @@ defmodule PhotoTagger.Gallery.Photo do
     field :image_last_modified, :utc_datetime
 
     timestamps(type: :utc_datetime)
-    many_to_many :tags, Tag, join_through: "photos_tags", unique: true, preload_order: [asc: :name]
+
+    many_to_many :tags, Tag,
+      join_through: "photos_tags",
+      unique: true,
+      preload_order: [asc: :name]
   end
 
   @doc false

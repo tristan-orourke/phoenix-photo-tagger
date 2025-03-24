@@ -28,6 +28,7 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
   def filename(:original, {file, _scope}) do
     Path.basename(file.file_name, Path.extname(file.file_name))
   end
+
   def filename(version, {file, _scope}) do
     basename = Path.basename(file.file_name, Path.extname(file.file_name))
     "#{basename}.#{version}"
@@ -42,5 +43,4 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
   def default_url(_version, _scope) do
     "/images/logo.svg"
   end
-
 end

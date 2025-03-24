@@ -24,7 +24,13 @@ defmodule PhotoTagger.Gallery do
   end
 
   def list_photos_by_folder(folder) do
-    Repo.all(from(p in Photo, where: p.folder == ^folder, order_by: [desc: p.inserted_at], order_by: [asc: p.name]))
+    Repo.all(
+      from(p in Photo,
+        where: p.folder == ^folder,
+        order_by: [desc: p.inserted_at],
+        order_by: [asc: p.name]
+      )
+    )
   end
 
   defp photos_ids_by_tags([]) do
@@ -61,7 +67,14 @@ defmodule PhotoTagger.Gallery do
 
   def list_photos_by_all_tags(tag_names) do
     photo_ids = photos_ids_by_tags(tag_names)
-    Repo.all(from(p in Photo, where: p.id in ^photo_ids, order_by: [desc: p.inserted_at], order_by: [asc: p.name]))
+
+    Repo.all(
+      from(p in Photo,
+        where: p.id in ^photo_ids,
+        order_by: [desc: p.inserted_at],
+        order_by: [asc: p.name]
+      )
+    )
   end
 
   def list_photos_by_folder_and_tags(folder, tag_names) do
@@ -101,6 +114,7 @@ defmodule PhotoTagger.Gallery do
   """
   def create_photo(attrs \\ %{}) do
     attrs = Map.put(attrs, "name", attrs["image"].filename)
+
     %Photo{}
     |> Photo.changeset_create(attrs)
     |> Repo.insert()
@@ -109,6 +123,7 @@ defmodule PhotoTagger.Gallery do
   defp photo_full_path(%Photo{} = photo, version) do
     # TODO if the image_uploader transform function changes, it might not be .jpg
     ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".jpg")
+
     Path.join([
       get_folder_path(photo.folder),
       ImageUploader.filename(version, {photo.image, photo}) <> ext
@@ -128,11 +143,13 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
-
     # If the name is being updated, update the image file_name as well
-    attrs = if(Map.has_key?(attrs, "name"), do:
-      Map.put(attrs, "image", Map.replace(photo.image, :file_name, attrs["name"])),
-      else: attrs)
+    attrs =
+      if(Map.has_key?(attrs, "name"),
+        do: Map.put(attrs, "image", Map.replace(photo.image, :file_name, attrs["name"])),
+        else: attrs
+      )
+
     changeset = Photo.changeset_update(photo, attrs)
 
     Ecto.Multi.new()
@@ -146,7 +163,10 @@ defmodule PhotoTagger.Gallery do
       |> Enum.filter(fn {old_path, new_path} -> old_path != new_path end)
       # TODO: Before trying to move files, check that they all exist
       |> Enum.reduce({:ok, changes}, fn
-        _paths, {:error, changes} -> {:error, changes} # Stop processing if there was an error
+        # Stop processing if there was an error
+        _paths, {:error, changes} ->
+          {:error, changes}
+
         {old_path, new_path}, {:ok, changes} ->
           case File.rename(old_path, new_path) do
             :ok -> {:ok, changes}
@@ -262,31 +282,39 @@ defmodule PhotoTagger.Gallery do
   end
 
   defp get_folder_path(folder) do
-    Path.join([Application.get_env(:waffle, :storage_dir_prefix), ImageUploader.storage_dir(nil, {nil, %{folder: folder}})])
+    Path.join([
+      Application.get_env(:waffle, :storage_dir_prefix),
+      ImageUploader.storage_dir(nil, {nil, %{folder: folder}})
+    ])
   end
 
   def rename_folder(folder, new_folder) do
     Ecto.Multi.new()
-    |> Ecto.Multi.update_all(:photos, from(p in Photo, where: p.folder == ^folder), set: [folder: new_folder])
+    |> Ecto.Multi.update_all(:photos, from(p in Photo, where: p.folder == ^folder),
+      set: [folder: new_folder]
+    )
     |> Ecto.Multi.run(:rename_folder, fn _repo, _changes ->
-        old_path = get_folder_path(folder)
-        new_path = get_folder_path(new_folder)
+      old_path = get_folder_path(folder)
+      new_path = get_folder_path(new_folder)
 
-        case File.rename(old_path, new_path) do
-          :ok -> {:ok, new_path}
-          {:error, reason} -> {:error, reason}
-        end
-      end)
+      case File.rename(old_path, new_path) do
+        :ok -> {:ok, new_path}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
     |> Repo.transaction()
   end
 
   def delete_folder(folder) do
     Ecto.Multi.new()
     |> Ecto.Multi.delete_all(:photos, from(p in Photo, where: p.folder == ^folder))
-    |> Ecto.Multi.delete_all(:tags, from(t in Tag, where: fragment("? NOT IN (SELECT tag_id FROM photos_tags)", t.id)))
+    |> Ecto.Multi.delete_all(
+      :tags,
+      from(t in Tag, where: fragment("? NOT IN (SELECT tag_id FROM photos_tags)", t.id))
+    )
     |> Ecto.Multi.run(:delete_folder, fn _repo, _changes ->
-        File.rm_rf(get_folder_path(folder))
-      end)
+      File.rm_rf(get_folder_path(folder))
+    end)
     |> Repo.transaction()
   end
 

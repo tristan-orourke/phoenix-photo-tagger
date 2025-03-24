@@ -1,5 +1,5 @@
 <.header>
-  Photo <%= @photo.id %>
+  Photo {@photo.id}
   <:subtitle>This is a photo record from your database.</:subtitle>
   <:actions>
     <.link href={~p"/photos/#{@photo}/edit"}>
@@ -9,12 +9,12 @@
 </.header>
 
 <.list>
-  <:item title="Name"><%= @photo.name %></:item>
-  <:item title="Folder"><%= @photo.folder %></:item>
+  <:item title="Name">{@photo.name}</:item>
+  <:item title="Folder">{@photo.folder}</:item>
   <:item title="Tags">
     <ul>
       <%= for tag <- @photo.tags do %>
-        <li><%= tag.name %></li>
+        <li>{tag.name}</li>
       <% end %>
     </ul>
   </:item>

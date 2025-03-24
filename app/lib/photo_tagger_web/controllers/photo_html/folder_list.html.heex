@@ -4,11 +4,11 @@
 
 <ul>
   <%= for folder <-@folders do %>
-    <li><%= folder.name %></li>
-      <ul class="list-disc">
+    <li>{folder.name}</li>
+    <ul class="list-disc">
       <%= for tag <-folder.tags do %>
-        <li ><%= tag %></li>
-    <% end %>
+        <li>{tag}</li>
+      <% end %>
     </ul>
   <% end %>
 </ul>
