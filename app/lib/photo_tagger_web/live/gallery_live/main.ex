@@ -17,7 +17,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.folders all_folders={@all_folders} all_tags={@all_tags} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
         </div>
         <div id="gallery-section" class="col-span-4 overflow-y-auto">
-          <.gallery photos={@filtered_photos} folder={@folder} tags={@tags} selected_photos={@selected_photos}/>
+          <.gallery_nav_bar item_count={Enum.count(@filtered_photos)} multiselect_active={@multiselect_active} />
+          <div>
+            <.gallery photos={@filtered_photos} folder={@folder} tags={@tags} selected_photos={@selected_photos}/>
+          </div>
         </div>
         <div id="photo-section" class="col-span-2 overflow-y-auto">
           <%= case @selected_photos do %>
@@ -36,6 +39,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def mount(_params, _session, socket) do
     #TODO: I might be able to load all_tags and all_folders here instead of handle_params.
     # Would they be updated properly after getting forms to work with live_view?
+    socket = assign(socket, :multiselect_active, false)
     {:ok, socket}
   end
 
@@ -221,6 +225,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.folder_nav_item current_folder={@folder} nav_folder={folder.name} nav_tags={folder.tags} recommended_tags={@recommended_tags} tags={@tags} />
         <% end %>
       </ul>
+    </div>
+    """
+  end
+
+  attr(:item_count, :integer, required: true)
+  attr(:multiselect_active, :boolean, required: true)
+
+  def gallery_nav_bar(assigns) do
+    button_colours = case assigns.multiselect_active do
+      false -> "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800"
+      true -> "bg-blue-600 text-white hover:bg-blue-700"
+    end
+    ~H"""
+    <div class="flex items-center sticky top-0 bg-white">
+      <div class="flex-1"/>
+      <div class="flex-none pl-3 pr-3">
+        <button
+          class={"border rounded-full px-1 my-1 #{button_colours}"}
+          phx-click="toggle_multiselect">
+          <span class="pl-2 pr-2">
+            <.icon name="hero-squares-plus"/>
+          </span>
+        </button>
+      </div>
+      <div class="flex-none pl-3 pr-3 mr-4">
+        <p class="font-bold">{"#{@item_count} items"}</p>
+      </div>
     </div>
     """
   end
@@ -436,6 +467,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     end
     expanded_state = expand_state(%{folder: folder, tags: tags, photo_id: photo_id, selected_photo_ids: selected_photo_ids})
     assign(socket, expanded_state)
+  end
+
+  def handle_event("toggle_multiselect", _params, socket) do
+    {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
   end
 
   # Holding ctrl while clicking a photo will select multiple
