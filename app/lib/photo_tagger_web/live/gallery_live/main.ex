@@ -474,7 +474,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   # Holding ctrl while clicking a photo will select multiple
-  def handle_event("select_gallery_photo", %{"ctrl_key_pressed" => true, "photo_id" => photo_id}, socket) do
+  def handle_event("select_gallery_photo", %{"ctrl_key_pressed" => ctrl_key_pressed, "photo_id" => photo_id}, socket) do
+    case {ctrl_key_pressed, socket.assigns.multiselect_active} do
+      {false, false} -> handle_single_photo_select(photo_id, socket)
+      _ -> handle_multi_photo_select(photo_id, socket)
+    end
+  end
+
+  def handle_multi_photo_select(photo_id, socket) do
     selected_photos = socket.assigns.selected_photos
     # Remove the new photo from selected_photos if it is present, otherwise add it
     new_selection = if(
@@ -485,8 +492,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply, push_patch(socket, to: build_url(socket.assigns.folder, new_selection, socket.assigns.tags))}
   end
 
-  def handle_event("select_gallery_photo", %{"photo_id" => photo_id}, socket) do
-    Logger.debug("Selecting photo: #{photo_id}")
+  def handle_single_photo_select(photo_id, socket) do
     {:noreply, push_patch(socket, to: build_url(socket.assigns.folder, [%{id: photo_id}], socket.assigns.tags))}
   end
 
