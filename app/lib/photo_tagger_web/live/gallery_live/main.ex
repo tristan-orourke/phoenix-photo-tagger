@@ -17,7 +17,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.folders all_folders={@all_folders} all_tags={@all_tags} folder={@folder} tags={@tags} recommended_tags={@recommended_tags} />
         </div>
         <div id="gallery-section" class="col-span-4 overflow-y-auto">
-          <.gallery_nav_bar item_count={Enum.count(@filtered_photos)} multiselect_active={@multiselect_active} />
+          <.gallery_header item_count={Enum.count(@filtered_photos)} multiselect_active={@multiselect_active} />
           <div>
             <.gallery photos={@filtered_photos} folder={@folder} tags={@tags} selected_photos={@selected_photos}/>
           </div>
@@ -232,7 +232,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:item_count, :integer, required: true)
   attr(:multiselect_active, :boolean, required: true)
 
-  def gallery_nav_bar(assigns) do
+  def gallery_header(assigns) do
     button_colours = case assigns.multiselect_active do
       false -> "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800"
       true -> "bg-blue-600 text-white hover:bg-blue-700"
