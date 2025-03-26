@@ -11,7 +11,7 @@ defmodule PhotoTaggerWeb.Telemetry do
     children = [
       # Telemetry poller will execute the given period measurements
       # every 10_000ms. Learn more here: https://hexdocs.pm/telemetry_metrics
-      {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
+      {:telemetry_poller, measurements: periodic_measurements(), period: 10_000},
       # Add reporters as children of your supervision tree.
       # {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
@@ -50,6 +50,22 @@ defmodule PhotoTaggerWeb.Telemetry do
         tags: [:event],
         unit: {:native, :millisecond}
       ),
+
+      # Liveview Metrics
+      summary("phoenix.live_view.mount.stop.duration",
+        unit: {:native, :millisecond}
+      ),
+      summary("phoenix.live_view.handle_params.stop.duration",
+        unit: {:native, :millisecond}
+      ),
+      summary("phoenix.live_view.handle_event.stop.duration",
+        unit: {:native, :millisecond},
+        tags: [:event]
+      ),
+      summary("phoenix.live_view.render.stop.duration",
+        unit: {:native, :millisecond}
+      ),
+
 
       # Database Metrics
       summary("photo_tagger.repo.query.total_time",
