@@ -63,10 +63,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def mount(_params, _session, socket) do
-    # TODO: I might be able to load all_tags and all_folders here instead of handle_params.
-    # Would they be updated properly after getting forms to work with live_view?
-    socket = assign(socket, :multiselect_active, false)
-    {:ok, socket}
+    {:ok,
+     socket
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:multiselect_active, false)}
   end
 
   def handle_params(params, _session, socket) do
@@ -161,9 +162,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> MapSet.to_list()
       |> Enum.sort_by(&String.downcase(&1.name))
 
-    all_folders = Gallery.list_folders_include_tags()
-    all_tags = Gallery.list_tags()
-
     update_photo_form =
       case selected_photos do
         [photo] -> photo
@@ -175,9 +173,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     %{
       folder: folder,
-      all_folders: all_folders,
       tags: tags,
-      all_tags: all_tags,
       filtered_photos: filtered_photos,
       selected_photos: selected_photos,
       recommended_tags: recommended_tags,
@@ -329,7 +325,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         true ->
           "bg-blue-600 text-white hover:bg-blue-700"
       end
+
     assigns = assign(assigns, :button_colours, button_colours)
+
     ~H"""
     <div class="flex items-center sticky top-0 bg-white">
       <div class="flex-1" />
@@ -530,6 +528,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           _ -> {add, remove, [tag | limbo]}
         end
       end)
+
     assigns = assign(assigns, :tags_to_add, tags_to_add)
     assigns = assign(assigns, :tags_to_remove, tags_to_remove)
     assigns = assign(assigns, :tags_in_limbo, tags_in_limbo)
@@ -633,22 +632,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assign(socket, expanded_state)
   end
 
-  def handle_event("toggle_multiselect", _params, socket) do
-    {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
-  end
-
-  # Holding ctrl while clicking a photo will select multiple
-  def handle_event(
-        "select_gallery_photo",
-        %{"ctrl_key_pressed" => ctrl_key_pressed, "photo_id" => photo_id},
-        socket
-      ) do
-    case {ctrl_key_pressed, socket.assigns.multiselect_active} do
-      {false, false} -> handle_single_photo_select(photo_id, socket)
-      _ -> handle_multi_photo_select(photo_id, socket)
-    end
-  end
-
   def handle_multi_photo_select(photo_id, socket) do
     selected_photos = socket.assigns.selected_photos
     # Remove the new photo from selected_photos if it is present, otherwise add it
@@ -670,16 +653,42 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
+  ## Event Handlers
+
+  def handle_event("toggle_multiselect", _params, socket) do
+    {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
+  end
+
+  # Holding ctrl while clicking a photo will select multiple
+  def handle_event(
+        "select_gallery_photo",
+        %{"ctrl_key_pressed" => ctrl_key_pressed, "photo_id" => photo_id},
+        socket
+      ) do
+    case {ctrl_key_pressed, socket.assigns.multiselect_active} do
+      {false, false} -> handle_single_photo_select(photo_id, socket)
+      _ -> handle_multi_photo_select(photo_id, socket)
+    end
+  end
+
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
-    {:noreply, refresh_socket(socket)}
+
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> refresh_socket()}
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
-    {:noreply, refresh_socket(socket)}
+
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> refresh_socket()}
   end
 
   def handle_event("add_tag_bulk", %{"tag" => tag}, socket) do
@@ -689,7 +698,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
     end)
 
-    {:noreply, refresh_socket(socket)}
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> refresh_socket()}
   end
 
   def handle_event("remove_tag_bulk", %{"tag" => tag}, socket) do
@@ -699,16 +711,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
     end)
 
-    {:noreply, refresh_socket(socket)}
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> refresh_socket()}
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
     photo = Gallery.get_photo!(id)
+    result = Gallery.update_photo(photo, photo_params)
 
-    case Gallery.update_photo(photo, photo_params) do
+    case result do
       {:ok, _photo} ->
         {:noreply,
-         refresh_socket(socket)
+         assign(socket, :all_folders, Gallery.list_folders_include_tags())
+         |> refresh_socket()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
@@ -726,7 +743,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:ok, _photo} = Gallery.delete_photo(photo)
 
     {:noreply,
-     push_patch(socket, to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
+     socket
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_tags, Gallery.list_tags())
+     |> push_patch(to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
   end
 end
