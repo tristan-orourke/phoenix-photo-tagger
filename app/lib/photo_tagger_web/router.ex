@@ -1,5 +1,6 @@
 defmodule PhotoTaggerWeb.Router do
   use PhotoTaggerWeb, :router
+  import Phoenix.LiveDashboard.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -36,6 +37,12 @@ defmodule PhotoTaggerWeb.Router do
     delete "/tags/:tag", TagController, :delete
   end
 
+  scope "/admin", PhotoTaggerWeb do
+    pipe_through :browser
+
+    live_dashboard "/dashboard", metrics: PhotoTaggerWeb.Telemetry
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", PhotoTaggerWeb do
   #   pipe_through :api
@@ -48,12 +55,12 @@ defmodule PhotoTaggerWeb.Router do
     # If your application does not have an admins-only section yet,
     # you can use Plug.BasicAuth to set up some basic authentication
     # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
+    # import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: PhotoTaggerWeb.Telemetry
+      # live_dashboard "/dashboard", metrics: PhotoTaggerWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
