@@ -329,13 +329,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         true ->
           "bg-blue-600 text-white hover:bg-blue-700"
       end
-
+    assigns = assign(assigns, :button_colours, button_colours)
     ~H"""
     <div class="flex items-center sticky top-0 bg-white">
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
         <button
-          class={"border rounded-full px-1 my-1 #{button_colours}"}
+          class={"border rounded-full px-1 my-1 #{@button_colours}"}
           phx-click="toggle_multiselect"
         >
           <span class="pl-2 pr-2">
@@ -530,6 +530,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           _ -> {add, remove, [tag | limbo]}
         end
       end)
+    assigns = assign(assigns, :tags_to_add, tags_to_add)
+    assigns = assign(assigns, :tags_to_remove, tags_to_remove)
+    assigns = assign(assigns, :tags_in_limbo, tags_in_limbo)
 
     ~H"""
     <.list>
@@ -551,7 +554,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Remove tags">
         <ul class="flex flex-wrap">
-          <%= for tag <- (tags_to_remove ++ tags_in_limbo) do %>
+          <%= for tag <- (@tags_to_remove ++ @tags_in_limbo) do %>
             <li class="mr-2">
               <.form
                 class="inline"
@@ -589,7 +592,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div class="flex flex-wrap mt-2">
           <%= for tag <- @recommended_tags do %>
-            <%= if (tag not in tags_to_remove) do %>
+            <%= if (tag not in @tags_to_remove) do %>
               <div class="mr-2">
                 <.form for={Component.to_form(%{"tag" => tag.name})} phx-submit="add_tag_bulk">
                   <input class="hidden" type="text" name="tag" value={tag.name} />
