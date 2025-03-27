@@ -54,7 +54,7 @@ defmodule PhotoTaggerWeb.Components.Accordion do
           </button>
         </h3>
         <div
-          class="accordion-panel grid grid-rows-[0fr] data-[expanded]:grid-rows-[1fr] transition-all transform ease-in duration-100"
+          class="accordion-panel grid grid-rows-[0fr] data-[expanded]:grid-rows-[1fr]"
           data-expanded={panel[:default_expanded]}
           id={panel_id(@id, idx)}
           role="region"
