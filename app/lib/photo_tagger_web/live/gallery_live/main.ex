@@ -27,6 +27,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.gallery_header
           item_count={Enum.count(@filtered_photos)}
           multiselect_active={@multiselect_active}
+          collapse_groups={@collapse_groups}
         />
         <div>
           <.gallery
@@ -70,6 +71,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:all_folders, Gallery.list_folders_include_tags())
       |> assign(:all_tags, Gallery.list_tags())
       |> assign(:multiselect_active, false)
+      |> assign(:collapse_groups, false)
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -377,30 +379,35 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   attr(:item_count, :integer, required: true)
   attr(:multiselect_active, :boolean, required: true)
+  attr(:collapse_groups, :boolean, required: true)
 
   def gallery_header(assigns) do
-    button_colours =
-      case assigns.multiselect_active do
-        false ->
-          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800"
-
-        true ->
-          "bg-blue-600 text-white hover:bg-blue-700"
-      end
-
-    assigns = assign(assigns, :button_colours, button_colours)
-
     ~H"""
     <div class="flex items-center sticky top-0 bg-white">
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
+        <.toggle_button
+          selected={@collapse_groups}
+          phx-click="toggle_collapse_groups"
+        >
+          <span class="pl-2 pr-2">
+            <.icon name="hero-square-2-stack" />
+            <span class="sr-only md:not-sr-only">
+              Collapse groups
+            </span>
+          </span>
+        </.toggle_button>
+      </div>
+      <div class="flex-none pr-3">
         <.toggle_button
           selected={@multiselect_active}
           phx-click="toggle_multiselect"
         >
           <span class="pl-2 pr-2">
             <.icon name="hero-squares-plus" />
-            Multiselect
+            <span class="sr-only md:not-sr-only">
+              Multiselect
+            </span>
           </span>
         </.toggle_button>
       </div>
@@ -745,6 +752,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("toggle_multiselect", _params, socket) do
     {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
+  end
+
+  def handle_event("toggle_collapse_groups", _params, socket) do
+    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups)}
   end
 
   # Holding ctrl while clicking a photo will select multiple
