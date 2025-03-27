@@ -9,6 +9,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
 
+  # require Logger
+
+
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
@@ -741,10 +744,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
-
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
      |> refresh_selected_photos()}
   end
@@ -756,6 +759,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
      |> refresh_selected_photos()}
   end
@@ -770,6 +774,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
      |> refresh_selected_photos()}
   end
@@ -784,6 +789,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
      |> refresh_selected_photos()}
   end
