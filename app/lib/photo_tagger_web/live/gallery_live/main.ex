@@ -35,6 +35,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             folder={@folder}
             tags={@tags}
             selected_photos={@selected_photos}
+            collapse_groups={@collapse_groups}
           />
         </div>
       </div>
@@ -422,21 +423,43 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
   attr(:selected_photos, :list, default: [])
+  attr(:collapse_groups, :boolean, default: false)
 
   def gallery(assigns) do
+    grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+    assigns = assign(assigns, :grouped_photos, grouped_photos)
+
+    assigns =
+      case assigns.collapse_groups do
+        false ->
+          assigns
+
+        true ->
+          assign(
+            assigns,
+            :photos,
+            # Filter out photos that are in a group, excepting the first in any group
+            Enum.filter(assigns.photos, fn photo ->
+              photo.group == nil or photo == List.first(grouped_photos[photo.group])
+            end)
+          )
+      end
+
     ~H"""
     <div>
       <ul class="flex flex-wrap gap-4 p-6">
         <%= for photo <- @photos do %>
+          <% represents_group = @collapse_groups and photo.group != nil and Enum.count(@grouped_photos[photo.group]) > 1 %>
           <li class="w-40 h-40">
             <button
               id={"gallery-photo-button-#{photo.id}"}
-              class="h-full w-full
+              class="h-full w-full relative
                 data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
                 phx-click-loading:outline phx-click-loading:outline-blue-200"
               data-selected={Enum.member?(@selected_photos, photo)}
-              phx-click="select_gallery_photo"
+              phx-click={if(represents_group, do: "select_gallery_group", else: "select_gallery_photo")}
               phx-value-photo_id={photo.id}
+              phx-value-photo_group={photo.group}
             >
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
@@ -444,6 +467,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :small)}
               />
+              <%= if represents_group do %>
+                <div class="w-40 h-40 -z-10 absolute left-1 bottom-1 bg-gray-500" />
+                <div class="w-40 h-40 -z-20 absolute left-2 bottom-2 bg-gray-400" />
+              <% end %>
             </button>
           </li>
         <% end %>
@@ -768,6 +795,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {false, false} -> handle_single_photo_select(photo_id, socket)
       _ -> handle_multi_photo_select(photo_id, socket)
     end
+  end
+
+  def handle_event(
+        "select_gallery_group",
+        %{"photo_group" => photo_group, "ctrl_key_pressed" => ctrl_key_pressed},
+        socket
+      ) do
+    # TODO implement, then group field in multiselect mode form, then add collapsed to url
+    group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
+
+    group_already_selected =
+      Enum.all?(group_photos, &Enum.member?(socket.assigns.selected_photos, &1))
+
+    # If not in multiselect mode, select all photos in the group
+    # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
+    # If in multiselect mode, and some or no photos in the group are already selected, add all of them to the selection
+    new_selected_photos =
+      case {ctrl_key_pressed, socket.assigns.multiselect_active, group_already_selected} do
+        {false, false, _} -> group_photos
+        {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
+        {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
+      end
+
+    {:noreply,
+     push_patch(socket,
+       to: build_url(socket.assigns.folder, new_selected_photos, socket.assigns.tags)
+     )}
   end
 
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
