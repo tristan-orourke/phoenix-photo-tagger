@@ -423,9 +423,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div>
       <ul class="flex flex-wrap gap-4 p-6">
         <%= for photo <- @photos do %>
-          <li class="w-40 h-40 data-[selected]:outline outline-4 outline-offset-2 outline-blue-400"
-          data-selected={Enum.member?(@selected_photos, photo)}>
-            <button class="h-full" phx-click="select_gallery_photo" phx-value-photo_id={photo.id}>
+          <li class="w-40 h-40">
+            <button
+              class="h-full w-full
+                data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
+                phx-click-loading:outline phx-click-loading:outline-blue-200"
+              data-selected={Enum.member?(@selected_photos, photo)}
+              phx-click="select_gallery_photo"
+              phx-value-photo_id={photo.id}
+            >
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
                 class="w-40 h-40 object-cover"
