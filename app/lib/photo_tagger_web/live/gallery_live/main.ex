@@ -8,7 +8,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTagger.Uploaders.ImageUploader
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
-  import Logger
+
+  # require Logger
 
   def render(assigns) do
     ~H"""
@@ -63,10 +64,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def mount(_params, _session, socket) do
-    # TODO: I might be able to load all_tags and all_folders here instead of handle_params.
-    # Would they be updated properly after getting forms to work with live_view?
-    socket = assign(socket, :multiselect_active, false)
-    {:ok, socket}
+    {
+      :ok,
+      socket
+      |> assign(:all_folders, Gallery.list_folders_include_tags())
+      |> assign(:all_tags, Gallery.list_tags())
+      |> assign(:multiselect_active, false)
+      #  |> assign(%{
+      #    folder: nil,
+      #    tags: [],
+      #    filtered_photos: [],
+      #    selected_photos: [],
+      #    recommended_tags: [],
+      #    update_photo_form: Gallery.update_photo_changeset(%Photo{}) |> Component.to_form()
+      #  })
+    }
   end
 
   def handle_params(params, _session, socket) do
@@ -76,7 +88,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
     expanded_state =
-      expand_state(%{
+      expand_state(socket, %{
         folder: folder,
         tags: tags,
         photo_id: photo_id,
@@ -132,37 +144,82 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     URI.to_string(uri)
   end
 
-  def expand_state(%{
-        folder: folder,
-        tags: tags,
-        photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids
-      }) do
+  def expand_state(
+        socket,
+        %{
+          folder: folder,
+          tags: tags,
+          # This id comes from the url path
+          photo_id: photo_id,
+          # These come from url query params
+          selected_photo_ids: selected_photo_ids
+        }
+      ) do
+    prev_folder = Map.get(socket.assigns, :folder)
+    prev_tags = Map.get(socket.assigns, :tags, [])
+    prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
+
     filtered_photos =
-      case {folder, tags} do
-        {nil, []} -> Gallery.list_photos()
-        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
-        {folder, []} -> Gallery.list_photos_by_folder(folder)
-        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+      case {folder, tags, prev_filtered_photos} do
+        # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
+        {^prev_folder, ^prev_tags, prev_filtered_photos} when is_list(prev_filtered_photos) ->
+          prev_filtered_photos
+
+        {nil, [], _} ->
+          Gallery.list_photos()
+          |> Repo.preload(:tags)
+
+        {nil, tags, _} ->
+          Gallery.list_photos_by_all_tags(tags)
+          |> Repo.preload(:tags)
+
+        {folder, [], _} ->
+          Gallery.list_photos_by_folder(folder)
+          |> Repo.preload(:tags)
+
+        {folder, tags, _} ->
+          Gallery.list_photos_by_folder_and_tags(folder, tags)
+          |> Repo.preload(:tags)
       end
 
-    filtered_photos = Repo.preload(filtered_photos, :tags)
+    prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
 
-    selected_photos =
+    prev_selected_photo_ids =
+      case Map.get(socket.assigns, :selected_photos, nil) do
+        nil -> nil
+        photos -> Enum.map(photos, & &1.id)
+      end
+
+    new_selected_photo_ids =
       [photo_id | selected_photo_ids]
       |> Enum.filter(&(&1 != nil))
-      |> Enum.map(&Gallery.get_photo!(&1))
-      |> Repo.preload(:tags)
 
+    selected_photos =
+      case {new_selected_photo_ids, prev_selected_photos} do
+        # If the selected photo ids have not changed, and we have cached selected photos, use them without querying the database
+        {^prev_selected_photo_ids, prev_selected_photos} when is_list(prev_selected_photos) ->
+          prev_selected_photos
+
+        # Otherwise, selections have changed, query them from the database
+        {_, _} ->
+          new_selected_photo_ids
+          |> Enum.map(&Gallery.get_photo!(&1))
+          |> Repo.preload(:tags)
+      end
+
+    # If filtered photos have not changed, use cached recommended tags
     recommended_tags =
-      Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
-        MapSet.union(acc, MapSet.new(photo.tags))
-      end)
-      |> MapSet.to_list()
-      |> Enum.sort_by(&String.downcase(&1.name))
+      case filtered_photos do
+        ^prev_filtered_photos ->
+          Map.get(socket.assigns, :recommended_tags, [])
 
-    all_folders = Gallery.list_folders_include_tags()
-    all_tags = Gallery.list_tags()
+        _ ->
+          Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
+            MapSet.union(acc, MapSet.new(photo.tags))
+          end)
+          |> MapSet.to_list()
+          |> Enum.sort_by(&String.downcase(&1.name))
+      end
 
     update_photo_form =
       case selected_photos do
@@ -175,9 +232,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     %{
       folder: folder,
-      all_folders: all_folders,
       tags: tags,
-      all_tags: all_tags,
       filtered_photos: filtered_photos,
       selected_photos: selected_photos,
       recommended_tags: recommended_tags,
@@ -209,10 +264,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     ~H"""
     <.link
-      class={"
-        #{@toggled_tag in @tags && "font-bold"}
-        #{if(@toggled_tag in @tags, do: "bg-red-400 text-black hover:text-black", else: "bg-green-500 text-white hover:text-white")}
-        rounded-full px-1 no-underline"}
+      class={"rounded-full px-1 no-underline " <>
+        "bg-green-500 text-white hover:text-white " <> # styling if not in current filters
+        "data-[selected]:font-bold data-[selected]:bg-red-400 data-[selected]:text-black data-[selected]:hover:text-black" # styling if in current filters
+      }
+      data-selected={@toggled_tag in @tags}
       patch={@href}
     >
       {render_slot(@inner_block)}
@@ -244,7 +300,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <li>
       <.accordion id={folder_accordion_id(@nav_folder)}>
         <:trigger>
-          <p class={"text-left #{@is_current_folder && "font-bold"}"}>
+          <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
             {if(@nav_folder, do: @nav_folder, else: "All folders")}
           </p>
         </:trigger>
@@ -252,7 +308,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="list-disc list-inside">
             <li>
               <.link
-                class={"#{Enum.empty?(@tags) && @is_current_folder && "font-bold"}"}
+                class="data-[selected]:font-bold"
+                data-selected={Enum.empty?(@tags) && @is_current_folder}
                 patch={build_url(@nav_folder, [], [])}
               >
                 All photos
@@ -267,7 +324,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               end) do %>
               <li>
                 <.link
-                  class={"#{@is_current_folder && tag in @tags && "font-bold"}"}
+                  class="data-[selected]:font-bold"
+                  data-selected={@is_current_folder && tag in @tags}
                   patch={build_url(@nav_folder, [], [tag])}
                 >
                   {tag}
@@ -329,13 +387,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         true ->
           "bg-blue-600 text-white hover:bg-blue-700"
       end
+
     assigns = assign(assigns, :button_colours, button_colours)
+
     ~H"""
     <div class="flex items-center sticky top-0 bg-white">
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
         <button
-          class={"border rounded-full px-1 my-1 #{@button_colours}"}
+          class="border rounded-full px-1 my-1
+          border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800
+          aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700"
+          aria-selected={if(@multiselect_active, do: "true", else: "false")}
           phx-click="toggle_multiselect"
         >
           <span class="pl-2 pr-2">
@@ -360,8 +423,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div>
       <ul class="flex flex-wrap gap-4 p-6">
         <%= for photo <- @photos do %>
-          <li class={"w-40 h-40 #{if(Enum.member?(@selected_photos, photo), do: "outline outline-4 outline-offset-2 outline-blue-400", else: "")}"}>
-            <button class="h-full" phx-click="select_gallery_photo" phx-value-photo_id={photo.id}>
+          <li class="w-40 h-40">
+            <button
+              class="h-full w-full
+                data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
+                phx-click-loading:outline phx-click-loading:outline-blue-200"
+              data-selected={Enum.member?(@selected_photos, photo)}
+              phx-click="select_gallery_photo"
+              phx-value-photo_id={photo.id}
+            >
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
                 class="w-40 h-40 object-cover"
@@ -392,8 +462,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Folder">
         <.link
-          class={"#{@folder == @photo.folder && "font-bold"}"}
+          class="data-[active]:font-bold"
           patch={build_url(@photo.folder, [@photo], @tags)}
+          data-active={@folder == @photo.folder}
         >
           {@photo.folder}
         </.link>
@@ -530,6 +601,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           _ -> {add, remove, [tag | limbo]}
         end
       end)
+
     assigns = assign(assigns, :tags_to_add, tags_to_add)
     assigns = assign(assigns, :tags_to_remove, tags_to_remove)
     assigns = assign(assigns, :tags_in_limbo, tags_in_limbo)
@@ -623,7 +695,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     expanded_state =
-      expand_state(%{
+      expand_state(socket, %{
         folder: folder,
         tags: tags,
         photo_id: photo_id,
@@ -631,22 +703,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       })
 
     assign(socket, expanded_state)
-  end
-
-  def handle_event("toggle_multiselect", _params, socket) do
-    {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
-  end
-
-  # Holding ctrl while clicking a photo will select multiple
-  def handle_event(
-        "select_gallery_photo",
-        %{"ctrl_key_pressed" => ctrl_key_pressed, "photo_id" => photo_id},
-        socket
-      ) do
-    case {ctrl_key_pressed, socket.assigns.multiselect_active} do
-      {false, false} -> handle_single_photo_select(photo_id, socket)
-      _ -> handle_multi_photo_select(photo_id, socket)
-    end
   end
 
   def handle_multi_photo_select(photo_id, socket) do
@@ -670,16 +726,56 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
+  def refresh_selected_photos(socket) do
+    selected_photo_ids = socket.assigns.selected_photos |> Enum.map(& &1.id)
+
+    selected_photos =
+      Enum.map(selected_photo_ids, &Gallery.get_photo!(&1))
+      |> Repo.preload(:tags)
+
+    assign(socket, selected_photos: selected_photos)
+  end
+
+  ## Event Handlers
+
+  def handle_event("toggle_multiselect", _params, socket) do
+    {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
+  end
+
+  # Holding ctrl while clicking a photo will select multiple
+  def handle_event(
+        "select_gallery_photo",
+        %{"ctrl_key_pressed" => ctrl_key_pressed, "photo_id" => photo_id},
+        socket
+      ) do
+    case {ctrl_key_pressed, socket.assigns.multiselect_active} do
+      {false, false} -> handle_single_photo_select(photo_id, socket)
+      _ -> handle_multi_photo_select(photo_id, socket)
+    end
+  end
+
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
-    {:noreply, refresh_socket(socket)}
+
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
-    {:noreply, refresh_socket(socket)}
+
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("add_tag_bulk", %{"tag" => tag}, socket) do
@@ -689,7 +785,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
     end)
 
-    {:noreply, refresh_socket(socket)}
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("remove_tag_bulk", %{"tag" => tag}, socket) do
@@ -699,16 +800,24 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
     end)
 
-    {:noreply, refresh_socket(socket)}
+    {:noreply,
+     socket
+     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
     photo = Gallery.get_photo!(id)
+    result = Gallery.update_photo(photo, photo_params)
 
-    case Gallery.update_photo(photo, photo_params) do
+    case result do
       {:ok, _photo} ->
         {:noreply,
-         refresh_socket(socket)
+         assign(socket, :all_folders, Gallery.list_folders_include_tags())
+         |> refresh_socket()
+         |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
@@ -726,7 +835,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:ok, _photo} = Gallery.delete_photo(photo)
 
     {:noreply,
-     push_patch(socket, to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
+     socket
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_tags, Gallery.list_tags())
+     |> push_patch(to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
   end
 end
