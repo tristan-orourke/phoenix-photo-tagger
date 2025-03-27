@@ -8,7 +8,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTagger.Uploaders.ImageUploader
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
-  import Logger
 
   def render(assigns) do
     ~H"""
@@ -63,11 +62,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> assign(:all_tags, Gallery.list_tags())
-     |> assign(:multiselect_active, false)}
+    {
+      :ok,
+      socket
+      |> assign(:all_folders, Gallery.list_folders_include_tags())
+      |> assign(:all_tags, Gallery.list_tags())
+      |> assign(:multiselect_active, false)
+      #  |> assign(%{
+      #    folder: nil,
+      #    tags: [],
+      #    filtered_photos: [],
+      #    selected_photos: [],
+      #    recommended_tags: [],
+      #    update_photo_form: Gallery.update_photo_changeset(%Photo{}) |> Component.to_form()
+      #  })
+    }
   end
 
   def handle_params(params, _session, socket) do
@@ -77,7 +86,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
     expanded_state =
-      expand_state(%{
+      expand_state(socket, %{
         folder: folder,
         tags: tags,
         photo_id: photo_id,
@@ -133,34 +142,82 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     URI.to_string(uri)
   end
 
-  def expand_state(%{
-        folder: folder,
-        tags: tags,
-        photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids
-      }) do
+  def expand_state(
+        socket,
+        %{
+          folder: folder,
+          tags: tags,
+          # This id comes from the url path
+          photo_id: photo_id,
+          # These come from url query params
+          selected_photo_ids: selected_photo_ids
+        }
+      ) do
+    prev_folder = Map.get(socket.assigns, :folder)
+    prev_tags = Map.get(socket.assigns, :tags, [])
+    prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
+
     filtered_photos =
-      case {folder, tags} do
-        {nil, []} -> Gallery.list_photos()
-        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
-        {folder, []} -> Gallery.list_photos_by_folder(folder)
-        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+      case {folder, tags, prev_filtered_photos} do
+        # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
+        {^prev_folder, ^prev_tags, prev_filtered_photos} when is_list(prev_filtered_photos) ->
+          prev_filtered_photos
+
+        {nil, [], _} ->
+          Gallery.list_photos()
+          |> Repo.preload(:tags)
+
+        {nil, tags, _} ->
+          Gallery.list_photos_by_all_tags(tags)
+          |> Repo.preload(:tags)
+
+        {folder, [], _} ->
+          Gallery.list_photos_by_folder(folder)
+          |> Repo.preload(:tags)
+
+        {folder, tags, _} ->
+          Gallery.list_photos_by_folder_and_tags(folder, tags)
+          |> Repo.preload(:tags)
       end
 
-    filtered_photos = Repo.preload(filtered_photos, :tags)
+    prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
 
-    selected_photos =
+    prev_selected_photo_ids =
+      case Map.get(socket.assigns, :selected_photos, nil) do
+        nil -> nil
+        photos -> Enum.map(photos, & &1.id)
+      end
+
+    new_selected_photo_ids =
       [photo_id | selected_photo_ids]
       |> Enum.filter(&(&1 != nil))
-      |> Enum.map(&Gallery.get_photo!(&1))
-      |> Repo.preload(:tags)
 
+    selected_photos =
+      case {new_selected_photo_ids, prev_selected_photos} do
+        # If the selected photo ids have not changed, and we have cached selected photos, use them without querying the database
+        {^prev_selected_photo_ids, prev_selected_photos} when is_list(prev_selected_photos) ->
+          prev_selected_photos
+
+        # Otherwise, selections have changed, query them from the database
+        {_, _} ->
+          new_selected_photo_ids
+          |> Enum.map(&Gallery.get_photo!(&1))
+          |> Repo.preload(:tags)
+      end
+
+    # If filtered photos have not changed, use cached recommended tags
     recommended_tags =
-      Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
-        MapSet.union(acc, MapSet.new(photo.tags))
-      end)
-      |> MapSet.to_list()
-      |> Enum.sort_by(&String.downcase(&1.name))
+      case filtered_photos do
+        ^prev_filtered_photos ->
+          Map.get(socket.assigns, :recommended_tags, [])
+
+        _ ->
+          Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
+            MapSet.union(acc, MapSet.new(photo.tags))
+          end)
+          |> MapSet.to_list()
+          |> Enum.sort_by(&String.downcase(&1.name))
+      end
 
     update_photo_form =
       case selected_photos do
@@ -622,7 +679,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     expanded_state =
-      expand_state(%{
+      expand_state(socket, %{
         folder: folder,
         tags: tags,
         photo_id: photo_id,
