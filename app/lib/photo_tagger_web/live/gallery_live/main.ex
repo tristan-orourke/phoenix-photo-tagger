@@ -425,6 +425,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= for photo <- @photos do %>
           <li class="w-40 h-40">
             <button
+              id={"gallery-photo-button-#{photo.id}"}
               class="h-full w-full
                 data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
                 phx-click-loading:outline phx-click-loading:outline-blue-200"
@@ -557,6 +558,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             name="photo[description]"
             type="textarea"
             label="Description"
+          />
+          <.input
+            field={@update_photo_form[:group]}
+            name="photo[group]"
+            type="text"
+            label="Group"
           />
           <.button class="mt-4">Save</.button>
         </.form>
