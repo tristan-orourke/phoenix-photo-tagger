@@ -710,6 +710,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
+  def refresh_selected_photos(socket) do
+    selected_photo_ids = socket.assigns.selected_photos |> Enum.map(& &1.id)
+
+    selected_photos =
+      Enum.map(selected_photo_ids, &Gallery.get_photo!(&1))
+      |> Repo.preload(:tags)
+
+    assign(socket, selected_photos: selected_photos)
+  end
+
   ## Event Handlers
 
   def handle_event("toggle_multiselect", _params, socket) do
@@ -735,7 +745,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
-     |> refresh_socket()}
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
@@ -745,7 +756,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
-     |> refresh_socket()}
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("add_tag_bulk", %{"tag" => tag}, socket) do
@@ -758,7 +770,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
-     |> refresh_socket()}
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("remove_tag_bulk", %{"tag" => tag}, socket) do
@@ -771,7 +784,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
-     |> refresh_socket()}
+     |> refresh_socket()
+     |> refresh_selected_photos()}
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
@@ -783,6 +797,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders_include_tags())
          |> refresh_socket()
+         |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
