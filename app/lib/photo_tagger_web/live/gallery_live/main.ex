@@ -394,17 +394,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div class="flex items-center sticky top-0 bg-white">
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
-        <button
-          class="border rounded-full px-1 my-1
-          border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800
-          aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700"
-          aria-selected={if(@multiselect_active, do: "true", else: "false")}
+        <.toggle_button
+          selected={@multiselect_active}
           phx-click="toggle_multiselect"
         >
           <span class="pl-2 pr-2">
             <.icon name="hero-squares-plus" />
+            Multiselect
           </span>
-        </button>
+        </.toggle_button>
       </div>
       <div class="flex-none pl-3 pr-3 mr-4">
         <p class="font-bold">{"#{@item_count} items"}</p>

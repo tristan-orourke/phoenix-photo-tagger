@@ -246,6 +246,30 @@ defmodule PhotoTaggerWeb.CoreComponents do
     """
   end
 
+  attr :selected, :boolean, required: true
+  attr :class, :string, default: nil
+  attr :rest, :global, include: ~w(disabled form name value)
+  slot :inner_block, required: true
+
+  def toggle_button(assigns) do
+    ~H"""
+    <button
+      class={
+        ClassHelper.tw([
+          "border rounded-full px-1 my-1",
+          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
+          "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700",
+          @class
+        ])
+      }
+      aria-selected={if(@selected, do: "true", else: "false")}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
   @doc """
   Renders an input with label and error messages.
 
