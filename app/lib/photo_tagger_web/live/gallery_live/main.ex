@@ -11,7 +11,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   # require Logger
 
-
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
@@ -265,10 +264,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     ~H"""
     <.link
-      class={"
-        #{@toggled_tag in @tags && "font-bold"}
-        #{if(@toggled_tag in @tags, do: "bg-red-400 text-black hover:text-black", else: "bg-green-500 text-white hover:text-white")}
-        rounded-full px-1 no-underline"}
+      class={"rounded-full px-1 no-underline " <>
+        "bg-green-500 text-white hover:text-white " <> # styling if not in current filters
+        "data-[selected]:font-bold data-[selected]:bg-red-400 data-[selected]:text-black data-[selected]:hover:text-black" # styling if in current filters
+      }
+      data-selected={@toggled_tag in @tags}
       patch={@href}
     >
       {render_slot(@inner_block)}
@@ -300,7 +300,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <li>
       <.accordion id={folder_accordion_id(@nav_folder)}>
         <:trigger>
-          <p class={"text-left #{@is_current_folder && "font-bold"}"}>
+          <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
             {if(@nav_folder, do: @nav_folder, else: "All folders")}
           </p>
         </:trigger>
@@ -308,7 +308,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="list-disc list-inside">
             <li>
               <.link
-                class={"#{Enum.empty?(@tags) && @is_current_folder && "font-bold"}"}
+                class="data-[selected]:font-bold"
+                data-selected={Enum.empty?(@tags) && @is_current_folder}
                 patch={build_url(@nav_folder, [], [])}
               >
                 All photos
@@ -323,7 +324,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               end) do %>
               <li>
                 <.link
-                  class={"#{@is_current_folder && tag in @tags && "font-bold"}"}
+                  class="data-[selected]:font-bold"
+                  data-selected={@is_current_folder && tag in @tags}
                   patch={build_url(@nav_folder, [], [tag])}
                 >
                   {tag}
@@ -393,7 +395,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
         <button
-          class={"border rounded-full px-1 my-1 #{@button_colours}"}
+          class="border rounded-full px-1 my-1
+          border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800
+          aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700"
+          aria-selected={if(@multiselect_active, do: "true", else: "false")}
           phx-click="toggle_multiselect"
         >
           <span class="pl-2 pr-2">
@@ -418,7 +423,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div>
       <ul class="flex flex-wrap gap-4 p-6">
         <%= for photo <- @photos do %>
-          <li class={"w-40 h-40 #{if(Enum.member?(@selected_photos, photo), do: "outline outline-4 outline-offset-2 outline-blue-400", else: "")}"}>
+          <li class="w-40 h-40 data-[selected]:outline outline-4 outline-offset-2 outline-blue-400"
+          data-selected={Enum.member?(@selected_photos, photo)}>
             <button class="h-full" phx-click="select_gallery_photo" phx-value-photo_id={photo.id}>
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
@@ -450,8 +456,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </:item>
       <:item title="Folder">
         <.link
-          class={"#{@folder == @photo.folder && "font-bold"}"}
+          class="data-[active]:font-bold"
           patch={build_url(@photo.folder, [@photo], @tags)}
+          data-active={@folder == @photo.folder}
         >
           {@photo.folder}
         </.link>
@@ -744,6 +751,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
+
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags())
