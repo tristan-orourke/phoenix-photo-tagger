@@ -18,19 +18,22 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def create(conn, %{"photo" => photo_params}) do
-    %{"folder" => folder, "images" => images, "file_metadata" => metadata_string} = photo_params
+    {%{"images" => images, "file_metadata" => metadata_string}, other_params} =
+      Map.split(photo_params, ["images", "file_metadata"])
+
     metadata = JSON.decode!(metadata_string)
+    folder = other_params["folder"]
 
     photo_attrs =
       Enum.map(images, fn image ->
-        %{
-          "folder" => folder,
-          "image" => image,
-          "image_last_modified" =>
-            Enum.find(metadata, &(&1["name"] == image.filename))
-            |> Map.get("lastModified")
-            |> DateTime.from_unix!(:millisecond)
-        }
+        other_params
+        |> Map.put("image", image)
+        |> Map.put(
+          "image_last_modified",
+          Enum.find(metadata, &(&1["name"] == image.filename))
+          |> Map.get("lastModified")
+          |> DateTime.from_unix!(:millisecond)
+        )
       end)
 
     results = Enum.map(photo_attrs, &Gallery.create_photo(&1))

@@ -27,6 +27,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.gallery_header
           item_count={Enum.count(@filtered_photos)}
           multiselect_active={@multiselect_active}
+          collapse_groups={@collapse_groups}
         />
         <div>
           <.gallery
@@ -34,6 +35,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             folder={@folder}
             tags={@tags}
             selected_photos={@selected_photos}
+            collapse_groups={@collapse_groups}
           />
         </div>
       </div>
@@ -70,6 +72,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:all_folders, Gallery.list_folders_include_tags())
       |> assign(:all_tags, Gallery.list_tags())
       |> assign(:multiselect_active, false)
+      |> assign(:collapse_groups, false)
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -133,13 +136,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
     uri = if(photo_id, do: URI.append_path(uri, "/photos/#{photo_id}"), else: uri)
 
-    tag_query = Plug.Conn.Query.encode(%{query_tags: tags})
-    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, tag_query), else: uri)
-
-    selected_query = Plug.Conn.Query.encode(%{selected_photos: selected_photo_ids})
+    query =
+      %{}
+      |> Map.put(:query_tags, tags)
+      |> Map.put(:selected_photos, selected_photo_ids)
+      |> Plug.Conn.Query.encode()
 
     uri =
-      if(!Enum.empty?(selected_photo_ids), do: URI.append_query(uri, selected_query), else: uri)
+      case query do
+        "" -> uri
+        _ -> URI.append_query(uri, query)
+      end
 
     URI.to_string(uri)
   end
@@ -377,34 +384,35 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   attr(:item_count, :integer, required: true)
   attr(:multiselect_active, :boolean, required: true)
+  attr(:collapse_groups, :boolean, required: true)
 
   def gallery_header(assigns) do
-    button_colours =
-      case assigns.multiselect_active do
-        false ->
-          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800"
-
-        true ->
-          "bg-blue-600 text-white hover:bg-blue-700"
-      end
-
-    assigns = assign(assigns, :button_colours, button_colours)
-
     ~H"""
     <div class="flex items-center sticky top-0 bg-white">
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
-        <button
-          class="border rounded-full px-1 my-1
-          border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800
-          aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700"
-          aria-selected={if(@multiselect_active, do: "true", else: "false")}
-          phx-click="toggle_multiselect"
+        <.toggle_button
+          selected={@collapse_groups}
+          phx-click="toggle_collapse_groups"
+          class="flex items-center pl-3 pr-3"
         >
-          <span class="pl-2 pr-2">
-            <.icon name="hero-squares-plus" />
+          <.icon name="hero-square-3-stack-3d w-5 h-5" />
+          <span class="sr-only md:not-sr-only md:ml-1">
+            Collapse groups
           </span>
-        </button>
+        </.toggle_button>
+      </div>
+      <div class="flex-none pr-3">
+        <.toggle_button
+          selected={@multiselect_active}
+          phx-click="toggle_multiselect"
+          class="flex items-center pl-3 pr-3"
+        >
+          <.icon name="hero-squares-plus" />
+          <span class="sr-only md:not-sr-only md:ml-1">
+            Multiselect
+          </span>
+        </.toggle_button>
       </div>
       <div class="flex-none pl-3 pr-3 mr-4">
         <p class="font-bold">{"#{@item_count} items"}</p>
@@ -417,20 +425,43 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
   attr(:selected_photos, :list, default: [])
+  attr(:collapse_groups, :boolean, default: false)
 
   def gallery(assigns) do
+    grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+    assigns = assign(assigns, :grouped_photos, grouped_photos)
+
+    assigns =
+      case assigns.collapse_groups do
+        false ->
+          assigns
+
+        true ->
+          assign(
+            assigns,
+            :photos,
+            # Filter out photos that are in a group, excepting the first in any group
+            Enum.filter(assigns.photos, fn photo ->
+              photo.group == nil or photo == List.first(grouped_photos[photo.group])
+            end)
+          )
+      end
+
     ~H"""
     <div>
       <ul class="flex flex-wrap gap-4 p-6">
         <%= for photo <- @photos do %>
+          <% represents_group = @collapse_groups and photo.group != nil and Enum.count(@grouped_photos[photo.group]) > 1 %>
           <li class="w-40 h-40">
             <button
-              class="h-full w-full
+              id={"gallery-photo-button-#{photo.id}"}
+              class="h-full w-full relative
                 data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
                 phx-click-loading:outline phx-click-loading:outline-blue-200"
-              data-selected={Enum.member?(@selected_photos, photo)}
-              phx-click="select_gallery_photo"
+              data-selected={member_by_id?(@selected_photos, photo)}
+              phx-click={if(represents_group, do: "select_gallery_group", else: "select_gallery_photo")}
               phx-value-photo_id={photo.id}
+              phx-value-photo_group={photo.group}
             >
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
@@ -438,6 +469,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :small)}
               />
+              <%= if represents_group do %>
+                <div class="w-40 h-40 -z-10 absolute left-1 bottom-1 bg-gray-500" />
+                <div class="w-40 h-40 -z-20 absolute left-2 bottom-2 bg-gray-400" />
+              <% end %>
             </button>
           </li>
         <% end %>
@@ -558,6 +593,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             type="textarea"
             label="Description"
           />
+          <.input
+            field={@update_photo_form[:group]}
+            name="photo[group]"
+            type="text"
+            label="Group"
+          />
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
@@ -605,6 +646,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assigns = assign(assigns, :tags_to_add, tags_to_add)
     assigns = assign(assigns, :tags_to_remove, tags_to_remove)
     assigns = assign(assigns, :tags_in_limbo, tags_in_limbo)
+
+    assigns = assign(assigns, :groups, Enum.uniq(Enum.map(assigns.photos, & &1.group)))
 
     ~H"""
     <.list>
@@ -680,29 +723,31 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <% end %>
         </div>
       </:item>
+      <:item title="Group">
+        <%= if Enum.count(@groups) > 1 do %>
+          <p>Photos belong to multiple groups:</p>
+          <ul class="list-disc list-inside mb-2">
+            <%= for group <- @groups do %>
+              <li>{if group != nil, do: group, else: "No group"}</li>
+            <% end %>
+          </ul>
+        <% end %>
+        <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
+          <div class="flex items-center space-x-4">
+            <input
+              type="text"
+              name="group"
+              id="bulk_group_input"
+              Placeholder="group"
+              class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+              value={if(Enum.count(@groups) == 1, do: Enum.at(@groups, 0), else: "")}
+            />
+            <.button type="submit">Submit</.button>
+          </div>
+        </.form>
+      </:item>
     </.list>
     """
-  end
-
-  def refresh_socket(socket) do
-    folder = socket.assigns.folder
-    tags = socket.assigns.tags
-
-    {photo_id, selected_photo_ids} =
-      case socket.assigns.selected_photos do
-        [photo] -> {photo.id, []}
-        photos -> {nil, Enum.map(photos, & &1.id)}
-      end
-
-    expanded_state =
-      expand_state(socket, %{
-        folder: folder,
-        tags: tags,
-        photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids
-      })
-
-    assign(socket, expanded_state)
   end
 
   def handle_multi_photo_select(photo_id, socket) do
@@ -727,19 +772,36 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def refresh_selected_photos(socket) do
-    selected_photo_ids = socket.assigns.selected_photos |> Enum.map(& &1.id)
-
     selected_photos =
-      Enum.map(selected_photo_ids, &Gallery.get_photo!(&1))
+      socket.assigns.selected_photos
+      |> Enum.map(& &1.id)
+      |> Enum.map(&Gallery.get_photo!(&1))
       |> Repo.preload(:tags)
 
     assign(socket, selected_photos: selected_photos)
+  end
+
+  def refresh_filtered_photos(socket) do
+    filtered_photos =
+      case {socket.assigns.folder, socket.assigns.tags} do
+        {nil, []} -> Gallery.list_photos()
+        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
+        {folder, []} -> Gallery.list_photos_by_folder(folder)
+        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+      end
+      |> Repo.preload(:tags)
+
+    assign(socket, filtered_photos: filtered_photos)
   end
 
   ## Event Handlers
 
   def handle_event("toggle_multiselect", _params, socket) do
     {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
+  end
+
+  def handle_event("toggle_collapse_groups", _params, socket) do
+    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups)}
   end
 
   # Holding ctrl while clicking a photo will select multiple
@@ -754,6 +816,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     end
   end
 
+  def handle_event(
+        "select_gallery_group",
+        %{"photo_group" => photo_group, "ctrl_key_pressed" => ctrl_key_pressed},
+        socket
+      ) do
+    # TODO implement, then group field in multiselect mode form, then add collapsed to url
+    group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
+
+    group_already_selected =
+      Enum.all?(group_photos, &member_by_id?(socket.assigns.selected_photos, &1))
+
+    # If not in multiselect mode, select all photos in the group
+    # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
+    # If in multiselect mode, and some or no photos in the group are already selected, add all of them to the selection
+    new_selected_photos =
+      case {ctrl_key_pressed, socket.assigns.multiselect_active, group_already_selected} do
+        {false, false, _} -> group_photos
+        {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
+        {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
+      end
+
+    {:noreply,
+     push_patch(socket,
+       to: build_url(socket.assigns.folder, new_selected_photos, socket.assigns.tags)
+     )}
+  end
+
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
     photo = Gallery.get_photo!(photo_id)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
@@ -762,7 +851,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -774,7 +862,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -789,7 +876,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -804,8 +890,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
+  end
+
+  def handle_event("set_group_bulk", %{"group" => group}, socket) do
+    selected_photos = socket.assigns.selected_photos
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
+    end)
+
+    {:noreply,
+     socket
+     |> refresh_selected_photos()
+     |> refresh_filtered_photos()}
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
@@ -816,13 +914,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _photo} ->
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders_include_tags())
-         |> refresh_socket()
          |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
         {:noreply,
-         refresh_socket(socket)
+         socket
+         |> refresh_selected_photos()
          |> put_flash(
            :error,
            "Failed to update photo. Error #{failed_value} in step #{failed_op}."
@@ -840,5 +938,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> assign(:all_tags, Gallery.list_tags())
      |> push_patch(to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
+  end
+
+  ## Utility functions
+  def member_by_id?(enumerable, %{id: id}) do
+    Enum.any?(enumerable, fn
+      %{id: ^id} -> true
+      _ -> false
+    end)
   end
 end
