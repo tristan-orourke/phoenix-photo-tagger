@@ -750,27 +750,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
-  def refresh_socket(socket) do
-    folder = socket.assigns.folder
-    tags = socket.assigns.tags
-
-    {photo_id, selected_photo_ids} =
-      case socket.assigns.selected_photos do
-        [photo] -> {photo.id, []}
-        photos -> {nil, Enum.map(photos, & &1.id)}
-      end
-
-    expanded_state =
-      expand_state(socket, %{
-        folder: folder,
-        tags: tags,
-        photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids
-      })
-
-    assign(socket, expanded_state)
-  end
-
   def handle_multi_photo_select(photo_id, socket) do
     selected_photos = socket.assigns.selected_photos
     # Remove the new photo from selected_photos if it is present, otherwise add it
@@ -792,13 +771,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
-  def refresh_photos(socket) do
+  def refresh_selected_photos(socket) do
     selected_photos =
       socket.assigns.selected_photos
       |> Enum.map(& &1.id)
       |> Enum.map(&Gallery.get_photo!(&1))
       |> Repo.preload(:tags)
 
+    assign(socket, selected_photos: selected_photos)
+  end
+
+  def refresh_filtered_photos(socket) do
     filtered_photos =
       case {socket.assigns.folder, socket.assigns.tags} do
         {nil, []} -> Gallery.list_photos()
@@ -808,9 +791,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
       |> Repo.preload(:tags)
 
-    socket
-    |> assign(selected_photos: selected_photos)
-    |> assign(filtered_photos: filtered_photos)
+    assign(socket, filtered_photos: filtered_photos)
   end
 
   ## Event Handlers
@@ -870,8 +851,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
-     |> refresh_photos()}
+     |> refresh_selected_photos()}
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
@@ -882,8 +862,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
-     |> refresh_photos()}
+     |> refresh_selected_photos()}
   end
 
   def handle_event("add_tag_bulk", %{"tag" => tag}, socket) do
@@ -897,8 +876,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
-     |> refresh_photos()}
+     |> refresh_selected_photos()}
   end
 
   def handle_event("remove_tag_bulk", %{"tag" => tag}, socket) do
@@ -912,8 +890,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
-     |> refresh_photos()}
+     |> refresh_selected_photos()}
   end
 
   def handle_event("set_group_bulk", %{"group" => group}, socket) do
@@ -923,7 +900,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
     end)
 
-    {:noreply, refresh_photos(socket)}
+    {:noreply,
+     socket
+     |> refresh_selected_photos()
+     |> refresh_filtered_photos()}
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
@@ -934,13 +914,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _photo} ->
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders_include_tags())
-         |> refresh_socket()
-         |> refresh_photos()
+         |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
         {:noreply,
-         refresh_socket(socket)
+         socket
+         |> refresh_selected_photos()
          |> put_flash(
            :error,
            "Failed to update photo. Error #{failed_value} in step #{failed_op}."
