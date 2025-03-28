@@ -136,13 +136,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
     uri = if(photo_id, do: URI.append_path(uri, "/photos/#{photo_id}"), else: uri)
 
-    tag_query = Plug.Conn.Query.encode(%{query_tags: tags})
-    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, tag_query), else: uri)
-
-    selected_query = Plug.Conn.Query.encode(%{selected_photos: selected_photo_ids})
+    query =
+      %{}
+      |> Map.put(:query_tags, tags)
+      |> Map.put(:selected_photos, selected_photo_ids)
+      |> Plug.Conn.Query.encode()
 
     uri =
-      if(!Enum.empty?(selected_photo_ids), do: URI.append_query(uri, selected_query), else: uri)
+      case query do
+        "" -> uri
+        _ -> URI.append_query(uri, query)
+      end
 
     URI.to_string(uri)
   end
@@ -390,12 +394,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.toggle_button
           selected={@collapse_groups}
           phx-click="toggle_collapse_groups"
+          class="flex items-center pl-3 pr-3"
         >
-          <span class="pl-2 pr-2">
-            <.icon name="hero-square-2-stack" />
-            <span class="sr-only md:not-sr-only">
-              Collapse groups
-            </span>
+          <.icon name="hero-square-3-stack-3d w-5 h-5" />
+          <span class="sr-only md:not-sr-only md:ml-1">
+            Collapse groups
           </span>
         </.toggle_button>
       </div>
@@ -403,12 +406,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.toggle_button
           selected={@multiselect_active}
           phx-click="toggle_multiselect"
+          class="flex items-center pl-3 pr-3"
         >
-          <span class="pl-2 pr-2">
-            <.icon name="hero-squares-plus" />
-            <span class="sr-only md:not-sr-only">
-              Multiselect
-            </span>
+          <.icon name="hero-squares-plus" />
+          <span class="sr-only md:not-sr-only md:ml-1">
+            Multiselect
           </span>
         </.toggle_button>
       </div>
