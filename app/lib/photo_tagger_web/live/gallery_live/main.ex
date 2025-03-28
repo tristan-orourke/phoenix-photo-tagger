@@ -388,7 +388,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery_header(assigns) do
     ~H"""
-    <div class="flex items-center sticky top-0 bg-white">
+    <div class="flex items-center sticky top-0 bg-white z-50">
       <div class="flex-1" />
       <div class="flex-none pl-3 pr-3">
         <.toggle_button
