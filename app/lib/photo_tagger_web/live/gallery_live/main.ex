@@ -90,6 +90,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
+    collapse_groups =
+      Map.get(params, "collapse_groups", nil)
+      |> case do
+        nil -> socket.assigns.collapse_groups # use the current value if not set in the url
+        false -> false
+        "false" -> false
+        _ -> true
+      end
+
+    socket = assign(socket, :collapse_groups, collapse_groups)
+
     expanded_state =
       expand_state(socket, %{
         folder: folder,
@@ -125,7 +136,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply, assign(socket, expanded_state)}
   end
 
-  def build_url(folder, selected_photos, tags) do
+  def build_url(folder, selected_photos, tags, other_queries \\ %{}) do
     {photo_id, selected_photo_ids} =
       case selected_photos do
         [photo] -> {photo.id, []}
@@ -136,13 +147,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
     uri = if(photo_id, do: URI.append_path(uri, "/photos/#{photo_id}"), else: uri)
 
-    tag_query = Plug.Conn.Query.encode(%{query_tags: tags})
-    uri = if(!Enum.empty?(tags), do: URI.append_query(uri, tag_query), else: uri)
+    # Don't include queries with values of "false" in the URL
+    # other_queries = Map.filter(other_queries, fn {_, v} -> v != false end)
 
-    selected_query = Plug.Conn.Query.encode(%{selected_photos: selected_photo_ids})
+    query =
+      %{}
+      |> Map.put(:query_tags, tags)
+      |> Map.put(:selected_photos, selected_photo_ids)
+      |> Map.merge(other_queries)
+      |> Plug.Conn.Query.encode()
 
     uri =
-      if(!Enum.empty?(selected_photo_ids), do: URI.append_query(uri, selected_query), else: uri)
+      case query do
+        "" -> uri
+        _ -> URI.append_query(uri, query)
+      end
 
     URI.to_string(uri)
   end
@@ -428,6 +447,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def gallery(assigns) do
     grouped_photos = Enum.group_by(assigns.photos, & &1.group)
     assigns = assign(assigns, :grouped_photos, grouped_photos)
+
+    Logger.debug("collapse groups: #{inspect(assigns.collapse_groups)}")
 
     assigns =
       case assigns.collapse_groups do
@@ -723,27 +744,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
-  def refresh_socket(socket) do
-    folder = socket.assigns.folder
-    tags = socket.assigns.tags
-
-    {photo_id, selected_photo_ids} =
-      case socket.assigns.selected_photos do
-        [photo] -> {photo.id, []}
-        photos -> {nil, Enum.map(photos, & &1.id)}
-      end
-
-    expanded_state =
-      expand_state(socket, %{
-        folder: folder,
-        tags: tags,
-        photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids
-      })
-
-    assign(socket, expanded_state)
-  end
-
   def handle_multi_photo_select(photo_id, socket) do
     selected_photos = socket.assigns.selected_photos
     # Remove the new photo from selected_photos if it is present, otherwise add it
@@ -782,7 +782,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
-    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups)}
+    {:noreply,
+     push_patch(socket,
+       to:
+         build_url(socket.assigns.folder, socket.assigns.selected_photos, socket.assigns.tags, %{
+           collapse_groups: !socket.assigns.collapse_groups
+         })
+     )}
   end
 
   # Holding ctrl while clicking a photo will select multiple
@@ -802,7 +808,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         %{"photo_group" => photo_group, "ctrl_key_pressed" => ctrl_key_pressed},
         socket
       ) do
-    # TODO implement, then group field in multiselect mode form, then add collapsed to url
     group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
 
     group_already_selected =
@@ -832,7 +837,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -844,7 +848,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -859,7 +862,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -874,7 +876,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> refresh_socket()
      |> refresh_selected_photos()}
   end
 
@@ -886,13 +887,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, _photo} ->
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders_include_tags())
-         |> refresh_socket()
          |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
         {:noreply,
-         refresh_socket(socket)
+         socket
          |> put_flash(
            :error,
            "Failed to update photo. Error #{failed_value} in step #{failed_op}."
