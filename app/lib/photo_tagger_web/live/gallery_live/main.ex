@@ -458,7 +458,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               class="h-full w-full relative
                 data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
                 phx-click-loading:outline phx-click-loading:outline-blue-200"
-              data-selected={Enum.member?(@selected_photos, photo)}
+              data-selected={member_by_id?(@selected_photos, photo)}
               phx-click={if(represents_group, do: "select_gallery_group", else: "select_gallery_photo")}
               phx-value-photo_id={photo.id}
               phx-value-photo_group={photo.group}
@@ -647,6 +647,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assigns = assign(assigns, :tags_to_remove, tags_to_remove)
     assigns = assign(assigns, :tags_in_limbo, tags_in_limbo)
 
+    assigns = assign(assigns, :groups, Enum.uniq(Enum.map(assigns.photos, & &1.group)))
+
     ~H"""
     <.list>
       <:item title="Selected photos">
@@ -721,6 +723,29 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <% end %>
         </div>
       </:item>
+      <:item title="Group">
+        <%= if Enum.count(@groups) > 1 do %>
+          <p>Photos belong to multiple groups:</p>
+          <ul class="list-disc list-inside mb-2">
+            <%= for group <- @groups do %>
+              <li>{if group != nil, do: group, else: "No group"}</li>
+            <% end %>
+          </ul>
+        <% end %>
+        <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
+          <div class="flex items-center space-x-4">
+            <input
+              type="text"
+              name="group"
+              id="bulk_group_input"
+              Placeholder="group"
+              class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+              value={if(Enum.count(@groups) == 1, do: Enum.at(@groups, 0), else: "")}
+            />
+            <.button type="submit">Submit</.button>
+          </div>
+        </.form>
+      </:item>
     </.list>
     """
   end
@@ -767,14 +792,25 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
-  def refresh_selected_photos(socket) do
-    selected_photo_ids = socket.assigns.selected_photos |> Enum.map(& &1.id)
-
+  def refresh_photos(socket) do
     selected_photos =
-      Enum.map(selected_photo_ids, &Gallery.get_photo!(&1))
+      socket.assigns.selected_photos
+      |> Enum.map(& &1.id)
+      |> Enum.map(&Gallery.get_photo!(&1))
       |> Repo.preload(:tags)
 
-    assign(socket, selected_photos: selected_photos)
+    filtered_photos =
+      case {socket.assigns.folder, socket.assigns.tags} do
+        {nil, []} -> Gallery.list_photos()
+        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
+        {folder, []} -> Gallery.list_photos_by_folder(folder)
+        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+      end
+      |> Repo.preload(:tags)
+
+    socket
+    |> assign(selected_photos: selected_photos)
+    |> assign(filtered_photos: filtered_photos)
   end
 
   ## Event Handlers
@@ -808,7 +844,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
 
     group_already_selected =
-      Enum.all?(group_photos, &Enum.member?(socket.assigns.selected_photos, &1))
+      Enum.all?(group_photos, &member_by_id?(socket.assigns.selected_photos, &1))
 
     # If not in multiselect mode, select all photos in the group
     # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
@@ -835,7 +871,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
-     |> refresh_selected_photos()}
+     |> refresh_photos()}
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
@@ -847,7 +883,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
-     |> refresh_selected_photos()}
+     |> refresh_photos()}
   end
 
   def handle_event("add_tag_bulk", %{"tag" => tag}, socket) do
@@ -862,7 +898,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
-     |> refresh_selected_photos()}
+     |> refresh_photos()}
   end
 
   def handle_event("remove_tag_bulk", %{"tag" => tag}, socket) do
@@ -877,7 +913,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> assign(:all_tags, Gallery.list_tags())
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_socket()
-     |> refresh_selected_photos()}
+     |> refresh_photos()}
+  end
+
+  def handle_event("set_group_bulk", %{"group" => group}, socket) do
+    selected_photos = socket.assigns.selected_photos
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
+    end)
+
+    {:noreply, refresh_photos(socket)}
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
@@ -889,7 +935,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders_include_tags())
          |> refresh_socket()
-         |> refresh_selected_photos()
+         |> refresh_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
@@ -912,5 +958,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> assign(:all_tags, Gallery.list_tags())
      |> push_patch(to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
+  end
+
+  ## Utility functions
+  def member_by_id?(enumerable, %{id: id}) do
+    Enum.any?(enumerable, fn
+      %{id: ^id} -> true
+      _ -> false
+    end)
   end
 end
