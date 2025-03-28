@@ -936,7 +936,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> assign(:all_tags, Gallery.list_tags())
-     |> push_patch(to: build_url(socket.assigns.folder, nil, socket.assigns.tags))
+     |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
   end
 
