@@ -490,9 +490,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def photo(assigns) do
     ~H"""
     <.list>
-      <:item title="Image">
+      <%!-- On medium screens and above, sticky the image section to the top --%>
+      <:item title="Image" class="max-h-[40vh] md:sticky md:top-0 md:bg-white md:border-b md:border-zinc-100 md:mb-4 md:z-10">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
-          <img img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
+          <img class="object-contain h-full" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
       </:item>
       <:item title="Folder">
