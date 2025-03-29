@@ -410,7 +410,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           class="flex items-center pl-3 pr-3"
         >
           <.icon name="hero-square-3-stack-3d w-5 h-5" />
-          <span class="sr-only md:not-sr-only md:ml-1">
+          <span class="sr-only lg:not-sr-only lg:ml-1">
             Collapse groups
           </span>
         </.toggle_button>
@@ -422,7 +422,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           class="flex items-center pl-3 pr-3"
         >
           <.icon name="hero-squares-plus" />
-          <span class="sr-only md:not-sr-only md:ml-1">
+          <span class="sr-only lg:not-sr-only lg:ml-1">
             Multiselect
           </span>
         </.toggle_button>
@@ -504,7 +504,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
-      <:item title="Image" class="max-h-[40vh] md:sticky md:top-0 md:bg-white md:border-b md:border-zinc-100 md:mb-4 md:z-10">
+      <:item title="Image" class="max-h-[40vh] lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
           <img class="object-contain h-full" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
