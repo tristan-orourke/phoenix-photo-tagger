@@ -270,6 +270,34 @@ defmodule PhotoTaggerWeb.CoreComponents do
     """
   end
 
+  attr :selected, :boolean, required: true
+  attr :href, :string, required: true
+  attr :nav_type, :atom, values: [:patch, :navigate, :href], default: :patch
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def toggle_link(assigns) do
+    assigns = assign(assigns, :nav, Map.put(%{}, assigns.nav_type, assigns.href))
+    ~H"""
+    <.link
+      class={
+        ClassHelper.tw([
+          "border rounded-full px-1 my-1 no-underline",
+          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
+          "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700",
+          @class
+        ])
+      }
+      aria-selected={if(@selected, do: "true", else: "false")}
+      {@nav}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.link>
+    """
+  end
+
   @doc """
   Renders an input with label and error messages.
 

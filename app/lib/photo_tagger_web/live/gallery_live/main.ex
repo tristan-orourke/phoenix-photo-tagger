@@ -270,16 +270,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       assign(assigns, :href, build_url(assigns.folder, assigns.selected_photos, tags_list))
 
     ~H"""
-    <.link
-      class={"rounded-full px-1 no-underline " <>
-        "bg-green-500 text-white hover:text-white " <> # styling if not in current filters
-        "data-[selected]:font-bold data-[selected]:bg-red-400 data-[selected]:text-black data-[selected]:hover:text-black" # styling if in current filters
-      }
-      data-selected={@toggled_tag in @tags}
-      patch={@href}
+    <.toggle_link
+      selected={@toggled_tag in @tags}
+      href={@href}
     >
       {render_slot(@inner_block)}
-    </.link>
+    </.toggle_link>
     """
   end
 
@@ -508,23 +504,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Tags">
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
-            <li class="mr-2">
+            <li class="mr-2 flex items-center">
               <.toggle_tag_button
                 folder={@folder}
                 selected_photos={[@photo]}
                 tags={@tags}
                 toggled_tag={tag.name}
               >
-                {if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name}
+                {tag.name}
               </.toggle_tag_button>
               <.form
-                class="inline"
                 for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})}
                 phx-submit="remove_tag"
               >
                 <input class="hidden" type="text" name="photo_id" value={@photo.id} />
                 <input class="hidden" type="text" name="tag" value={tag.name} />
-                <button type="submit">
+                <button type="submit" class="flex items-center">
                   <.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900" />
                 </button>
               </.form>
