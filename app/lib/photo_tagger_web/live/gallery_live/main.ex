@@ -12,7 +12,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
-      <div id="folders-section" class="col-span-1 overflow-y-auto">
+      <div id="folders-section" class="col-span-1 overflow-y-auto pl-4 sm:pl-6 lg:pl-8 ">
         <.folders
           all_folders={@all_folders}
           all_tags={@all_tags}
