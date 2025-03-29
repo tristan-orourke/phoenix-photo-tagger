@@ -9,8 +9,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
 
-  # require Logger
-
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
@@ -251,6 +249,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:selected_photos, :list, default: [])
   attr(:tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
+  attr(:class, :string, default: "")
   slot(:inner_block)
 
   def toggle_tag_button(assigns) do
@@ -270,16 +269,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       assign(assigns, :href, build_url(assigns.folder, assigns.selected_photos, tags_list))
 
     ~H"""
-    <.link
-      class={"rounded-full px-1 no-underline " <>
-        "bg-green-500 text-white hover:text-white " <> # styling if not in current filters
-        "data-[selected]:font-bold data-[selected]:bg-red-400 data-[selected]:text-black data-[selected]:hover:text-black" # styling if in current filters
-      }
-      data-selected={@toggled_tag in @tags}
-      patch={@href}
+    <.toggle_link
+      selected={@toggled_tag in @tags}
+      href={@href}
+      class={@class}
     >
       {render_slot(@inner_block)}
-    </.link>
+    </.toggle_link>
     """
   end
 
@@ -298,53 +294,70 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
 
   def folder_nav_item(assigns) do
-    assigns = assign(assigns, :is_current_folder, assigns.current_folder == assigns.nav_folder)
+    recommended_tag_names = Enum.map(assigns.recommended_tags, & &1.name)
+
+    {recommended_nav_tags, other_nav_tags} =
+      Enum.split_with(assigns.nav_tags, &(&1 in recommended_tag_names))
 
     assigns =
-      assign(assigns, :recommended_tag_names, Enum.map(assigns.recommended_tags, & &1.name))
+      assigns
+      |> assign(:is_current_folder, assigns.current_folder == assigns.nav_folder)
+      |> assign(:recommended_nav_tags, recommended_nav_tags)
+      |> assign(:other_nav_tags, other_nav_tags)
 
     ~H"""
     <li>
       <.accordion id={folder_accordion_id(@nav_folder)}>
         <:trigger>
-          <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
+          <%!-- <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
             {if(@nav_folder, do: @nav_folder, else: "All folders")}
-          </p>
-        </:trigger>
-        <:panel default_expanded={@is_current_folder}>
-          <ul class="list-disc list-inside">
-            <li>
-              <.link
+          </p> --%>
+          <p class="text-left">
+            <.link
                 class="data-[selected]:font-bold"
                 data-selected={Enum.empty?(@tags) && @is_current_folder}
                 patch={build_url(@nav_folder, [], [])}
               >
-                All photos
-              </.link>
-            </li>
-            <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
-                cond do
-                  tag in @tags -> 0 # show currently selected tags first
-                  tag in @recommended_tag_names -> 1 # then recommended tags
-                  true -> 2 # then all other tags
-                end
-              end) do %>
-              <li>
-                <.link
-                  class="data-[selected]:font-bold"
-                  data-selected={@is_current_folder && tag in @tags}
-                  patch={build_url(@nav_folder, [], [tag])}
-                >
-                  {tag}
-                </.link>
-                <%= if @is_current_folder and tag in @recommended_tag_names do %>
-                  <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}>
-                    {if(tag in @tags, do: "-", else: "+")}
-                  </.toggle_tag_button>
+              {if(@nav_folder, do: @nav_folder, else: "All folders")}
+            </.link>
+          </p>
+        </:trigger>
+        <:panel default_expanded={@is_current_folder}>
+          <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
+            <%= if not Enum.empty?(@recommended_nav_tags) do %>
+              <ul class="flex flex-wrap my-2">
+                <%= for tag <- Enum.sort_by(@recommended_nav_tags, fn tag ->
+                    cond do
+                      tag in @tags -> 0 # show currently selected tags first
+                      # tag in @recommended_tag_names -> 1 # then recommended tags
+                      true -> 2 # then other tags
+                    end
+                  end) do %>
+                  <li class="mr-2 flex items-center">
+                      <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}>
+                        {tag}
+                      </.toggle_tag_button>
+                  </li>
                 <% end %>
-              </li>
+              </ul>
             <% end %>
-          </ul>
+            <%= if not Enum.empty?(@other_nav_tags) do %>
+              <ul class="flex flex-wrap py-2">
+                <%= for tag <- @other_nav_tags do %>
+                  <li>
+                    <%!-- <.toggle_link selected={false}
+                      class="text-gray-500 border-gray-500"
+                      href={build_url(@nav_folder, [], [tag])} >
+                      {tag}
+                    </.toggle_link> --%>
+                    <.link class="text-zinc-500 mr-2 my-1" patch={build_url(@nav_folder, [], [tag])} >
+                      {tag}
+                    </.link>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+          </div>
         </:panel>
       </.accordion>
     </li>
@@ -490,9 +503,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def photo(assigns) do
     ~H"""
     <.list>
-      <:item title="Image">
+      <%!-- On medium screens and above, sticky the image section to the top --%>
+      <:item title="Image" class="max-h-[40vh] md:sticky md:top-0 md:bg-white md:border-b md:border-zinc-100 md:mb-4 md:z-10">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
-          <img img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
+          <img class="object-contain h-full" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
       </:item>
       <:item title="Folder">
@@ -507,32 +521,29 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Tags">
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
-            <li class="mr-2">
+            <li class="mr-2 flex items-center">
               <.toggle_tag_button
                 folder={@folder}
                 selected_photos={[@photo]}
                 tags={@tags}
                 toggled_tag={tag.name}
               >
-                {if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name}
+                {tag.name}
               </.toggle_tag_button>
               <.form
-                class="inline"
                 for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})}
                 phx-submit="remove_tag"
               >
                 <input class="hidden" type="text" name="photo_id" value={@photo.id} />
                 <input class="hidden" type="text" name="tag" value={tag.name} />
-                <button type="submit">
+                <button type="submit" class="flex items-center">
                   <.icon name="hero-trash-micro" class="text-red-700 hover:text-red-900" />
                 </button>
               </.form>
             </li>
           <% end %>
         </ul>
-      </:item>
-      <:item title="Add tags">
-        <div>
+        <div class="mt-2">
           <.form for={Component.to_form(%{"tag" => "", "photo_id" => @photo.id})} phx-submit="add_tag">
             <input class="hidden" type="text" name="photo_id" value={@photo.id} />
             <div class="flex items-center space-x-4">
