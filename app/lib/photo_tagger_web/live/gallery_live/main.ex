@@ -530,9 +530,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             </li>
           <% end %>
         </ul>
-      </:item>
-      <:item title="Add tags">
-        <div>
+        <div class="mt-2">
           <.form for={Component.to_form(%{"tag" => "", "photo_id" => @photo.id})} phx-submit="add_tag">
             <input class="hidden" type="text" name="photo_id" value={@photo.id} />
             <div class="flex items-center space-x-4">
