@@ -1,7 +1,9 @@
 <div class="h-screen flex flex-col">
   <div class="p-2 ">
     <.header>
-      Photo Tagger
+      <span class="hidden md:inline">
+        Photo Tagger
+      </span>      
       <:actions>
         <.link class="px-4" href={~p"/edit-tags"}>
           Edit Tags
@@ -10,7 +12,7 @@
           Edit Folders
         </.link>
         <.link href={~p"/photos/new"}>
-          <.button>Upload Photos</.button>
+          <.button class="py-2 md:py-1 lg:py-2">Upload Photos</.button>
         </.link>
       </:actions>
     </.header>
@@ -20,7 +22,7 @@
     <.flash_group flash={@flash} />
   </div>
 
-  <main class="overflow-y-auto overscroll-none">
+  <main class="pl-4 sm:pl-6 lg:pl-8 overflow-y-auto overscroll-none">
     {@inner_content}
   </main>
 </div>

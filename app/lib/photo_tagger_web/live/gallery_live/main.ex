@@ -12,7 +12,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
-      <div id="folders-section" class="col-span-1 overflow-y-auto pl-4 sm:pl-6 lg:pl-8 ">
+      <div id="folders-section" class="col-span-2 lg:col-span-1 overflow-y-auto">
         <.folders
           all_folders={@all_folders}
           all_tags={@all_tags}
@@ -21,7 +21,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           recommended_tags={@recommended_tags}
         />
       </div>
-      <div id="gallery-section" class="col-span-4 overflow-y-auto">
+      <div id="gallery-section" class="col-span-3 lg:col-span-4 overflow-y-auto">
         <.gallery_header
           item_count={Enum.count(@filtered_photos)}
           multiselect_active={@multiselect_active}
@@ -373,8 +373,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def folders(assigns) do
     ~H"""
     <div>
-      <h2>Folders</h2>
-      <ul class="space-y-2 mt-2">
+      <h2 class="hidden lg:block">Folders</h2>
+      <ul class="space-y-2 mt-2 text-sm md:text-base">
         <.folder_nav_item
           current_folder={@folder}
           nav_tags={Enum.map(@all_tags, & &1.name)}
