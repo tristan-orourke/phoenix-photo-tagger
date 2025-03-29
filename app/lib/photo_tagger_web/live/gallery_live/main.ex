@@ -251,6 +251,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:selected_photos, :list, default: [])
   attr(:tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
+  attr(:class, :string, default: "")
   slot(:inner_block)
 
   def toggle_tag_button(assigns) do
@@ -273,6 +274,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <.toggle_link
       selected={@toggled_tag in @tags}
       href={@href}
+      class={@class}
     >
       {render_slot(@inner_block)}
     </.toggle_link>
@@ -308,7 +310,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </p>
         </:trigger>
         <:panel default_expanded={@is_current_folder}>
-          <ul class="list-disc list-inside">
+          <ul class="list-none pl-2">
             <li>
               <.link
                 class="data-[selected]:font-bold"
@@ -326,17 +328,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 end
               end) do %>
               <li>
-                <.link
-                  class="data-[selected]:font-bold"
-                  data-selected={@is_current_folder && tag in @tags}
-                  patch={build_url(@nav_folder, [], [tag])}
-                >
-                  {tag}
-                </.link>
                 <%= if @is_current_folder and tag in @recommended_tag_names do %>
-                  <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}>
-                    {if(tag in @tags, do: "-", else: "+")}
+                  <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag} class="">
+                    {tag}
                   </.toggle_tag_button>
+                <% else %>
+                  <%!-- <.toggle_link selected={false}
+                    class="text-gray-500 border-gray-500"
+                    href={build_url(@nav_folder, [], [tag])} >
+                    {tag}
+                  </.toggle_link> --%>
+
+                  <.link
+                    patch={build_url(@nav_folder, [], [tag])}
+                  >
+                    {tag}
+                  </.link>
                 <% end %>
               </li>
             <% end %>
