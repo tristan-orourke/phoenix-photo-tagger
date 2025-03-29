@@ -309,20 +309,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <li>
       <.accordion id={folder_accordion_id(@nav_folder)}>
         <:trigger>
-          <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
+          <%!-- <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
             {if(@nav_folder, do: @nav_folder, else: "All folders")}
+          </p> --%>
+          <p class="text-left">
+            <.link
+                class="data-[selected]:font-bold"
+                data-selected={Enum.empty?(@tags) && @is_current_folder}
+                patch={build_url(@nav_folder, [], [])}
+              >
+              {if(@nav_folder, do: @nav_folder, else: "All folders")}
+            </.link>
           </p>
         </:trigger>
         <:panel default_expanded={@is_current_folder}>
-          <div class="list-none pl-2">
-            <.link
-              class="data-[selected]:font-bold"
-              data-selected={Enum.empty?(@tags) && @is_current_folder}
-              patch={build_url(@nav_folder, [], [])}
-            >
-              All photos
-            </.link>
-            <div class="divide-y divide-zinc-300 my-2">
+          <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
+            <%= if not Enum.empty?(@recommended_nav_tags) do %>
               <ul class="flex flex-wrap my-2">
                 <%= for tag <- Enum.sort_by(@recommended_nav_tags, fn tag ->
                     cond do
@@ -338,6 +340,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   </li>
                 <% end %>
               </ul>
+            <% end %>
+            <%= if not Enum.empty?(@other_nav_tags) do %>
               <ul class="flex flex-wrap py-2">
                 <%= for tag <- @other_nav_tags do %>
                   <li>
@@ -352,7 +356,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   </li>
                 <% end %>
               </ul>
-            </div>
+            <% end %>
           </div>
         </:panel>
       </.accordion>
