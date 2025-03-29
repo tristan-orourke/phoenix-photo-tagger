@@ -9,8 +9,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
 
-  # require Logger
-
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
@@ -296,10 +294,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
 
   def folder_nav_item(assigns) do
-    assigns = assign(assigns, :is_current_folder, assigns.current_folder == assigns.nav_folder)
+    recommended_tag_names = Enum.map(assigns.recommended_tags, & &1.name)
+
+    {recommended_nav_tags, other_nav_tags} =
+      Enum.split_with(assigns.nav_tags, &(&1 in recommended_tag_names))
 
     assigns =
-      assign(assigns, :recommended_tag_names, Enum.map(assigns.recommended_tags, & &1.name))
+      assigns
+      |> assign(:is_current_folder, assigns.current_folder == assigns.nav_folder)
+      |> assign(:recommended_nav_tags, recommended_nav_tags)
+      |> assign(:other_nav_tags, other_nav_tags)
 
     ~H"""
     <li>
@@ -310,44 +314,46 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </p>
         </:trigger>
         <:panel default_expanded={@is_current_folder}>
-          <ul class="list-none pl-2">
-            <li>
-              <.link
-                class="data-[selected]:font-bold"
-                data-selected={Enum.empty?(@tags) && @is_current_folder}
-                patch={build_url(@nav_folder, [], [])}
-              >
-                All photos
-              </.link>
-            </li>
-            <%= for tag <- Enum.sort_by(@nav_tags, fn tag ->
-                cond do
-                  tag in @tags -> 0 # show currently selected tags first
-                  tag in @recommended_tag_names -> 1 # then recommended tags
-                  true -> 2 # then all other tags
-                end
-              end) do %>
-              <li>
-                <%= if @is_current_folder and tag in @recommended_tag_names do %>
-                  <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag} class="">
-                    {tag}
-                  </.toggle_tag_button>
-                <% else %>
-                  <%!-- <.toggle_link selected={false}
-                    class="text-gray-500 border-gray-500"
-                    href={build_url(@nav_folder, [], [tag])} >
-                    {tag}
-                  </.toggle_link> --%>
-
-                  <.link
-                    patch={build_url(@nav_folder, [], [tag])}
-                  >
-                    {tag}
-                  </.link>
+          <div class="list-none pl-2">
+            <.link
+              class="data-[selected]:font-bold"
+              data-selected={Enum.empty?(@tags) && @is_current_folder}
+              patch={build_url(@nav_folder, [], [])}
+            >
+              All photos
+            </.link>
+            <div class="divide-y divide-zinc-300 my-2">
+              <ul class="flex flex-wrap my-2">
+                <%= for tag <- Enum.sort_by(@recommended_nav_tags, fn tag ->
+                    cond do
+                      tag in @tags -> 0 # show currently selected tags first
+                      # tag in @recommended_tag_names -> 1 # then recommended tags
+                      true -> 2 # then other tags
+                    end
+                  end) do %>
+                  <li class="mr-2 flex items-center">
+                      <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}>
+                        {tag}
+                      </.toggle_tag_button>
+                  </li>
                 <% end %>
-              </li>
-            <% end %>
-          </ul>
+              </ul>
+              <ul class="flex flex-wrap py-2">
+                <%= for tag <- @other_nav_tags do %>
+                  <li>
+                    <%!-- <.toggle_link selected={false}
+                      class="text-gray-500 border-gray-500"
+                      href={build_url(@nav_folder, [], [tag])} >
+                      {tag}
+                    </.toggle_link> --%>
+                    <.link class="text-zinc-500 mr-2 my-1" patch={build_url(@nav_folder, [], [tag])} >
+                      {tag}
+                    </.link>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
         </:panel>
       </.accordion>
     </li>
