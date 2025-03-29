@@ -746,6 +746,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </div>
         </.form>
       </:item>
+      <:item title="Delete">
+        <.form
+          phx-submit="delete_photo_bulk"
+          for={Component.to_form(%{})}
+          onsubmit="return confirm('Are you sure you want to permanently delete these photos?')"
+        >
+          <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
+        </.form>
+      </:item>
     </.list>
     """
   end
@@ -936,8 +945,25 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      socket
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> assign(:all_tags, Gallery.list_tags())
+     |> refresh_filtered_photos()
      |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
+  end
+
+  def handle_event("delete_photo_bulk", _params, socket) do
+    selected_photos = socket.assigns.selected_photos
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _photo} = Gallery.delete_photo(photo)
+    end)
+
+    {:noreply,
+     socket
+     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_tags, Gallery.list_tags())
+     |> refresh_filtered_photos()
+     |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
+     |> put_flash(:info, "Photos deleted successfully.")}
   end
 
   ## Utility functions
