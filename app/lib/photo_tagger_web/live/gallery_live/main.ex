@@ -34,6 +34,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             tags={@tags}
             selected_photos={@selected_photos}
             collapse_groups={@collapse_groups}
+            zoom_level={@zoom_level}
           />
         </div>
       </div>
@@ -71,6 +72,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:all_tags, Gallery.list_tags())
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
+      |> assign(:zoom_level, 0)
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -88,12 +90,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
+    zoom_level =
+      Map.get(params, "zoom", "0")
+      |> Integer.parse()
+      |> case do
+        {zoom_level, _} -> zoom_level
+        :error -> 0
+      end
+
     expanded_state =
       expand_state(socket, %{
         folder: folder,
         tags: tags,
         photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids
+        selected_photo_ids: selected_photo_ids,
+        zoom_level: zoom_level
       })
 
     # Reset scroll position of a section if the relevent params change
@@ -157,7 +168,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           # This id comes from the url path
           photo_id: photo_id,
           # These come from url query params
-          selected_photo_ids: selected_photo_ids
+          selected_photo_ids: selected_photo_ids,
+          zoom_level: zoom_level
         }
       ) do
     prev_folder = Map.get(socket.assigns, :folder)
@@ -241,7 +253,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       filtered_photos: filtered_photos,
       selected_photos: selected_photos,
       recommended_tags: recommended_tags,
-      update_photo_form: update_photo_form
+      update_photo_form: update_photo_form,
+      zoom_level: zoom_level
     }
   end
 
@@ -438,6 +451,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
   attr(:selected_photos, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
+  attr(:zoom_level, :integer, default: 0)
 
   def gallery(assigns) do
     grouped_photos = Enum.group_by(assigns.photos, & &1.group)
@@ -459,9 +473,25 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           )
       end
 
+    clamp = fn x, min, max -> min(max(x, min), max) end
+    get_grid_size = fn zoom_level, base_size ->
+      size = clamp.(base_size - zoom_level, 1, 9)
+      "grid-cols-#{size}"
+    end
+    assigns = assigns
+      |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
+      |> assign(:md_grid_size, get_grid_size.(assigns.zoom_level, 2))
+      |> assign(:lg_grid_size, get_grid_size.(assigns.zoom_level, 4))
+      |> assign(:xl_grid_size, get_grid_size.(assigns.zoom_level, 4))
+      |> assign(:_2xl_grid_size, get_grid_size.(assigns.zoom_level, 6))
     ~H"""
     <div class="p-2 lg:p-6 ">
-      <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl-grid-cols-6 gap-2 lg:gap-4">
+      <ul class={"grid gap-2 lg:gap-4
+      #{@grid_size}
+      md:#{@md_grid_size}
+      lg:#{@lg_grid_size}
+      xl:#{@xl_grid_size}
+      2xl:#{@_2xl_grid_size}"}>
         <%= for photo <- @photos do %>
           <% represents_group = @collapse_groups and photo.group != nil and Enum.count(@grouped_photos[photo.group]) > 1 %>
           <li class="aspect-square">

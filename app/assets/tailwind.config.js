@@ -18,6 +18,12 @@ module.exports = {
       }
     },
   },
+  safelist: [
+    {
+      pattern: /grid-cols-[123456789]/,
+      variants: ['sm', 'md', 'lg', 'xl', '2xl'],
+    },
+  ],
   plugins: [
     require("@tailwindcss/forms"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
