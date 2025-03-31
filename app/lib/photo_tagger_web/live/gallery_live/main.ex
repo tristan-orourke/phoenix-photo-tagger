@@ -401,19 +401,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery_header(assigns) do
     ~H"""
-    <div class="flex items-center sticky top-0 bg-white z-50">
-      <div class="flex-1" />
-      <div class="flex-none pl-3 pr-3">
-        <.toggle_button
-          selected={@collapse_groups}
-          phx-click="toggle_collapse_groups"
-          class="flex items-center pl-3 pr-3"
-        >
-          <.icon name="hero-square-3-stack-3d w-5 h-5" />
-          <span class="sr-only lg:not-sr-only lg:ml-1">
-            Collapse groups
-          </span>
-        </.toggle_button>
+    <div class="flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
+      <div class="flex-none mr-3 lg-ml-3">
+        <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
       </div>
       <div class="flex-none pr-3">
         <.toggle_button
@@ -421,14 +411,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           phx-click="toggle_multiselect"
           class="flex items-center pl-3 pr-3"
         >
-          <.icon name="hero-squares-plus" />
+          <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
           <span class="sr-only lg:not-sr-only lg:ml-1">
             Multiselect
           </span>
         </.toggle_button>
       </div>
-      <div class="flex-none pl-3 pr-3 mr-4">
-        <p class="font-bold">{"#{@item_count} items"}</p>
+      <div class="flex-none pl-3 pr-3">
+        <.toggle_button
+          selected={@collapse_groups}
+          phx-click="toggle_collapse_groups"
+          class="flex items-center pl-3 pr-3"
+        >
+          <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+          <span class="sr-only lg:not-sr-only lg:ml-1">
+            Collapse groups
+          </span>
+        </.toggle_button>
       </div>
     </div>
     """
