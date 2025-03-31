@@ -460,15 +460,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     ~H"""
-    <div>
-      <ul class="flex flex-wrap gap-4 p-6">
+    <div class="p-2 lg:p-6 ">
+      <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl-grid-cols-6 gap-2 lg:gap-4">
         <%= for photo <- @photos do %>
           <% represents_group = @collapse_groups and photo.group != nil and Enum.count(@grouped_photos[photo.group]) > 1 %>
-          <li class="w-40 h-40">
+          <li class="aspect-square">
             <button
               id={"gallery-photo-button-#{photo.id}"}
-              class="h-full w-full relative
-                data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
+              class="h-full w-full relative block
+                data-[selected]:outline
+                outline-4 outline-offset-2 outline-blue-400
                 phx-click-loading:outline phx-click-loading:outline-blue-200"
               data-selected={member_by_id?(@selected_photos, photo)}
               phx-click={if(represents_group, do: "select_gallery_group", else: "select_gallery_photo")}
@@ -477,13 +478,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             >
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
-                class="w-40 h-40 object-cover"
+                class="w-full h-full object-cover"
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :small)}
               />
               <%= if represents_group do %>
-                <div class="w-40 h-40 -z-10 absolute left-1 bottom-1 bg-gray-500" />
-                <div class="w-40 h-40 -z-20 absolute left-2 bottom-2 bg-gray-400" />
+                <div class="w-full h-full -z-10 absolute left-1 bottom-1 bg-gray-500" />
+                <div class="w-full h-full -z-20 absolute left-2 bottom-2 bg-gray-400" />
               <% end %>
             </button>
           </li>
