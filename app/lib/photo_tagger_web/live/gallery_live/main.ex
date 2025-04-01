@@ -90,21 +90,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
-    zoom_level =
-      Map.get(params, "zoom", "0")
-      |> Integer.parse()
-      |> case do
-        {zoom_level, _} -> zoom_level
-        :error -> 0
-      end
+    # zoom_level =
+    #   Map.get(params, "zoom", "0")
+    #   |> Integer.parse()
+    #   |> case do
+    #     {zoom_level, _} -> zoom_level
+    #     :error -> 0
+    #   end
 
     expanded_state =
       expand_state(socket, %{
         folder: folder,
         tags: tags,
         photo_id: photo_id,
-        selected_photo_ids: selected_photo_ids,
-        zoom_level: zoom_level
+        selected_photo_ids: selected_photo_ids
       })
 
     # Reset scroll position of a section if the relevent params change
@@ -168,8 +167,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           # This id comes from the url path
           photo_id: photo_id,
           # These come from url query params
-          selected_photo_ids: selected_photo_ids,
-          zoom_level: zoom_level
+          selected_photo_ids: selected_photo_ids
         }
       ) do
     prev_folder = Map.get(socket.assigns, :folder)
@@ -253,8 +251,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       filtered_photos: filtered_photos,
       selected_photos: selected_photos,
       recommended_tags: recommended_tags,
-      update_photo_form: update_photo_form,
-      zoom_level: zoom_level
+      update_photo_form: update_photo_form
     }
   end
 
@@ -415,7 +412,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def gallery_header(assigns) do
     ~H"""
     <div class="flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
-      <div class="flex-none mr-3 lg-ml-3">
+      <div class="flex-none pr-3">
+        <.button class="p-1 flex items-center" phx-click="zoom_out">
+          <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
+        </.button>
+      </div>
+      <div class="flex-none pr-1">
+        <.button class="p-1 flex items-center" phx-click="zoom_in">
+          <.icon name="hero-magnifying-glass-plus" class="hero-magnifying-glass-plus-mini lg:hero-magnifying-glass-plus w-4 h-4 lg:w-5 lg:h-5" />
+        </.button>
+      </div>
+      <div class="flex-none mr-3 lg:ml-3">
         <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
       </div>
       <div class="flex-none pr-3">
@@ -473,17 +480,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           )
       end
 
-    clamp = fn x, min, max -> min(max(x, min), max) end
     get_grid_size = fn zoom_level, base_size ->
-      size = clamp.(base_size - zoom_level, 1, 9)
+      size = clamp(base_size - zoom_level, 1, 9)
       "grid-cols-#{size}"
     end
-    assigns = assigns
+
+    assigns =
+      assigns
       |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
       |> assign(:md_grid_size, get_grid_size.(assigns.zoom_level, 2))
       |> assign(:lg_grid_size, get_grid_size.(assigns.zoom_level, 4))
       |> assign(:xl_grid_size, get_grid_size.(assigns.zoom_level, 4))
       |> assign(:_2xl_grid_size, get_grid_size.(assigns.zoom_level, 6))
+
     ~H"""
     <div class="p-2 lg:p-6 ">
       <ul class={"grid gap-2 lg:gap-4
@@ -1007,6 +1016,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> put_flash(:info, "Photos deleted successfully.")}
   end
 
+  def handle_event("zoom_in", _params, socket) do
+    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level + 1, 1, 9))}
+  end
+
+  def handle_event("zoom_out", _params, socket) do
+    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level - 1, 1, 9))}
+  end
+
   ## Utility functions
   def member_by_id?(enumerable, %{id: id}) do
     Enum.any?(enumerable, fn
@@ -1014,4 +1031,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       _ -> false
     end)
   end
+
+  def clamp(x, min, max), do: min(max(x, min), max)
 end
