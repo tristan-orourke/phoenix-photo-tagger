@@ -337,7 +337,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <:panel default_expanded={@is_current_folder}>
           <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
             <%= if not Enum.empty?(@recommended_nav_tags) do %>
-              <ul class="flex flex-wrap my-2">
+              <ul class="md:flex md:flex-wrap my-2">
                 <%= for tag <- Enum.sort_by(@recommended_nav_tags, fn tag ->
                     cond do
                       tag in @tags -> 0 # show currently selected tags first
@@ -354,7 +354,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               </ul>
             <% end %>
             <%= if not Enum.empty?(@other_nav_tags) do %>
-              <ul class="flex flex-wrap py-2">
+              <ul class="md:flex md:flex-wrap py-2">
                 <%= for tag <- @other_nav_tags do %>
                   <li>
                     <%!-- <.toggle_link selected={false}
