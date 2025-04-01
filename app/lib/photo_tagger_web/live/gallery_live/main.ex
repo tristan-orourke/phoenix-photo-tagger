@@ -740,7 +740,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Add tags">
         <div class="mt-4">
           <.form for={Component.to_form(%{"tag" => ""})} phx-submit="add_tag_bulk">
-            <div class="flex items-center space-x-4">
+            <div class="flex flex-wrap gap-2">
               <%!-- TODO: convert this simple inline form to a component --%>
               <%!-- <.label for="add_any_tag">Add tag</.label> --%>
               <input
@@ -748,7 +748,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 name="tag"
                 id="add_any_tag"
                 Placeholder="Add tag"
-                class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+                class="w-full max-w-40 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
               />
               <.button type="submit">Submit</.button>
             </div>
@@ -782,13 +782,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </ul>
         <% end %>
         <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
-          <div class="flex items-center space-x-4">
+          <div class="flex flex-wrap gap-2">
             <input
               type="text"
               name="group"
               id="bulk_group_input"
               Placeholder="group"
-              class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+              class="w-full max-w-40 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
               value={if(Enum.count(@groups) == 1, do: Enum.at(@groups, 0), else: "")}
             />
             <.button type="submit">Submit</.button>
