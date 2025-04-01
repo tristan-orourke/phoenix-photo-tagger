@@ -9,10 +9,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
 
+  require Logger
+
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
-      <div id="folders-section" class="col-span-1 overflow-y-auto pl-4 sm:pl-6 lg:pl-8 ">
+      <div id="folders-section" class="col-span-2 lg:col-span-1 overflow-y-auto">
         <.folders
           all_folders={@all_folders}
           all_tags={@all_tags}
@@ -21,7 +23,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           recommended_tags={@recommended_tags}
         />
       </div>
-      <div id="gallery-section" class="col-span-4 overflow-y-auto">
+      <div id="gallery-section" class="col-span-3 lg:col-span-4 overflow-y-auto">
         <.gallery_header
           item_count={Enum.count(@filtered_photos)}
           multiselect_active={@multiselect_active}
@@ -34,6 +36,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             tags={@tags}
             selected_photos={@selected_photos}
             collapse_groups={@collapse_groups}
+            zoom_level={@zoom_level}
           />
         </div>
       </div>
@@ -71,6 +74,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:all_tags, Gallery.list_tags())
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
+      |> assign(:zoom_level, 0)
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -87,6 +91,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     tags = Map.get(params, "query_tags", [])
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
+
+    # zoom_level =
+    #   Map.get(params, "zoom", "0")
+    #   |> Integer.parse()
+    #   |> case do
+    #     {zoom_level, _} -> zoom_level
+    #     :error -> 0
+    #   end
 
     expanded_state =
       expand_state(socket, %{
@@ -325,7 +337,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <:panel default_expanded={@is_current_folder}>
           <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
             <%= if not Enum.empty?(@recommended_nav_tags) do %>
-              <ul class="flex flex-wrap my-2">
+              <ul class="md:flex md:flex-wrap my-2">
                 <%= for tag <- Enum.sort_by(@recommended_nav_tags, fn tag ->
                     cond do
                       tag in @tags -> 0 # show currently selected tags first
@@ -342,7 +354,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               </ul>
             <% end %>
             <%= if not Enum.empty?(@other_nav_tags) do %>
-              <ul class="flex flex-wrap py-2">
+              <ul class="md:flex md:flex-wrap py-2">
                 <%= for tag <- @other_nav_tags do %>
                   <li>
                     <%!-- <.toggle_link selected={false}
@@ -373,8 +385,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def folders(assigns) do
     ~H"""
     <div>
-      <h2>Folders</h2>
-      <ul class="space-y-2 mt-2">
+      <h2 class="hidden lg:block">Folders</h2>
+      <ul class="space-y-2 mt-2 text-sm md:text-base">
         <.folder_nav_item
           current_folder={@folder}
           nav_tags={Enum.map(@all_tags, & &1.name)}
@@ -401,34 +413,41 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery_header(assigns) do
     ~H"""
-    <div class="flex items-center sticky top-0 bg-white z-50">
-      <div class="flex-1" />
-      <div class="flex-none pl-3 pr-3">
-        <.toggle_button
-          selected={@collapse_groups}
-          phx-click="toggle_collapse_groups"
-          class="flex items-center pl-3 pr-3"
-        >
-          <.icon name="hero-square-3-stack-3d w-5 h-5" />
-          <span class="sr-only md:not-sr-only md:ml-1">
-            Collapse groups
-          </span>
-        </.toggle_button>
+    <div class="flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
+      <div class="flex-none pr-3">
+        <.button class="p-1 flex items-center" phx-click="zoom_out">
+          <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
+        </.button>
+      </div>
+      <div class="flex-none pr-1">
+        <.button class="p-1 flex items-center" phx-click="zoom_in">
+          <.icon name="hero-magnifying-glass-plus" class="hero-magnifying-glass-plus-mini lg:hero-magnifying-glass-plus w-4 h-4 lg:w-5 lg:h-5" />
+        </.button>
+      </div>
+      <div class="flex-none mr-3 lg:ml-3">
+        <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
       </div>
       <div class="flex-none pr-3">
         <.toggle_button
+          selected={@collapse_groups}
+          phx-click="toggle_collapse_groups"
+          class="flex items-center pl-3 pr-3 inline mr-1"
+        >
+          <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+          <span class="sr-only lg:not-sr-only lg:ml-1">
+            Collapse groups
+          </span>
+        </.toggle_button>
+        <.toggle_button
           selected={@multiselect_active}
           phx-click="toggle_multiselect"
-          class="flex items-center pl-3 pr-3"
+          class="flex items-center pl-3 pr-3 inline"
         >
-          <.icon name="hero-squares-plus" />
-          <span class="sr-only md:not-sr-only md:ml-1">
+          <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+          <span class="sr-only lg:not-sr-only lg:ml-1">
             Multiselect
           </span>
         </.toggle_button>
-      </div>
-      <div class="flex-none pl-3 pr-3 mr-4">
-        <p class="font-bold">{"#{@item_count} items"}</p>
       </div>
     </div>
     """
@@ -439,6 +458,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
   attr(:selected_photos, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
+  attr(:zoom_level, :integer, default: 0)
 
   def gallery(assigns) do
     grouped_photos = Enum.group_by(assigns.photos, & &1.group)
@@ -460,16 +480,34 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           )
       end
 
+    get_grid_size = fn zoom_level, base_size ->
+      size = clamp(base_size - zoom_level, 1, 9)
+      "grid-cols-#{size}"
+    end
+    assigns =
+      assigns
+      |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
+      |> assign(:md_grid_size, get_grid_size.(assigns.zoom_level, 2))
+      |> assign(:lg_grid_size, get_grid_size.(assigns.zoom_level, 4))
+      |> assign(:xl_grid_size, get_grid_size.(assigns.zoom_level, 4))
+      |> assign(:_2xl_grid_size, get_grid_size.(assigns.zoom_level, 6))
+
     ~H"""
-    <div>
-      <ul class="flex flex-wrap gap-4 p-6">
+    <div class="p-2 lg:p-6 ">
+      <ul class={"grid gap-2 lg:gap-4
+      #{@grid_size}
+      md:#{@md_grid_size}
+      lg:#{@lg_grid_size}
+      xl:#{@xl_grid_size}
+      2xl:#{@_2xl_grid_size}"}>
         <%= for photo <- @photos do %>
           <% represents_group = @collapse_groups and photo.group != nil and Enum.count(@grouped_photos[photo.group]) > 1 %>
-          <li class="w-40 h-40">
+          <li class="aspect-square">
             <button
               id={"gallery-photo-button-#{photo.id}"}
-              class="h-full w-full relative
-                data-[selected]:outline outline-4 outline-offset-2 outline-blue-400
+              class="h-full w-full relative block
+                data-[selected]:outline
+                outline-4 outline-offset-2 outline-blue-400
                 phx-click-loading:outline phx-click-loading:outline-blue-200"
               data-selected={member_by_id?(@selected_photos, photo)}
               phx-click={if(represents_group, do: "select_gallery_group", else: "select_gallery_photo")}
@@ -478,13 +516,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             >
               <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
               <img
-                class="w-40 h-40 object-cover"
+                class="w-full h-full object-cover"
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :small)}
               />
               <%= if represents_group do %>
-                <div class="w-40 h-40 -z-10 absolute left-1 bottom-1 bg-gray-500" />
-                <div class="w-40 h-40 -z-20 absolute left-2 bottom-2 bg-gray-400" />
+                <div class="w-full h-full -z-10 absolute left-1 bottom-1 bg-gray-500" />
+                <div class="w-full h-full -z-20 absolute left-2 bottom-2 bg-gray-400" />
               <% end %>
             </button>
           </li>
@@ -504,7 +542,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
-      <:item title="Image" class="max-h-[40vh] md:sticky md:top-0 md:bg-white md:border-b md:border-zinc-100 md:mb-4 md:z-10">
+      <:item title="Image" class="max-h-[40vh] lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
           <img class="object-contain h-full" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
@@ -546,7 +584,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <div class="mt-2">
           <.form for={Component.to_form(%{"tag" => "", "photo_id" => @photo.id})} phx-submit="add_tag">
             <input class="hidden" type="text" name="photo_id" value={@photo.id} />
-            <div class="flex items-center space-x-4">
+            <div class="flex flex-wrap gap-2">
               <%!-- TODO: convert this simple inline form to a component --%>
               <%!-- <.label for="add_any_tag">Add tag</.label> --%>
               <input
@@ -554,7 +592,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 name="tag"
                 id="add_any_tag"
                 Placeholder="Add tag"
-                class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+                class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
               />
               <.button type="submit">Submit</.button>
             </div>
@@ -977,6 +1015,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> put_flash(:info, "Photos deleted successfully.")}
   end
 
+  def handle_event("zoom_in", _params, socket) do
+    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level + 1, -9, 9))}
+  end
+
+  def handle_event("zoom_out", _params, socket) do
+    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level - 1, -9, 9))}
+  end
+
   ## Utility functions
   def member_by_id?(enumerable, %{id: id}) do
     Enum.any?(enumerable, fn
@@ -984,4 +1030,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       _ -> false
     end)
   end
+
+  def clamp(x, min, max), do: min(max(x, min), max)
 end

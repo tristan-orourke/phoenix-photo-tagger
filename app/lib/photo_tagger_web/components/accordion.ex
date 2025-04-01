@@ -48,7 +48,7 @@ defmodule PhotoTaggerWeb.Components.Accordion do
           >
             {render_slot(trigger)}
             <.icon
-              class="accordion-trigger-icon h-5 w-5 absolute right-4 transition-all ease-in-out duration-100 top-1/2 -translate-y-1/2"
+              class="hero-chevron-down-micro md:hero-chevron-down-mini lg:hero-chevron-down accordion-trigger-icon h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 absolute right-4 transition-all ease-in-out duration-100 top-1/2 -translate-y-1/2"
               name={trigger[:icon_name] || "hero-chevron-down"}
             />
           </button>
