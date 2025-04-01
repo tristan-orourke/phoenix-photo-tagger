@@ -9,6 +9,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTaggerWeb.HtmlHelpers
   import PhotoTaggerWeb.Components.Accordion
 
+  require Logger
+
   def render(assigns) do
     ~H"""
     <div class="grid grid-cols-7 gap-4 h-full">
@@ -484,7 +486,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       size = clamp(base_size - zoom_level, 1, 9)
       "grid-cols-#{size}"
     end
-
     assigns =
       assigns
       |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
@@ -1017,11 +1018,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("zoom_in", _params, socket) do
-    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level + 1, 1, 9))}
+    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level + 1, -9, 9))}
   end
 
   def handle_event("zoom_out", _params, socket) do
-    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level - 1, 1, 9))}
+    {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level - 1, -9, 9))}
   end
 
   ## Utility functions
