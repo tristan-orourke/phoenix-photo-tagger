@@ -429,25 +429,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </div>
       <div class="flex-none pr-3">
         <.toggle_button
-          selected={@multiselect_active}
-          phx-click="toggle_multiselect"
-          class="flex items-center pl-3 pr-3"
-        >
-          <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
-          <span class="sr-only lg:not-sr-only lg:ml-1">
-            Multiselect
-          </span>
-        </.toggle_button>
-      </div>
-      <div class="flex-none pl-3 pr-3">
-        <.toggle_button
           selected={@collapse_groups}
           phx-click="toggle_collapse_groups"
-          class="flex items-center pl-3 pr-3"
+          class="flex items-center pl-3 pr-3 inline mr-1"
         >
           <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
           <span class="sr-only lg:not-sr-only lg:ml-1">
             Collapse groups
+          </span>
+        </.toggle_button>
+        <.toggle_button
+          selected={@multiselect_active}
+          phx-click="toggle_multiselect"
+          class="flex items-center pl-3 pr-3 inline"
+        >
+          <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+          <span class="sr-only lg:not-sr-only lg:ml-1">
+            Multiselect
           </span>
         </.toggle_button>
       </div>
