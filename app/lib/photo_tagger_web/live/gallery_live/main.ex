@@ -411,20 +411,35 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div>
       <h2 class="hidden lg:block">Folders</h2>
       <ul class="space-y-2 mt-2 text-sm md:text-base">
-        <.folder_nav_item
+        <.live_component module={PhotoTaggerWeb.GalleryLive.FolderNavItem}
+          id="all_folders"
           current_folder={@folder}
           nav_tags={@all_tag_names}
           recommended_tags={@recommended_tags}
           tags={@tags}
         />
+        <%!-- <.folder_nav_item
+          current_folder={@folder}
+          nav_tags={@all_tag_names}
+          recommended_tags={@recommended_tags}
+          tags={@tags}
+        /> --%>
         <%= for folder <- @all_folders do %>
-          <.folder_nav_item
+          <.live_component module={PhotoTaggerWeb.GalleryLive.FolderNavItem}
+            id={"folder_#{folder.name}"}
             current_folder={@folder}
             nav_folder={folder.name}
             nav_tags={folder.tags}
             recommended_tags={@recommended_tags}
             tags={@tags}
           />
+          <%!-- <.folder_nav_item
+            current_folder={@folder}
+            nav_folder={folder.name}
+            nav_tags={folder.tags}
+            recommended_tags={@recommended_tags}
+            tags={@tags}
+          /> --%>
         <% end %>
       </ul>
     </div>
@@ -559,10 +574,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       xl:#{@xl_grid_size}
       2xl:#{@_2xl_grid_size}"}>
         <%= for photo <- @photos do %>
-          <.gallery_photo
+          <.live_component
+            module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
+            id={photo.id}
             photo={photo}
             is_selected={Enum.any?(@selected_photos, &(&1.id == photo.id))}
-            collapse_groups={@collapse_groups} />
+            collapse_groups={@collapse_groups}
+          />
+          <%!-- <.gallery_photo
+            photo={photo}
+            is_selected={Enum.any?(@selected_photos, &(&1.id == photo.id))}
+            collapse_groups={@collapse_groups} /> --%>
         <% end %>
       </ul>
     </div>
