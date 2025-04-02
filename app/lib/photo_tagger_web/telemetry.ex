@@ -70,7 +70,8 @@ defmodule PhotoTaggerWeb.Telemetry do
       # Database Metrics
       summary("photo_tagger.repo.query.total_time",
         unit: {:native, :millisecond},
-        description: "The sum of the other measurements"
+        description: "The sum of the other measurements",
+        tags: [:query]
       ),
       summary("photo_tagger.repo.query.decode_time",
         unit: {:native, :millisecond},
