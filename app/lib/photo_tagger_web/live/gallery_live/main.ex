@@ -142,9 +142,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         photos -> {nil, Enum.map(photos, & &1.id)}
       end
 
-    Logger.debug("Folder #{inspect(folder)}")
-    Logger.debug("Photo id #{inspect(photo_id)}")
-
     uri =
       case {folder, photo_id} do
         {nil, nil} -> URI.encode("/photos")
