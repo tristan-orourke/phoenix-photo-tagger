@@ -37,7 +37,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <.gallery
               photos={@filtered_photos}
               folder={@folder}
-              tags={@tags}
               selected_photos={@selected_photos}
               collapse_groups={@collapse_groups}
               zoom_level={@zoom_level}
@@ -76,7 +75,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       :ok,
       socket
       |> assign(:all_folders, Gallery.list_folders_include_tags())
-      |> assign(:all_tags, Gallery.list_tags())
+      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
       |> assign(:zoom_level, 0)
@@ -251,7 +250,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             MapSet.union(acc, MapSet.new(photo.tags))
           end)
           |> MapSet.to_list()
-          |> Enum.sort_by(&String.downcase(&1.name))
+          |> Enum.map(& &1.name)
+          |> Enum.sort_by(&String.downcase/1)
       end
 
     update_photo_form =
@@ -324,10 +324,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
 
   def folder_nav_item(assigns) do
-    recommended_tag_names = Enum.map(assigns.recommended_tags, & &1.name)
-
     {recommended_nav_tags, other_nav_tags} =
-      Enum.split_with(assigns.nav_tags, &(&1 in recommended_tag_names))
+      Enum.split_with(assigns.nav_tags, &(&1 in assigns.recommended_tags))
 
     recommended_nav_tags =
       Enum.sort_by(recommended_nav_tags, fn tag ->
@@ -406,15 +404,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
 
   def folders(assigns) do
-    assigns = assign(assigns, :all_tag_names, Enum.map(assigns.all_tags, & &1.name))
-
     ~H"""
     <div>
       <h2 class="hidden lg:block">Folders</h2>
       <ul class="space-y-2 mt-2 text-sm md:text-base">
         <.folder_nav_item
           is_current_folder={@all_folders_selected}
-          nav_tags={@all_tag_names}
+          nav_tags={@all_tags}
           recommended_tags={@recommended_tags}
           tags={@tags}
         />
@@ -480,7 +476,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   attr(:photos, :list, required: true)
   attr(:folder, :string, default: nil)
-  attr(:tags, :list, default: [])
   attr(:selected_photos, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
@@ -574,6 +569,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Tags">
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
+          <%!-- Note that @photo.tags are full structs, including id, not just a name like our other tag lists --%>
             <li class="mr-2 flex items-center">
               <.toggle_tag_button
                 folder={@folder}
@@ -613,7 +609,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <.button type="submit">Submit</.button>
               <datalist id="tag-list">
                 <%= for tag <- @all_tags do %>
-                  <option value={tag.name} />
+                  <option value={tag} />
                 <% end %>
               </datalist>
             </div>
@@ -625,16 +621,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <%= if tag not in @photo.tags do %>
               <div class="mr-2">
                 <.form
-                  for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})}
+                  for={Component.to_form(%{"tag" => tag, "photo_id" => @photo.id})}
                   phx-submit="add_tag"
                 >
                   <input class="hidden" type="text" name="photo_id" value={@photo.id} />
-                  <input class="hidden" type="text" name="tag" value={tag.name} />
+                  <input class="hidden" type="text" name="tag" value={tag} />
                   <button
                     class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800"
                     type="submit"
                   >
-                    {tag.name}
+                    {tag}
                   </button>
                 </.form>
               </div>
@@ -700,7 +696,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {tags_to_add, tags_to_remove, tags_in_limbo} =
       Enum.reduce(assigns.all_tags, {[], [], []}, fn tag, {add, remove, limbo} ->
         case Enum.reduce(assigns.photos, {0, 0}, fn photo, {has_tag_count, missing_count} ->
-               case tag in photo.tags do
+               case Enum.any?(photo.tags, fn t -> t.name == tag end) do
                  true -> {has_tag_count + 1, missing_count}
                  false -> {has_tag_count, missing_count + 1}
                end
@@ -744,15 +740,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <li class="mr-2">
               <.form
                 class="inline"
-                for={Component.to_form(%{"tag" => tag.name})}
+                for={Component.to_form(%{"tag" => tag})}
                 phx-submit="remove_tag_bulk"
               >
-                <input class="hidden" type="text" name="tag" value={tag.name} />
+                <input class="hidden" type="text" name="tag" value={tag} />
                 <button
                   class="border border-red-600 rounded-full hover:bg-red-100 px-1 my-1 text-red-600 hover:text-red-800"
                   type="submit"
                 >
-                  {tag.name}
+                  {tag}
                 </button>
               </.form>
             </li>
@@ -780,13 +776,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <%= for tag <- @recommended_tags do %>
             <%= if (tag not in @tags_to_remove) do %>
               <div class="mr-2">
-                <.form for={Component.to_form(%{"tag" => tag.name})} phx-submit="add_tag_bulk">
-                  <input class="hidden" type="text" name="tag" value={tag.name} />
+                <.form for={Component.to_form(%{"tag" => tag})} phx-submit="add_tag_bulk">
+                  <input class="hidden" type="text" name="tag" value={tag} />
                   <button
                     class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800"
                     type="submit"
                   >
-                    {tag.name}
+                    {tag}
                   </button>
                 </.form>
               </div>
@@ -929,7 +925,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_selected_photos()}
   end
@@ -940,7 +936,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_selected_photos()}
   end
@@ -954,7 +950,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_selected_photos()}
   end
@@ -968,7 +964,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> assign(:all_folders, Gallery.list_folders_include_tags())
      |> refresh_selected_photos()}
   end
@@ -1015,7 +1011,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> refresh_filtered_photos()
      |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
      |> put_flash(:info, "Photo deleted successfully.")}
@@ -1031,7 +1027,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_folders, Gallery.list_folders_include_tags())
-     |> assign(:all_tags, Gallery.list_tags())
+     |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> refresh_filtered_photos()
      |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
      |> put_flash(:info, "Photos deleted successfully.")}
