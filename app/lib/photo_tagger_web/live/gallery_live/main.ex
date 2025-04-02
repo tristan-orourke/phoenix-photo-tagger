@@ -142,9 +142,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         photos -> {nil, Enum.map(photos, & &1.id)}
       end
 
-    uri = URI.new!("/")
-    uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
-    uri = if(photo_id, do: URI.append_path(uri, "/photos/#{photo_id}"), else: uri)
+    Logger.debug("Folder #{inspect(folder)}")
+    Logger.debug("Photo id #{inspect(photo_id)}")
+
+    uri =
+      case {folder, photo_id} do
+        {nil, nil} -> URI.encode("/photos")
+        {folder, nil} -> URI.encode("/folders/#{folder}")
+        {nil, photo_id} -> URI.encode("/photos/#{photo_id}")
+        {folder, photo_id} -> URI.encode("/folders/#{folder}/photos/#{photo_id}")
+      end
+      |> URI.new!()
 
     query =
       %{}
@@ -175,26 +183,31 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_folder = Map.get(socket.assigns, :folder)
     prev_tags = Map.get(socket.assigns, :tags, [])
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
+    action = Map.get(socket.assigns, :live_action, nil)
 
     filtered_photos =
-      case {folder, tags, prev_filtered_photos} do
+      case {folder, tags, prev_filtered_photos, action} do
+        # The index action means no folder is selected (not event "all folders") and no photos need be displayed
+        {_, _, _, :index} ->
+          []
+
         # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
-        {^prev_folder, ^prev_tags, prev_filtered_photos} when is_list(prev_filtered_photos) ->
+        {^prev_folder, ^prev_tags, prev_filtered_photos, _} when is_list(prev_filtered_photos) ->
           prev_filtered_photos
 
-        {nil, [], _} ->
+        {nil, [], _, _} ->
           Gallery.list_photos()
           |> Repo.preload(:tags)
 
-        {nil, tags, _} ->
+        {nil, tags, _, _} ->
           Gallery.list_photos_by_all_tags(tags)
           |> Repo.preload(:tags)
 
-        {folder, [], _} ->
+        {folder, [], _, _} ->
           Gallery.list_photos_by_folder(folder)
           |> Repo.preload(:tags)
 
-        {folder, tags, _} ->
+        {folder, tags, _, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, tags)
           |> Repo.preload(:tags)
       end
@@ -484,6 +497,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       size = clamp(base_size - zoom_level, 1, 9)
       "grid-cols-#{size}"
     end
+
     assigns =
       assigns
       |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
