@@ -320,7 +320,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:nav_folder, :string, default: nil)
-  attr(:current_folder, :string, default: nil)
+  attr(:is_current_folder, :boolean, default: false)
   attr(:tags, :list, default: [])
 
   def folder_nav_item(assigns) do
@@ -342,7 +342,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     assigns =
       assigns
-      |> assign(:is_current_folder, assigns.current_folder == assigns.nav_folder)
       |> assign(:recommended_nav_tags, recommended_nav_tags)
       |> assign(:other_nav_tags, other_nav_tags)
 
@@ -413,35 +412,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div>
       <h2 class="hidden lg:block">Folders</h2>
       <ul class="space-y-2 mt-2 text-sm md:text-base">
-        <.live_component module={PhotoTaggerWeb.GalleryLive.FolderNavItem}
-          id="all_folders"
+        <.folder_nav_item
           is_current_folder={@all_folders_selected}
           nav_tags={@all_tag_names}
           recommended_tags={@recommended_tags}
           tags={@tags}
         />
-        <%!-- <.folder_nav_item
-          current_folder={@folder}
-          nav_tags={@all_tag_names}
-          recommended_tags={@recommended_tags}
-          tags={@tags}
-        /> --%>
         <%= for folder <- @all_folders do %>
-          <.live_component module={PhotoTaggerWeb.GalleryLive.FolderNavItem}
-            id={"folder_#{folder.name}"}
+          <.folder_nav_item
             is_current_folder={@folder == folder.name}
             nav_folder={folder.name}
             nav_tags={folder.tags}
             recommended_tags={@recommended_tags}
             tags={@tags}
           />
-          <%!-- <.folder_nav_item
-            current_folder={@folder}
-            nav_folder={folder.name}
-            nav_tags={folder.tags}
-            recommended_tags={@recommended_tags}
-            tags={@tags}
-          /> --%>
         <% end %>
       </ul>
     </div>
@@ -491,39 +475,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </.toggle_button>
       </div>
     </div>
-    """
-  end
-
-  attr(:photo, :map, required: true)
-  attr(:is_selected, :boolean, default: false)
-  attr(:collapse_groups, :boolean, default: false)
-
-  def gallery_photo(assigns) do
-    ~H"""
-    <li class="aspect-square">
-      <button
-        id={"gallery-photo-button-#{@photo.id}"}
-        class="h-full w-full relative block
-          data-[selected]:outline
-          outline-4 outline-offset-2 outline-blue-400
-          phx-click-loading:outline phx-click-loading:outline-blue-200"
-        data-selected={@is_selected}
-        phx-click={if(@collapse_groups and @photo.group, do: "select_gallery_group", else: "select_gallery_photo")}
-        phx-value-photo_id={@photo.id}
-        phx-value-photo_group={@photo.group}
-      >
-        <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
-        <img
-          class="w-full h-full object-cover"
-          alt={@photo.name}
-          src={ImageUploader.url({@photo.image, @photo}, :small)}
-        />
-        <%= if @collapse_groups and @photo.group do %>
-          <div class="w-full h-full -z-10 absolute left-1 bottom-1 bg-gray-500" />
-          <div class="w-full h-full -z-20 absolute left-2 bottom-2 bg-gray-400" />
-        <% end %>
-      </button>
-    </li>
     """
   end
 
