@@ -51,7 +51,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               photo={photo}
               folder={@folder}
               tags={@tags}
-              recommended_tags={@recommended_tags}
+              all_tags={@all_tags}
               update_photo_form={@update_photo_form}
             />
           <% [] -> %>
@@ -594,7 +594,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:photo, :map, required: true)
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
-  attr(:recommended_tags, :list, default: [])
+  # attr(:recommended_tags, :list, default: [])
+  attr(:all_tags, :list, required: true)
   attr(:update_photo_form, :map, required: true)
 
   def photo(assigns) do
@@ -652,14 +653,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 type="text"
                 name="tag"
                 id="add_any_tag"
+                list="tag-list"
                 Placeholder="Add tag"
                 class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
               />
               <.button type="submit">Submit</.button>
+              <datalist id="tag-list">
+                <%= for tag <- @all_tags do %>
+                  <option value={tag.name} />
+                <% end %>
+              </datalist>
             </div>
           </.form>
         </div>
-        <div class="flex flex-wrap mt-2">
+        <%!-- TODO: restore some version of recommended tags --%>
+        <%!-- <div class="flex flex-wrap mt-2">
           <%= for tag <- @recommended_tags do %>
             <%= if tag not in @photo.tags do %>
               <div class="mr-2">
@@ -679,7 +687,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               </div>
             <% end %>
           <% end %>
-        </div>
+        </div> --%>
       </:item>
       <:item title="Download file">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download>
