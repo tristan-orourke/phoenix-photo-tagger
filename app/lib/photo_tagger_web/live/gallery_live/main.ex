@@ -19,6 +19,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           all_folders={@all_folders}
           all_tags={@all_tags}
           folder={@folder}
+          all_folders_selected={@folder == nil and @live_action != :index}
           tags={@tags}
           recommended_tags={@recommended_tags}
         />
@@ -402,6 +403,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:all_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:folder, :string, default: nil)
+  attr(:all_folders_selected, :boolean, default: false)
   attr(:tags, :list, default: [])
 
   def folders(assigns) do
@@ -413,7 +415,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <ul class="space-y-2 mt-2 text-sm md:text-base">
         <.live_component module={PhotoTaggerWeb.GalleryLive.FolderNavItem}
           id="all_folders"
-          current_folder={@folder}
+          is_current_folder={@all_folders_selected}
           nav_tags={@all_tag_names}
           recommended_tags={@recommended_tags}
           tags={@tags}
@@ -427,7 +429,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= for folder <- @all_folders do %>
           <.live_component module={PhotoTaggerWeb.GalleryLive.FolderNavItem}
             id={"folder_#{folder.name}"}
-            current_folder={@folder}
+            is_current_folder={@folder == folder.name}
             nav_folder={folder.name}
             nav_tags={folder.tags}
             recommended_tags={@recommended_tags}

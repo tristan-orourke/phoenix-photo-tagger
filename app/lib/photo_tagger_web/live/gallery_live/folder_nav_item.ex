@@ -6,7 +6,7 @@ defmodule PhotoTaggerWeb.GalleryLive.FolderNavItem do
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:nav_folder, :string, default: nil)
-  attr(:current_folder, :string, default: nil)
+  attr(:is_current_folder, :boolean, default: false)
   attr(:tags, :list, default: [])
 
   def render(assigns) do
@@ -28,7 +28,6 @@ defmodule PhotoTaggerWeb.GalleryLive.FolderNavItem do
 
     assigns =
       assigns
-      |> assign(:is_current_folder, assigns.current_folder == assigns.nav_folder)
       |> assign(:recommended_nav_tags, recommended_nav_tags)
       |> assign(:other_nav_tags, other_nav_tags)
 
