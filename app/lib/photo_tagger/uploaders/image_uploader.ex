@@ -4,7 +4,7 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   require Logger
 
-  @versions [:original, :small]
+  @versions [:original, :small, :sq90, :sq200, :sq360, :sq600]
   @extensions ~w(.jpg .jpeg .gif .png)
 
   def valid_extensions, do: @extensions
@@ -22,6 +22,19 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   def transform(:small, _) do
     {:convert, "-strip -define jpeg:extent=100KB -format jpg", :jpg}
+  end
+
+  def transform(:sq90, _) do
+    {:convert, "-strip -resize 90x90^ -gravity center -crop 90x90+0+0 +repage", :jpg}
+  end
+  def transform(:sq200, _) do
+    {:convert, "-strip -resize 200x200^ -gravity center -crop 200x200+0+0 +repage", :jpg}
+  end
+  def transform(:sq360, _) do
+    {:convert, "-strip -resize 360x360^ -gravity center -crop 360x360+0+0 +repage", :jpg}
+  end
+  def transform(:sq600, _) do
+    {:convert, "-strip -resize 600x600^ -gravity center -crop 600x600+0+0 +repage", :jpg}
   end
 
   # Override the persisted filenames:
