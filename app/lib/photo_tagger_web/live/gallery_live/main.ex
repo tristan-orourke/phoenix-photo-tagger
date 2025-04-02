@@ -193,7 +193,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           []
 
         # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
-        {^prev_folder, ^prev_tags, prev_filtered_photos, _} when is_list(prev_filtered_photos) and prev_filtered_photos != []  ->
+        {^prev_folder, ^prev_tags, prev_filtered_photos, _}
+        when is_list(prev_filtered_photos) and prev_filtered_photos != [] ->
           prev_filtered_photos
 
         {nil, [], _, _} ->
@@ -294,9 +295,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assigns =
       assign(assigns, :href, build_url(assigns.folder, assigns.selected_photos, tags_list))
 
+    assigns = assign(assigns, :selected, assigns.toggled_tag in assigns.tags)
+
     ~H"""
     <.toggle_link
-      selected={@toggled_tag in @tags}
+      selected={@selected}
       href={@href}
       class={@class}
     >
@@ -325,6 +328,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {recommended_nav_tags, other_nav_tags} =
       Enum.split_with(assigns.nav_tags, &(&1 in recommended_tag_names))
 
+    recommended_nav_tags =
+      Enum.sort_by(recommended_nav_tags, fn tag ->
+        cond do
+          # show currently selected tags first
+          tag in assigns.tags -> 0
+          # tag in @recommended_tag_names -> 1 # then recommended tags
+          # then other tags
+          true -> 2
+        end
+      end)
+
     assigns =
       assigns
       |> assign(:is_current_folder, assigns.current_folder == assigns.nav_folder)
@@ -341,7 +355,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <p class="text-left">
             <.link
                 class="data-[selected]:font-bold"
-                data-selected={Enum.empty?(@tags) && @is_current_folder}
+                data-selected={@is_current_folder}
                 patch={build_url(@nav_folder, [], [])}
               >
               {if(@nav_folder, do: @nav_folder, else: "All folders")}
@@ -352,13 +366,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
             <%= if not Enum.empty?(@recommended_nav_tags) do %>
               <ul class="md:flex md:flex-wrap my-2">
-                <%= for tag <- Enum.sort_by(@recommended_nav_tags, fn tag ->
-                    cond do
-                      tag in @tags -> 0 # show currently selected tags first
-                      # tag in @recommended_tag_names -> 1 # then recommended tags
-                      true -> 2 # then other tags
-                    end
-                  end) do %>
+                <%= for tag <- @recommended_nav_tags do %>
                   <li class="mr-2 flex items-center">
                       <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag}>
                         {tag}
@@ -397,13 +405,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
 
   def folders(assigns) do
+    assigns = assign(assigns, :all_tag_names, Enum.map(assigns.all_tags, & &1.name))
+
     ~H"""
     <div>
       <h2 class="hidden lg:block">Folders</h2>
       <ul class="space-y-2 mt-2 text-sm md:text-base">
         <.folder_nav_item
           current_folder={@folder}
-          nav_tags={Enum.map(@all_tags, & &1.name)}
+          nav_tags={@all_tag_names}
           recommended_tags={@recommended_tags}
           tags={@tags}
         />
@@ -540,8 +550,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:xl_grid_size, get_grid_size.(assigns.zoom_level, 4))
       |> assign(:_2xl_grid_size, get_grid_size.(assigns.zoom_level, 6))
 
-
-
     ~H"""
     <div class="p-2 lg:p-6 ">
       <ul class={"grid gap-2 lg:gap-4
@@ -568,6 +576,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:update_photo_form, :map, required: true)
 
   def photo(assigns) do
+    assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder)
+
     ~H"""
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
@@ -580,7 +590,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.link
           class="data-[active]:font-bold"
           patch={build_url(@photo.folder, [@photo], @tags)}
-          data-active={@folder == @photo.folder}
+          data-active={@folder_is_active}
         >
           {@photo.folder}
         </.link>
