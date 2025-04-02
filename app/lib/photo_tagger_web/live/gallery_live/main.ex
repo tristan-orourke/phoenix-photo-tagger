@@ -30,14 +30,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           collapse_groups={@collapse_groups}
         />
         <div>
-          <.gallery
-            photos={@filtered_photos}
-            folder={@folder}
-            tags={@tags}
-            selected_photos={@selected_photos}
-            collapse_groups={@collapse_groups}
-            zoom_level={@zoom_level}
-          />
+          <%= if @live_action == :index do %>
+            <p>Select a folder to view photos</p>
+          <% else %>
+            <.gallery
+              photos={@filtered_photos}
+              folder={@folder}
+              tags={@tags}
+              selected_photos={@selected_photos}
+              collapse_groups={@collapse_groups}
+              zoom_level={@zoom_level}
+            />
+          <% end %>
         </div>
       </div>
       <div id="photo-section" class="col-span-2 overflow-y-auto">
@@ -189,7 +193,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           []
 
         # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
-        {^prev_folder, ^prev_tags, prev_filtered_photos, _} when is_list(prev_filtered_photos) ->
+        {^prev_folder, ^prev_tags, prev_filtered_photos, _} when is_list(prev_filtered_photos) and prev_filtered_photos != []  ->
           prev_filtered_photos
 
         {nil, [], _, _} ->
