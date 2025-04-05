@@ -37,7 +37,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <.gallery
               photos={@filtered_photos}
               folder={@folder}
-              selected_photos={@selected_photos}
+              selected_photo_ids={@selected_photo_ids}
               collapse_groups={@collapse_groups}
               zoom_level={@zoom_level}
             />
@@ -199,19 +199,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
         {nil, [], _, _} ->
           Gallery.list_photos()
-          |> Repo.preload(:tags)
 
         {nil, tags, _, _} ->
           Gallery.list_photos_by_all_tags(tags)
-          |> Repo.preload(:tags)
 
         {folder, [], _, _} ->
           Gallery.list_photos_by_folder(folder)
-          |> Repo.preload(:tags)
 
         {folder, tags, _, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, tags)
-          |> Repo.preload(:tags)
       end
 
     prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
@@ -225,6 +221,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     new_selected_photo_ids =
       [photo_id | selected_photo_ids]
       |> Enum.filter(&(&1 != nil))
+      |> Enum.map(&String.to_integer/1)
 
     selected_photos =
       case {new_selected_photo_ids, prev_selected_photos} do
@@ -246,7 +243,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           Map.get(socket.assigns, :recommended_tags, [])
 
         _ ->
-          Enum.reduce(filtered_photos, MapSet.new(), fn photo, acc ->
+          filtered_photos
+          |> Repo.preload(:tags)
+          |> Enum.reduce(MapSet.new(), fn photo, acc ->
             MapSet.union(acc, MapSet.new(photo.tags))
           end)
           |> MapSet.to_list()
@@ -266,8 +265,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     %{
       folder: folder,
       tags: tags,
-      filtered_photos: filtered_photos,
+      # Take only the fields we need to display in the gallery. This reduces the frequency of changes to the gallery.
+      filtered_photos:
+        filtered_photos
+        |> Enum.map(&Map.take(&1, [:id, :name, :group, :image, :folder])),
       selected_photos: selected_photos,
+      selected_photo_ids: new_selected_photo_ids,
       recommended_tags: recommended_tags,
       update_photo_form: update_photo_form
     }
@@ -476,7 +479,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   attr(:photos, :list, required: true)
   attr(:folder, :string, default: nil)
-  attr(:selected_photos, :list, default: [])
+  attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
 
@@ -525,14 +528,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
             id={photo.id}
-            photo={photo}
-            is_selected={Enum.any?(@selected_photos, &(&1.id == photo.id))}
+            photo_id={photo.id}
+            photo_group={photo.group}
+            photo_name={photo.name}
+            photo_image={photo.image}
+            photo_folder={photo.folder}
+            is_selected={photo.id in @selected_photo_ids}
             collapse_groups={@collapse_groups}
           />
-          <%!-- <.gallery_photo
-            photo={photo}
-            is_selected={Enum.any?(@selected_photos, &(&1.id == photo.id))}
-            collapse_groups={@collapse_groups} /> --%>
         <% end %>
       </ul>
     </div>
