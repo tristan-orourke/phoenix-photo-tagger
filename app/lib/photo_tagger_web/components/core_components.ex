@@ -588,6 +588,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
   """
   slot :item, required: true do
     attr :title, :string, required: true
+    attr :class, :string, required: false
   end
 
   def list(assigns) do

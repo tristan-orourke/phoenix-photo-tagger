@@ -70,7 +70,8 @@ defmodule PhotoTaggerWeb.Telemetry do
       # Database Metrics
       summary("photo_tagger.repo.query.total_time",
         unit: {:native, :millisecond},
-        description: "The sum of the other measurements"
+        description: "The sum of the other measurements",
+        tags: [:query]
       ),
       summary("photo_tagger.repo.query.decode_time",
         unit: {:native, :millisecond},
@@ -91,7 +92,7 @@ defmodule PhotoTaggerWeb.Telemetry do
       ),
 
       # VM Metrics
-      summary("vm.memory.total", unit: {:byte, :kilobyte}),
+      summary("vm.memory.total", unit: {:byte, :megabyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
       summary("vm.total_run_queue_lengths.io")
