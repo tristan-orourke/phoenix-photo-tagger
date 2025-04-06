@@ -1,26 +1,26 @@
 <.header>
   Listing Photos
   <:actions>
-    <.link href={~p"/photos/new"}>
+    <.link href={~p"/admin/photos/new"}>
       <.button>New Photo</.button>
     </.link>
   </:actions>
 </.header>
 
-<.table id="photos" rows={@photos} row_click={&JS.navigate(~p"/photos/#{&1}")}>
+<.table id="photos" rows={@photos} row_click={&JS.navigate(~p"/admin/photos/#{&1}")}>
   <:col :let={photo} label="Name">
-    <.link navigate={~p"/photos/#{photo}"}>
+    <.link navigate={~p"/admin/photos/#{photo}"}>
       {photo.name}
     </.link>
   </:col>
   <:action :let={photo}>
     <div class="sr-only">
-      <.link navigate={~p"/photos/#{photo}"}>Show</.link>
+      <.link navigate={~p"/admin/photos/#{photo}"}>Show</.link>
     </div>
-    <.link navigate={~p"/photos/#{photo}/edit"}>Edit</.link>
+    <.link navigate={~p"/admin/photos/#{photo}/edit"}>Edit</.link>
   </:action>
   <:action :let={photo}>
-    <.link href={~p"/photos/#{photo}"} method="delete" data-confirm="Are you sure?">
+    <.link href={~p"/admin/photos/#{photo}"} method="delete" data-confirm="Are you sure?">
       Delete
     </.link>
   </:action>

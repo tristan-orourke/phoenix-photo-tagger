@@ -6,7 +6,7 @@ defmodule PhotoTaggerWeb.PhotoController do
   alias PhotoTagger.Gallery.Photo
 
   def build_url(folder, photo) do
-    uri = URI.new!("/")
+    uri = URI.new!("/admin")
     uri = if(folder, do: URI.append_path(uri, "/folders/#{folder}"), else: uri)
     uri = if(photo, do: URI.append_path(uri, "/photos/#{photo.id}"), else: uri)
     URI.to_string(uri)

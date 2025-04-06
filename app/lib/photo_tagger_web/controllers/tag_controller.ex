@@ -14,7 +14,7 @@ defmodule PhotoTaggerWeb.TagController do
 
     conn
     |> put_flash(:info, "Tag updated successfully.")
-    |> redirect(to: ~p"/edit-tags")
+    |> redirect(to: ~p"/admin/edit-tags")
   end
 
   def delete(conn, %{"tag" => tag_name}) do
@@ -23,6 +23,6 @@ defmodule PhotoTaggerWeb.TagController do
 
     conn
     |> put_flash(:info, "Tag deleted successfully.")
-    |> redirect(to: ~p"/edit-tags")
+    |> redirect(to: ~p"/admin/edit-tags")
   end
 end

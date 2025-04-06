@@ -148,10 +148,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     uri =
       case {folder, photo_id} do
-        {nil, nil} -> URI.encode("/photos")
-        {folder, nil} -> URI.encode("/folders/#{folder}")
-        {nil, photo_id} -> URI.encode("/photos/#{photo_id}")
-        {folder, photo_id} -> URI.encode("/folders/#{folder}/photos/#{photo_id}")
+        {nil, nil} -> URI.encode("/admin/photos")
+        {folder, nil} -> URI.encode("/admin/folders/#{folder}")
+        {nil, photo_id} -> URI.encode("/admin/photos/#{photo_id}")
+        {folder, photo_id} -> URI.encode("/admin/folders/#{folder}/photos/#{photo_id}")
       end
       |> URI.new!()
 

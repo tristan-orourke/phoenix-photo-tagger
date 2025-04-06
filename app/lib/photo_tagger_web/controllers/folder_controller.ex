@@ -3,6 +3,10 @@ defmodule PhotoTaggerWeb.FolderController do
 
   alias PhotoTagger.Gallery
 
+  def index(conn, _params) do
+    text(conn, "Hello world")
+  end
+
   def edit_folders(conn, _params) do
     folders = Gallery.list_folders()
     render(conn, :edit_folders, folders: folders)
@@ -15,7 +19,7 @@ defmodule PhotoTaggerWeb.FolderController do
       {:ok, _} ->
         conn
         |> put_flash(:info, "Folder renamed successfully.")
-        |> redirect(to: ~p"/edit-folders")
+        |> redirect(to: ~p"/admin/edit-folders")
 
       {:error, failed_op, failed_value, _changes_so_far} ->
         conn
@@ -23,7 +27,7 @@ defmodule PhotoTaggerWeb.FolderController do
           :error,
           "Failed to rename folder! Error #{failed_value} in step #{failed_op}."
         )
-        |> redirect(to: ~p"/edit-folders")
+        |> redirect(to: ~p"/admin/edit-folders")
     end
   end
 
@@ -34,7 +38,7 @@ defmodule PhotoTaggerWeb.FolderController do
       {:ok, _} ->
         conn
         |> put_flash(:info, "Folder deleted successfully.")
-        |> redirect(to: ~p"/edit-folders")
+        |> redirect(to: ~p"/admin/edit-folders")
 
       {:error, failed_op, failed_value, _changes_so_far} ->
         conn
@@ -42,7 +46,7 @@ defmodule PhotoTaggerWeb.FolderController do
           :error,
           "Failed to delete folder! Error #{failed_value} in step #{failed_op}."
         )
-        |> redirect(to: ~p"/edit-folders")
+        |> redirect(to: ~p"/admin/edit-folders")
     end
   end
 end

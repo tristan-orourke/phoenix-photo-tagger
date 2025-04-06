@@ -66,6 +66,9 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
+  # Config basic auth
+  config :photo_tagger, :basic_auth, username: System.get_env!("ADMIN_USERNAME"), password: System.get_env!("ADMIN_PASSWORD")
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key
