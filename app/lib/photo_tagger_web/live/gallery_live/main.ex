@@ -74,7 +74,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {
       :ok,
       socket
-      |> assign(:all_folders, Gallery.list_folders_include_tags())
+      |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
       |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
@@ -268,7 +268,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       # Take only the fields we need to display in the gallery. This reduces the frequency of changes to the gallery.
       filtered_photos:
         filtered_photos
-        |> Enum.map(&Map.take(&1, [:id, :name, :group, :image, :folder])),
+        |> Enum.map(&simplify_photo/1),
       selected_photos: selected_photos,
       selected_photo_ids: new_selected_photo_ids,
       recommended_tags: recommended_tags,
@@ -869,6 +869,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
       end
       |> Repo.preload(:tags)
+      |> Enum.map(&simplify_photo/1)
 
     assign(socket, filtered_photos: filtered_photos)
   end
@@ -929,7 +930,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
      |> refresh_selected_photos()}
   end
 
@@ -940,7 +941,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
      |> refresh_selected_photos()}
   end
 
@@ -954,7 +955,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
      |> refresh_selected_photos()}
   end
 
@@ -968,7 +969,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply,
      socket
      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
      |> refresh_selected_photos()}
   end
 
@@ -992,7 +993,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     case result do
       {:ok, _photo} ->
         {:noreply,
-         assign(socket, :all_folders, Gallery.list_folders_include_tags())
+         assign(
+           socket,
+           :all_folders,
+           Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1)
+         )
          |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
@@ -1013,7 +1018,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> refresh_filtered_photos()
      |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
@@ -1029,7 +1034,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders_include_tags())
+     |> assign(:all_folders, Gallery.list_folders_include_tags() |> Enum.map(&simplify_folder/1))
      |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
      |> refresh_filtered_photos()
      |> push_patch(to: build_url(socket.assigns.folder, [], socket.assigns.tags))
@@ -1053,4 +1058,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def clamp(x, min, max), do: min(max(x, min), max)
+
+  # Keep only the values which are used by the UI
+  def simplify_folder(folder), do: Map.take(folder, [:name, :tags])
+  def simplify_photo(photo), do: Map.take(photo, [:id, :name, :group, :image, :folder])
 end
