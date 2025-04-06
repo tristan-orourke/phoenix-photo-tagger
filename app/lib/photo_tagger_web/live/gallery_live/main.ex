@@ -78,7 +78,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:all_tags, Gallery.list_tags() |> Enum.map(& &1.name))
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
-      |> assign(:zoom_level, 0)
+      |> assign(:zoom_level, 0),
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -87,6 +87,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       #    recommended_tags: [],
       #    update_photo_form: Gallery.update_photo_changeset(%Photo{}) |> Component.to_form()
       #  })
+      layout: {PhotoTaggerWeb.Layouts, :admin}
     }
   end
 

@@ -16,8 +16,9 @@ defmodule PhotoTaggerWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :auth do
+  pipeline :admin do
     plug :basic_auth, Application.compile_env(:photo_tagger, :basic_auth)
+    plug :put_layout, html: {PhotoTaggerWeb.Layouts, :admin}
   end
 
   scope "/", PhotoTaggerWeb do
@@ -27,7 +28,7 @@ defmodule PhotoTaggerWeb.Router do
   end
 
   scope "/admin", PhotoTaggerWeb do
-    pipe_through [:browser, :auth]
+    pipe_through [:browser, :admin]
 
     live_dashboard "/dashboard", metrics: PhotoTaggerWeb.Telemetry
 
