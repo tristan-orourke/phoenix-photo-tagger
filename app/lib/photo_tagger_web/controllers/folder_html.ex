@@ -3,6 +3,33 @@ defmodule PhotoTaggerWeb.FolderHTML do
 
   attr(:folders, :list, required: true)
 
+  def index(assigns) do
+    ~H"""
+    <div class="flex h-screen items-center justify-center">
+      <div class="pb-60">
+        <div class="pb-20 pt-12 px-12 shadow-xl">
+          <h1 class="text-4xl font-semibold text-zinc-800 p-8">
+            Available Galleries
+          </h1>
+          <nav>
+            <ul class="text-center align-middle h-full text-2xl space-y-4">
+              <%= for folder <- @folders do %>
+                <li>
+                  <.link href={~p"/folders/#{folder}"} class="text-blue-500 hover:underline">
+                    <%= folder %>
+                  </.link>
+                </li>
+              <% end %>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr(:folders, :list, required: true)
+
   def edit_folders(assigns) do
     ~H"""
     <.header>

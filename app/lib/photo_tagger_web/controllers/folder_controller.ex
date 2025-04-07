@@ -4,7 +4,8 @@ defmodule PhotoTaggerWeb.FolderController do
   alias PhotoTagger.Gallery
 
   def index(conn, _params) do
-    text(conn, "Hello world")
+    folders = Gallery.list_folders()
+    render(conn, :index, folders: folders)
   end
 
   def edit_folders(conn, _params) do
