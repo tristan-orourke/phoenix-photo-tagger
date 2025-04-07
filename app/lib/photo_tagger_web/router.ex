@@ -25,6 +25,8 @@ defmodule PhotoTaggerWeb.Router do
     pipe_through :browser
 
     get "/", FolderController, :index
+
+    live "/folders/:folder", GalleryLive.PublicGallery, :public_folder
   end
 
   scope "/admin", PhotoTaggerWeb do
