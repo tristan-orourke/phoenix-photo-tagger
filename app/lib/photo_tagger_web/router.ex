@@ -1,6 +1,7 @@
 defmodule PhotoTaggerWeb.Router do
   use PhotoTaggerWeb, :router
   import Phoenix.LiveDashboard.Router
+  import Plug.BasicAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -15,11 +16,30 @@ defmodule PhotoTaggerWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :admin do
+    plug :basic_auth, Application.compile_env(:photo_tagger, :basic_auth)
+    plug :put_layout, html: {PhotoTaggerWeb.Layouts, :admin}
+  end
+
   scope "/", PhotoTaggerWeb do
     pipe_through :browser
 
-    resources "/photos", PhotoController, only: [:new, :create, :edit, :update, :delete]
+    get "/", FolderController, :index
+    get "/folders", FolderController, :index
 
+    live "/folders/:folder", GalleryLive.Main, :public
+    live "/folders/:folder/photos", GalleryLive.Main, :public
+    live "/folders/:folder/photos/:photo_id", GalleryLive.Main, :public
+    live "/photos", GalleryLive.Main, :public
+    live "/photos/:photo_id", GalleryLive.Main, :public
+  end
+
+  scope "/admin", PhotoTaggerWeb do
+    pipe_through [:browser, :admin]
+
+    live_dashboard "/dashboard", metrics: PhotoTaggerWeb.Telemetry
+
+    resources "/photos", PhotoController, only: [:new, :create, :edit, :update, :delete]
     live "/", GalleryLive.Main, :index
     live "/folders", GalleryLive.Main, :index
     live "/folders/:folder", GalleryLive.Main, :folder
@@ -35,12 +55,6 @@ defmodule PhotoTaggerWeb.Router do
     get "/edit-tags", TagController, :edit_tags
     put "/tags/:tag", TagController, :update
     delete "/tags/:tag", TagController, :delete
-  end
-
-  scope "/admin", PhotoTaggerWeb do
-    pipe_through :browser
-
-    live_dashboard "/dashboard", metrics: PhotoTaggerWeb.Telemetry
   end
 
   # Other scopes may use custom stacks.

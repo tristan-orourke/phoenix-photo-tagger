@@ -1,14 +1,14 @@
 <ul class="mt-10 flex flex-col space-y-8">
   <%= for tag <- @photo.tags do %>
     <li>
-      <.form for={%{}} action={~p"/photos/#{@photo}/tags/#{tag.name}"} method="delete">
+      <.form for={%{}} action={~p"/admin/photos/#{@photo}/tags/#{tag.name}"} method="delete">
         {tag.name}
         <.button>Remove</.button>
       </.form>
     </li>
   <% end %>
 </ul>
-<.simple_form :let={f} for={%{"tag" => ""}} action={~p"/photos/#{@photo}/tags"} method="post">
+<.simple_form :let={f} for={%{"tag" => ""}} action={~p"/admin/photos/#{@photo}/tags"} method="post">
   <.input field={f[:tag]} type="text" label="New tag" />
   <:actions>
     <.button>Add tag</.button>

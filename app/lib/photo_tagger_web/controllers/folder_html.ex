@@ -3,6 +3,33 @@ defmodule PhotoTaggerWeb.FolderHTML do
 
   attr(:folders, :list, required: true)
 
+  def index(assigns) do
+    ~H"""
+    <div class="flex h-screen items-center justify-center">
+      <div class="pb-60">
+        <div class="pb-20 pt-12 px-12 shadow-xl">
+          <h1 class="text-4xl font-semibold text-zinc-800 p-8">
+            Available Galleries
+          </h1>
+          <nav>
+            <ul class="text-center align-middle h-full text-2xl space-y-4">
+              <%= for folder <- @folders do %>
+                <li>
+                  <.link href={~p"/folders/#{folder}"} class="text-blue-500 hover:underline">
+                    <%= folder %>
+                  </.link>
+                </li>
+              <% end %>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr(:folders, :list, required: true)
+
   def edit_folders(assigns) do
     ~H"""
     <.header>
@@ -15,7 +42,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
           <p class="font-bold">{folder}</p>
           <div class="ml-4">
             <div>
-              <.form for={%{}} action={~p"/folders/#{folder}/rename"} method="post">
+              <.form for={%{}} action={~p"/admin/folders/#{folder}/rename"} method="post">
                 <div class="flex items-center space-x-4">
                   <.label for={"folder_#{folder}"}>Name</.label>
                   <input
@@ -32,7 +59,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
             <div class="mt-8">
               <.form
                 for={%{}}
-                action={~p"/folders/#{folder}"}
+                action={~p"/admin/folders/#{folder}"}
                 method="delete"
                 onsubmit={"return confirm('Are you sure you want to delete the folder named \"#{folder}\"? This will permanently delete all photos in the folder.')"}
               >
@@ -44,7 +71,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
       <% end %>
     </ul>
 
-    <.back navigate={~p"/photos"}>Back to photos</.back>
+    <.back navigate={~p"/admin/photos"}>Back to photos</.back>
     """
   end
 end

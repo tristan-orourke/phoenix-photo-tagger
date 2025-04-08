@@ -2,11 +2,11 @@
   Edit Photo {@photo.id}
   <:subtitle>Use this form to manage photo records in your database.</:subtitle>
 </.header>
-<.edit_photo_form changeset={@changeset} action={~p"/photos/#{@photo}"} />
+<.edit_photo_form changeset={@changeset} action={~p"/admin/photos/#{@photo}"} />
 
 <h2 class="font-semibold mt-10">Tags</h2>
 <.edit_tag_forms photo={@photo} />
 <div class="mt-10">
   <img src={PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :small)} />
 </div>
-<.back navigate={~p"/"}>Back to gallery</.back>
+<.back navigate={~p"/admin"}>Back to gallery</.back>
