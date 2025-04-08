@@ -67,7 +67,7 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 
   # Config basic auth
-  config :photo_tagger, :basic_auth, username: System.get_env!("ADMIN_USERNAME"), password: System.get_env!("ADMIN_PASSWORD")
+  config :photo_tagger, :basic_auth, username: System.get_env("ADMIN_USERNAME") || "admin", password: System.get_env("ADMIN_PASSWORD") || "admin"
 
   # ## SSL Support
   #
