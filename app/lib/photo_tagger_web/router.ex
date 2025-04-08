@@ -17,7 +17,7 @@ defmodule PhotoTaggerWeb.Router do
   end
 
   pipeline :admin do
-    plug :basic_auth, Application.compile_env(:photo_tagger, :basic_auth)
+    plug :basic_auth, Application.fetch_env(:photo_tagger, :basic_auth)
     plug :put_layout, html: {PhotoTaggerWeb.Layouts, :admin}
   end
 
