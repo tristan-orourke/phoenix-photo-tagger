@@ -13,7 +13,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def render(assigns) do
     ~H"""
-    <div class="flex flex-row gap-4 h-full">
+    <div class="flex flex-row gap-4 h-full pr-2 lg:pr-4">
       <%= if @is_admin do %>
         <div id="folders-section" class="flex-initial basis-2/7 lg:basis-1/7 overflow-y-auto">
           <.folders
@@ -473,7 +473,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery_header(assigns) do
     ~H"""
-    <div class="flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
+    <div class="pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
       <div class="flex-none pr-3">
         <.button class="p-1 flex items-center" phx-click="zoom_out">
           <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
