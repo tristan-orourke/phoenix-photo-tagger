@@ -63,14 +63,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <% [] -> %>
             <p class="text-center">Select a photo to view details</p>
           <% _ -> %>
-            <.multi_photo_selection
-              photos={@selected_photos}
-              folder={@folder}
-              tags={@tags}
-              all_tags={@all_tags}
-              recommended_tags={@recommended_tags}
-              is_admin={@is_admin}
-            />
+            <%= if @is_admin do %>
+              <.multi_photo_selection
+                photos={@selected_photos}
+                folder={@folder}
+                tags={@tags}
+                all_tags={@all_tags}
+                recommended_tags={@recommended_tags}
+                is_admin={@is_admin}
+              />
+            <% else %>
+              <p class="text-center">Please select a single photo</p>
+            <% end %>
         <% end %>
       </div>
     </div>
@@ -465,6 +469,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:item_count, :integer, required: true)
   attr(:multiselect_active, :boolean, required: true)
   attr(:collapse_groups, :boolean, required: true)
+  attr(:is_admin, :boolean, required: true)
 
   def gallery_header(assigns) do
     ~H"""
@@ -482,28 +487,30 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <div class="flex-none mr-3 lg:ml-3">
         <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
       </div>
-      <div class="flex-none pr-3">
-        <.toggle_button
-          selected={@collapse_groups}
-          phx-click="toggle_collapse_groups"
-          class="flex items-center pl-3 pr-3 inline mr-1"
-        >
-          <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
-          <span class="sr-only lg:not-sr-only lg:ml-1">
-            Collapse groups
-          </span>
-        </.toggle_button>
-        <.toggle_button
-          selected={@multiselect_active}
-          phx-click="toggle_multiselect"
-          class="flex items-center pl-3 pr-3 inline"
-        >
-          <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
-          <span class="sr-only lg:not-sr-only lg:ml-1">
-            Multiselect
-          </span>
-        </.toggle_button>
-      </div>
+      <%= if @is_admin do %>
+        <div class="flex-none pr-3">
+          <.toggle_button
+            selected={@collapse_groups}
+            phx-click="toggle_collapse_groups"
+            class="flex items-center pl-3 pr-3 inline mr-1"
+          >
+            <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <span class="sr-only lg:not-sr-only lg:ml-1">
+              Collapse groups
+            </span>
+          </.toggle_button>
+          <.toggle_button
+            selected={@multiselect_active}
+            phx-click="toggle_multiselect"
+            class="flex items-center pl-3 pr-3 inline"
+          >
+            <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <span class="sr-only lg:not-sr-only lg:ml-1">
+              Multiselect
+            </span>
+          </.toggle_button>
+        </div>
+      <% end %>
     </div>
     """
   end
@@ -592,7 +599,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <img class="object-contain h-full" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
       </:item>
-      <:item title="Folder">
+      <:item title="Folder" :if={@is_admin}>
         <.link
           class="data-[active]:font-bold"
           patch={build_url(@photo.folder, [@photo], @tags, @is_admin)}
@@ -613,9 +620,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 toggled_tag={tag.name}
                 is_admin={@is_admin}
               >
-                {tag.name}
+                {if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name}
               </.toggle_tag_button>
               <.form
+                :if={@is_admin}
                 for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})}
                 phx-submit="remove_tag"
               >
@@ -628,7 +636,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             </li>
           <% end %>
         </ul>
-        <div class="mt-2">
+        <div :if={@is_admin} class="mt-2">
           <.form for={Component.to_form(%{"tag" => "", "photo_id" => @photo.id})} phx-submit="add_tag">
             <input class="hidden" type="text" name="photo_id" value={@photo.id} />
             <div class="flex flex-wrap gap-2">
@@ -679,7 +687,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           {@photo.name}
         </.link>
       </:item>
-      <:item title="Edit">
+      <:item title="Details" :if={not @is_admin and (@photo.notes || @photo.description || @photo.image_last_modified)}>
+        <p :if={@photo.notes}>Notes: {@photo.notes}</p>
+        <p :if={@photo.description}>Description: {@photo.description}</p>
+        <p :if={@photo.image_last_modified}>Last modified: {@photo.image_last_modified}</p>
+      </:item>
+      <:item title="Edit" :if={@is_admin}>
         <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
           <input class="hidden" type="text" name="photo_id" value={@update_photo_form.data.id} />
           <.input field={@update_photo_form[:name]} name="photo[name]" type="text" label="Name" />
@@ -705,10 +718,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
-      <:item title="Image last modified">
+      <:item title="Image last modified" :if={@is_admin and @photo.image_last_modified}>
         <p>{@photo.image_last_modified}</p>
       </:item>
-      <:item title="Delete">
+      <:item title="Delete" :if={@is_admin}>
         <.form
           phx-submit="delete_photo"
           for={Component.to_form(%{"photo_id" => @photo.id})}
