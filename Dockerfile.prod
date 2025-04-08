@@ -16,6 +16,11 @@ WORKDIR $APP_HOME
 # set build ENV
 ENV MIX_ENV="prod"
 
+ARG ADMIN_USERNAME="admin"
+ARG ADMIN_PASSWORD="admin"
+ENV ADMIN_USERNAME=$ADMIN_USERNAME
+ENV ADMIN_PASSWORD=$ADMIN_PASSWORD
+
 # install dependencies and compile assets
 RUN mix deps.get
 RUN mix assets.setup

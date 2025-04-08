@@ -13,11 +13,6 @@ ENV APP_HOME /app
 COPY ./app $APP_HOME
 WORKDIR $APP_HOME
 
-# Phoenix
-# RUN mix local.hex --force
-# RUN mix archive.install --force hex phx_new ${PHOENIX_VERSION}
-# RUN mix local.rebar --force
-
 # Install Dependencies
 RUN mix deps.get
 RUN mix assets.setup

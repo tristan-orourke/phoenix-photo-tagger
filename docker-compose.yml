@@ -1,6 +1,11 @@
 services:
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        - ADMIN_USERNAME=admin
+        - ADMIN_PASSWORD=admin
     ports:
       - "4000:4000"
     volumes:
@@ -9,8 +14,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=db
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin
+      - DATABASE_URL=ecto://postgres:postgres@db/postgres
+      - SECRET_KEY_BASE=zrMkg/peRCh4amd7hy2p5Eiost7aqpvmmZFoYFCwgxLiL120r6HvTrXUXT/8O36b
     depends_on:
       - db
     working_dir: /app
