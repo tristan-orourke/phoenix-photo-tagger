@@ -326,4 +326,37 @@ defmodule PhotoTagger.Gallery do
   def delete_tag(%Tag{} = tag) do
     Repo.delete(tag)
   end
+
+  # Get all photos with at least one overlapping tag with photo.
+  # Return all tags from those photos, not including tags from the original photo.
+  def get_related_tags(%Photo{} = photo) do
+    # Get all tags from the original photo
+    original_tag_ids = Repo.all(
+      from(t in Tag,
+        join: pt in PhotoTag,
+        on: pt.tag_id == t.id,
+        where: pt.photo_id == ^photo.id,
+        select: t.id
+      )
+    )
+
+    # Get all photos with at least one overlapping tag with the original photo
+    related_photos = Repo.all(
+      from(p in Photo,
+        join: pt in PhotoTag,
+        on: pt.photo_id == p.id,
+        where: pt.tag_id in ^original_tag_ids and p.id != ^photo.id,
+        select: p.id
+      )
+    )
+
+    # Get all tags from those photos, excluding tags from the original photo
+    Repo.all(
+      from(t in Tag,
+        join: pt in PhotoTag,
+        on: pt.tag_id == t.id,
+        where: pt.photo_id in ^related_photos and t.id not in ^original_tag_ids
+      )
+    )
+  end
 end

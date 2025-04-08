@@ -13,7 +13,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def render(assigns) do
     ~H"""
-    <div class="flex flex-row gap-4 h-full pr-2 lg:pr-4">
+    <div class="flex flex-row gap-4 h-full">
       <%= if @is_admin do %>
         <div id="folders-section" class="flex-initial basis-2/7 lg:basis-1/7 overflow-y-auto">
           <.folders
@@ -49,7 +49,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <% end %>
         </div>
       </div>
-      <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto">
+      <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
         <%= case @selected_photos do %>
           <% [photo] -> %>
             <.photo
@@ -57,6 +57,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               folder={@folder}
               tags={@tags}
               all_tags={@all_tags}
+              recommended_tags={@recommended_tags}
+              related_tags={@related_tags}
               update_photo_form={@update_photo_form}
               is_admin={@is_admin}
             />
@@ -155,8 +157,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         else: socket
       )
 
-    {:noreply,
-     assign(socket, expanded_state)}
+    {:noreply, assign(socket, expanded_state)}
   end
 
   def build_url(folder, selected_photos, tags, is_admin) do
@@ -271,13 +272,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         _ ->
           filtered_photos
           |> Repo.preload(:tags)
-          |> Enum.reduce(MapSet.new(), fn photo, acc ->
-            MapSet.union(acc, MapSet.new(photo.tags))
-          end)
-          |> MapSet.to_list()
+          |> Enum.flat_map(& &1.tags)
           |> Enum.map(& &1.name)
+          |> Enum.uniq()
           |> Enum.sort_by(&String.downcase/1)
       end
+
+    related_tags =
+      selected_photos
+      |> Enum.flat_map(&Gallery.get_related_tags/1)
+      |> Enum.map(& &1.name)
+      |> Enum.uniq()
+      |> Enum.sort_by(&String.downcase/1)
 
     update_photo_form =
       case selected_photos do
@@ -298,6 +304,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       selected_photos: selected_photos,
       selected_photo_ids: new_selected_photo_ids,
       recommended_tags: recommended_tags,
+      related_tags: related_tags,
       update_photo_form: update_photo_form
     }
   end
@@ -583,8 +590,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:photo, :map, required: true)
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
-  # attr(:recommended_tags, :list, default: [])
+  attr(:recommended_tags, :list, default: [])
   attr(:all_tags, :list, required: true)
+  attr(:related_tags, :list, required: true)
   attr(:update_photo_form, :map, required: true)
   attr(:is_admin, :boolean, required: true)
 
@@ -613,15 +621,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <%= for tag <- @photo.tags do %>
           <%!-- Note that @photo.tags are full structs, including id, not just a name like our other tag lists --%>
             <li class="mr-2 flex items-center">
-              <.toggle_tag_button
-                folder={@folder}
-                selected_photos={[@photo]}
-                tags={@tags}
-                toggled_tag={tag.name}
-                is_admin={@is_admin}
-              >
-                {if(tag.name in @tags, do: "- ", else: "+ ") <> tag.name}
-              </.toggle_tag_button>
+              <%= if tag.name in @recommended_tags do %>
+                <.toggle_tag_button
+                  folder={@folder}
+                  selected_photos={[@photo]}
+                  tags={@tags}
+                  toggled_tag={tag.name}
+                  is_admin={@is_admin}
+                >
+                  <span class="hidden md:inline">{if(tag.name in @tags, do: "- ", else: "+ ")}</span>{tag.name}
+                </.toggle_tag_button>
+              <% else %>
+                <.link patch={build_url(@folder, [@photo], [tag.name], @is_admin)}>
+                  {tag.name}
+                </.link>
+              <% end %>
               <.form
                 :if={@is_admin}
                 for={Component.to_form(%{"tag" => tag.name, "photo_id" => @photo.id})}
@@ -681,6 +695,29 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <% end %>
           <% end %>
         </div> --%>
+      </:item>
+      <:item title="Related tags">
+        <ul class="flex flex-wrap">
+          <%= for tag <- @related_tags do %>
+            <li class="mr-2 flex items-center">
+              <%= if tag in @recommended_tags do %>
+                <.toggle_tag_button
+                  folder={@folder}
+                  selected_photos={[@photo]}
+                  tags={@tags}
+                  toggled_tag={tag}
+                  is_admin={@is_admin}
+                >
+                  <span class="hidden md:inline">{if(tag in @tags, do: "- ", else: "+ ")}</span>{tag}
+                </.toggle_tag_button>
+              <% else %>
+                <.link patch={build_url(@folder, [@photo], [tag], @is_admin)}>
+                  {tag}
+                </.link>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
       </:item>
       <:item title="Download file">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download>
