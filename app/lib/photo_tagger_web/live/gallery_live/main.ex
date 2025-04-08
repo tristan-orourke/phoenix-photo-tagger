@@ -527,6 +527,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
+  attr(:is_admin, :boolean, required: true)
 
   def gallery(assigns) do
     grouped_photos = Enum.group_by(assigns.photos, & &1.group)
@@ -777,6 +778,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:tags, :list, default: [])
   attr(:all_tags, :list, required: true)
   attr(:recommended_tags, :list, default: [])
+  attr(:is_admin, :boolean, required: true)
 
   def multi_photo_selection(assigns) do
     {tags_to_add, tags_to_remove, tags_in_limbo} =
