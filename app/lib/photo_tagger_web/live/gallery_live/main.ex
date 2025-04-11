@@ -385,23 +385,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     ~H"""
     <li>
-      <.accordion id={folder_accordion_id(@nav_folder)}>
-        <:trigger>
-          <%!-- <p class="text-left data-[selected]:font-bold" data-selected={@is_current_folder}>
-            {if(@nav_folder, do: @nav_folder, else: "All folders")}
-          </p> --%>
-          <p class="text-left">
-            <.link
-                class="data-[selected]:font-bold"
-                data-selected={@is_current_folder}
-                patch={build_url(@nav_folder, [], [], @is_admin)}
-              >
-              {if(@nav_folder, do: @nav_folder, else: "All folders")}
-            </.link>
-          </p>
-        </:trigger>
-        <:panel default_expanded={@is_current_folder}>
-          <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
+      <.link
+          class="aria-expanded:font-bold"
+          data-selected={@is_current_folder}
+          patch={build_url(@nav_folder, [], [], @is_admin)}
+          aria-expanded={@is_current_folder}
+          class="w-full [&_.accordion-trigger-icon]:aria-expanded:rotate-180"
+        >
+        <span class="text-left">
+          {if(@nav_folder, do: @nav_folder, else: "All folders")}
+        </span>
+        <.icon
+          class="hero-chevron-down-micro md:hero-chevron-down-mini lg:hero-chevron-down accordion-trigger-icon h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 absolute right-4 transition-all ease-in-out duration-100 top-1/2 -translate-y-1/2"
+          name={"hero-chevron-down"}
+        />
+      </.link>
+      <%= if @is_current_folder do %>
+      <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
             <%= if not Enum.empty?(@recommended_nav_tags) do %>
               <ul class="md:flex md:flex-wrap my-2">
                 <%= for tag <- @recommended_nav_tags do %>
@@ -430,8 +430,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               </ul>
             <% end %>
           </div>
-        </:panel>
-      </.accordion>
+      <% end %>
     </li>
     """
   end
@@ -446,7 +445,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def folders(assigns) do
     ~H"""
-    <div>
+    <nav>
       <h2 class="hidden lg:block">Folders</h2>
       <ul class="space-y-2 mt-2 text-sm md:text-base">
         <.folder_nav_item
@@ -467,7 +466,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           />
         <% end %>
       </ul>
-    </div>
+    </nav>
     """
   end
 
