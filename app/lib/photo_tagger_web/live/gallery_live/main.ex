@@ -14,19 +14,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def render(assigns) do
     ~H"""
     <div class="flex flex-row gap-4 h-full">
-      <%= if @is_admin do %>
-        <div id="folders-section" class="flex-initial basis-2/7 lg:basis-1/7 overflow-y-auto">
-          <.folders
-            all_folders={@all_folders}
-            all_tags={@all_tags}
-            folder={@folder}
-            all_folders_selected={@folder == nil and @live_action != :index}
-            tags={@tags}
-            recommended_tags={@recommended_tags}
-            is_admin={@is_admin}
-          />
-        </div>
-      <% end %>
+      <div id="folders-section" class="flex-initial basis-2/7 lg:basis-1/7 overflow-y-auto">
+        <.folders
+          all_folders={@all_folders}
+          all_tags={@all_tags}
+          folder={@folder}
+          all_folders_selected={@folder == nil and @live_action != :index}
+          tags={@tags}
+          recommended_tags={@recommended_tags}
+          is_admin={@is_admin}
+        />
+      </div>
       <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
         <.gallery_header
           item_count={Enum.count(@filtered_photos)}
