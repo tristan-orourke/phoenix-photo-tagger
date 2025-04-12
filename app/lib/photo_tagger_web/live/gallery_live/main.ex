@@ -300,7 +300,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:selected_photo_ids, :list, default: [])
   attr(:tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
-  attr(:class, :string, default: "")
   attr(:is_admin, :boolean, required: true)
   slot(:inner_block)
 
@@ -330,7 +329,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <.toggle_link
       selected={@selected}
       href={@href}
-      class={@class}
     >
       {render_slot(@inner_block)}
     </.toggle_link>
@@ -480,7 +478,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 <%= for tag <- @other_nav_tags do %>
                   <li>
                     <%!-- <.toggle_link selected={false}
-                      class="text-gray-500 border-gray-500"
                       href={Util.build_url(@nav_folder, [], [tag])} >
                       {tag}
                     </.toggle_link> --%>
