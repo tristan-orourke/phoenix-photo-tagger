@@ -759,7 +759,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <%= if tag.name in @recommended_tags do %>
                 <.toggle_tag_button
                   folder={@folder}
-                  selected_photos={[@photo]}
+                  selected_photo_ids={[@photo.id]}
                   tags={@tags}
                   toggled_tag={tag.name}
                   is_admin={@is_admin}
