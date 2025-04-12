@@ -168,11 +168,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply, assign(socket, expanded_state)}
   end
 
-  def build_url(folder, selected_photos, tags, is_admin) do
+  def build_url(folder, selected_photo_ids, tags, is_admin) do
     {photo_id, selected_photo_ids} =
-      case selected_photos do
-        [photo] -> {photo.id, []}
-        photos -> {nil, Enum.map(photos, & &1.id)}
+      case selected_photo_ids do
+        [photo_id] -> {photo_id, []}
+        photo_ids -> {nil, photo_ids}
       end
 
     uri =
@@ -333,7 +333,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   attr(:folder, :string, default: nil)
-  attr(:selected_photos, :list, default: [])
+  attr(:selected_photo_ids, :list, default: [])
   attr(:tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
   attr(:class, :string, default: "")
@@ -357,7 +357,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       assign(
         assigns,
         :href,
-        build_url(assigns.folder, assigns.selected_photos, tags_list, assigns.is_admin)
+        build_url(assigns.folder, assigns.selected_photo_ids, tags_list, assigns.is_admin)
       )
 
     assigns = assign(assigns, :selected, assigns.toggled_tag in assigns.tags)
@@ -400,7 +400,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       assigns
       |> assign(:recommended_nav_tags, recommended_nav_tags)
       |> assign(:other_nav_tags, other_nav_tags)
-      |> assign(:selected_photos, assigns.selected_photo_ids |> Enum.map(&%{id: &1}))
 
     ~H"""
     <div>
@@ -427,7 +426,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="my-2">
             <%= for tag <- @recommended_nav_tags do %>
               <li class="mr-2 flex items-center">
-                  <.toggle_tag_button folder={@folder} tags={@current_tags} toggled_tag={tag} selected_photos={@selected_photos} is_admin={@is_admin}>
+                  <.toggle_tag_button folder={@folder} tags={@current_tags} toggled_tag={tag} selected_photo_ids={@selected_photo_ids} is_admin={@is_admin}>
                     {tag}
                   </.toggle_tag_button>
               </li>
@@ -438,7 +437,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="py-2">
             <%= for tag <- @other_nav_tags do %>
               <li>
-                <.link class="mr-2 my-1" patch={build_url(@folder, @selected_photos, [tag], @is_admin)} >
+                <.link class="mr-2 my-1" patch={build_url(@folder, @selected_photo_ids, [tag], @is_admin)} >
                   {tag}
                 </.link>
               </li>
@@ -746,7 +745,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Folder" :if={@is_admin}>
         <.link
           class="data-[active]:font-bold"
-          patch={build_url(@photo.folder, [@photo], @tags, @is_admin)}
+          patch={build_url(@photo.folder, [@photo.id], @tags, @is_admin)}
           data-active={@folder_is_active}
         >
           {@photo.folder}
@@ -768,7 +767,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   #{tag.name}
                 </.toggle_tag_button>
               <% else %>
-                <.link patch={build_url(@folder, [@photo], [tag.name], @is_admin)}>
+                <.link patch={build_url(@folder, [@photo.id], [tag.name], @is_admin)}>
                   #{tag.name}
                 </.link>
               <% end %>
@@ -847,7 +846,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   <span class="hidden md:inline">{if(tag in @tags, do: "- ", else: "+ ")}</span>{tag}
                 </.toggle_tag_button>
               <% else %>
-                <.link patch={build_url(@folder, [@photo], [tag], @is_admin)}>
+                <.link patch={build_url(@folder, [@photo.id], [tag], @is_admin)}>
                   {tag}
                 </.link>
               <% end %>
@@ -1058,6 +1057,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         do: Enum.filter(selected_photos, &(to_string(&1.id) != photo_id)),
         else: [%{id: photo_id} | selected_photos]
       )
+      |> Enum.map(& &1.id)
 
     {:noreply,
      push_patch(socket,
@@ -1077,7 +1077,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
        to:
          build_url(
            socket.assigns.folder,
-           [%{id: photo_id}],
+           [photo_id],
            socket.assigns.tags,
            socket.assigns.is_admin
          )
@@ -1150,6 +1150,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
         {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
       end
+      |> Enum.map(& &1.id)
 
     {:noreply,
      push_patch(socket,
