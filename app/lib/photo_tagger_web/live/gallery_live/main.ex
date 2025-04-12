@@ -14,8 +14,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def render(assigns) do
     ~H"""
     <div class="flex flex-row gap-4 h-full">
-      <div id="folders-section" class="flex-initial basis-2/7 lg:basis-1/7 overflow-y-auto">
-        <.folders
+      <div id="folders-section" class="shrink basis-0 overflow-y-auto">
+        <%!-- <.folders
           all_folders={@all_folders}
           all_tags={@all_tags}
           folder={@folder}
@@ -23,7 +23,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           tags={@tags}
           recommended_tags={@recommended_tags}
           is_admin={@is_admin}
-        />
+        /> --%>
+        <.tags_list
+            folder={@folder}
+            nav_tags={@nav_tags}
+            recommended_tags={@recommended_tags}
+            current_tags={@tags}
+            is_admin={@is_admin}
+          />
       </div>
       <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
         <.gallery_header
@@ -32,20 +39,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           collapse_groups={@collapse_groups}
           is_admin={@is_admin}
         />
-        <div>
-          <%= if @live_action == :index do %>
-            <p>Select a folder to view photos</p>
-          <% else %>
-            <.gallery
-              photos={@filtered_photos}
-              folder={@folder}
-              selected_photo_ids={@selected_photo_ids}
-              collapse_groups={@collapse_groups}
-              zoom_level={@zoom_level}
-              is_admin={@is_admin}
-            />
-          <% end %>
-        </div>
+        <%= if @live_action == :index do %>
+          <p>Select a folder to view photos</p>
+        <% else %>
+          <.gallery
+            photos={@filtered_photos}
+            folder={@folder}
+            selected_photo_ids={@selected_photo_ids}
+            collapse_groups={@collapse_groups}
+            zoom_level={@zoom_level}
+            is_admin={@is_admin}
+          />
+        <% end %>
       </div>
       <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
         <%= case @selected_photos do %>
@@ -276,6 +281,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           |> Enum.sort_by(&String.downcase/1)
       end
 
+    nav_tags =
+      case folder do
+        nil -> socket.assigns.all_tags
+
+        _ -> socket.assigns.all_folders
+          |> Enum.find(fn f -> f.name == folder end)
+          |> case do
+            nil -> socket.assigns.all_tags
+            folder -> folder.tags
+          end
+      end
+
     related_tags =
       selected_photos
       |> Enum.flat_map(&Gallery.get_related_tags/1)
@@ -302,6 +319,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       selected_photos: selected_photos,
       selected_photo_ids: new_selected_photo_ids,
       recommended_tags: recommended_tags,
+      nav_tags: nav_tags,
       related_tags: related_tags,
       update_photo_form: update_photo_form
     }
@@ -348,6 +366,62 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
+  attr(:folder, :string, default: nil)
+  attr(:nav_tags, :list, required: true)
+  attr(:recommended_tags, :list, required: true)
+  attr(:current_tags, :list, required: true)
+  attr(:is_admin, :boolean, required: true)
+  def tags_list(assigns) do
+    {recommended_nav_tags, other_nav_tags} =
+      Enum.split_with(assigns.nav_tags, &(&1 in assigns.recommended_tags))
+
+    recommended_nav_tags =
+      Enum.sort_by(recommended_nav_tags, fn tag ->
+        cond do
+          # show currently selected tags first
+          tag in assigns.current_tags -> 0
+          # tag in @recommended_tag_names -> 1 # then recommended tags
+          # then other tags
+          true -> 2
+        end
+      end)
+
+    assigns =
+      assigns
+      |> assign(:recommended_nav_tags, recommended_nav_tags)
+      |> assign(:other_nav_tags, other_nav_tags)
+
+    ~H"""
+    <div>
+      <h2 class="hidden lg:block">Tags</h2>
+      <nav class="divide-y divide-zinc-300 my-2 pl-2 list-none">
+        <%= if not Enum.empty?(@recommended_nav_tags) do %>
+          <ul class="my-2">
+            <%= for tag <- @recommended_nav_tags do %>
+              <li class="mr-2 flex items-center">
+                  <.toggle_tag_button folder={@folder} tags={@current_tags} toggled_tag={tag} is_admin={@is_admin}>
+                    {tag}
+                  </.toggle_tag_button>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+        <%= if not Enum.empty?(@other_nav_tags) do %>
+          <ul class="py-2">
+            <%= for tag <- @other_nav_tags do %>
+              <li>
+                <.link class="mr-2 my-1" patch={build_url(@folder, [], [tag], @is_admin)} >
+                  {tag}
+                </.link>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </nav>
+    </div>
+    """
+  end
+
   def folder_accordion_id(folder) do
     if folder do
       HtmlHelpers.escape_html_id("accordion-#{folder}")
@@ -390,20 +464,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           data-selected={@is_current_folder}
           patch={build_url(@nav_folder, [], [], @is_admin)}
           aria-expanded={@is_current_folder}
-          class="w-full [&_.accordion-trigger-icon]:aria-expanded:rotate-180"
         >
         <span class="text-left">
           {if(@nav_folder, do: @nav_folder, else: "All folders")}
         </span>
-        <.icon
+        <%!-- <.icon
           class="hero-chevron-down-micro md:hero-chevron-down-mini lg:hero-chevron-down accordion-trigger-icon h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 absolute right-4 transition-all ease-in-out duration-100 top-1/2 -translate-y-1/2"
           name={"hero-chevron-down"}
-        />
+        /> --%>
       </.link>
       <%= if @is_current_folder do %>
       <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
             <%= if not Enum.empty?(@recommended_nav_tags) do %>
-              <ul class="md:flex md:flex-wrap my-2">
+              <ul class="my-2">
                 <%= for tag <- @recommended_nav_tags do %>
                   <li class="mr-2 flex items-center">
                       <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag} is_admin={@is_admin}>
@@ -414,7 +487,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               </ul>
             <% end %>
             <%= if not Enum.empty?(@other_nav_tags) do %>
-              <ul class="md:flex md:flex-wrap py-2">
+              <ul class="py-2">
                 <%= for tag <- @other_nav_tags do %>
                   <li>
                     <%!-- <.toggle_link selected={false}
