@@ -26,6 +26,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         /> --%>
         <.tags_list
             folder={@folder}
+            all_folders={@all_folders}
             nav_tags={@nav_tags}
             recommended_tags={@recommended_tags}
             current_tags={@tags}
@@ -34,6 +35,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </div>
       <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
         <.gallery_header
+          folder={@folder}
+          all_folders={@all_folders}
+          tags={@tags}
           item_count={Enum.count(@filtered_photos)}
           multiselect_active={@multiselect_active}
           collapse_groups={@collapse_groups}
@@ -367,6 +371,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   attr(:folder, :string, default: nil)
+  attr(:all_folders, :list, required: true)
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:current_tags, :list, required: true)
@@ -393,7 +398,24 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     ~H"""
     <div>
-      <h2 class="hidden lg:block">Tags</h2>
+      <%!-- <h2>Folders</h2>
+      <nav>
+        <ul class="my-2">
+          <li class="mr-2">
+            <.link class="mr-2 my-1" patch={build_url(nil, [], [], @is_admin)} >
+              All folders
+            </.link>
+          </li>
+          <%= for folder <- @all_folders do %>
+            <li class="mr-2">
+              <.link class="mr-2 my-1" patch={build_url(folder.name, [], [], @is_admin)} >
+                {folder.name}
+              </.link>
+            </li>
+          <% end %>
+        </ul>
+      </nav> --%>
+      <h2 class="">Tags</h2>
       <nav class="divide-y divide-zinc-300 my-2 pl-2 list-none">
         <%= if not Enum.empty?(@recommended_nav_tags) do %>
           <ul class="my-2">
@@ -543,6 +565,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
+  attr(:folder, :string, default: nil)
+  attr(:all_folders, :list, required: true)
+  attr(:tags, :list, default: [])
   attr(:item_count, :integer, required: true)
   attr(:multiselect_active, :boolean, required: true)
   attr(:collapse_groups, :boolean, required: true)
@@ -550,44 +575,59 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery_header(assigns) do
     ~H"""
-    <div class="pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
-      <div class="flex-none pr-3">
-        <.button class="p-1 flex items-center" phx-click="zoom_out">
-          <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
-        </.button>
+    <div class="flex">
+      <div class="flex-grow">
+        <span>Folder:</span>
+        <form class="inline" phx-change="change_folder">
+          <select value={@folder} name="folder" id="folder-select"  class="ml-2 mr-2">
+            <option value="">All folders</option>
+            <%= for folder <- @all_folders do %>
+              <option value={folder.name} selected={@folder == folder.name}>
+                {folder.name}
+              </option>
+            <% end %>
+          </select>
+        </form>
       </div>
-      <div class="flex-none pr-1">
-        <.button class="p-1 flex items-center" phx-click="zoom_in">
-          <.icon name="hero-magnifying-glass-plus" class="hero-magnifying-glass-plus-mini lg:hero-magnifying-glass-plus w-4 h-4 lg:w-5 lg:h-5" />
-        </.button>
-      </div>
-      <div class="flex-none mr-3 lg:ml-3">
-        <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
-      </div>
-      <%= if @is_admin do %>
+      <div class="flex-none pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
         <div class="flex-none pr-3">
-          <.toggle_button
-            selected={@collapse_groups}
-            phx-click="toggle_collapse_groups"
-            class="flex items-center pl-3 pr-3 inline mr-1"
-          >
-            <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
-            <span class="sr-only lg:not-sr-only lg:ml-1">
-              Collapse groups
-            </span>
-          </.toggle_button>
-          <.toggle_button
-            selected={@multiselect_active}
-            phx-click="toggle_multiselect"
-            class="flex items-center pl-3 pr-3 inline"
-          >
-            <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
-            <span class="sr-only lg:not-sr-only lg:ml-1">
-              Multiselect
-            </span>
-          </.toggle_button>
+          <.button class="p-1 flex items-center" phx-click="zoom_out">
+            <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
+          </.button>
         </div>
-      <% end %>
+        <div class="flex-none pr-1">
+          <.button class="p-1 flex items-center" phx-click="zoom_in">
+            <.icon name="hero-magnifying-glass-plus" class="hero-magnifying-glass-plus-mini lg:hero-magnifying-glass-plus w-4 h-4 lg:w-5 lg:h-5" />
+          </.button>
+        </div>
+        <div class="flex-none mr-3 lg:ml-3">
+          <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
+        </div>
+        <%= if @is_admin do %>
+          <div class="flex-none pr-3">
+            <.toggle_button
+              selected={@collapse_groups}
+              phx-click="toggle_collapse_groups"
+              class="flex items-center pl-3 pr-3 inline mr-1"
+            >
+              <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+              <span class="sr-only lg:not-sr-only lg:ml-1">
+                Collapse groups
+              </span>
+            </.toggle_button>
+            <.toggle_button
+              selected={@multiselect_active}
+              phx-click="toggle_multiselect"
+              class="flex items-center pl-3 pr-3 inline"
+            >
+              <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+              <span class="sr-only lg:not-sr-only lg:ml-1">
+                Multiselect
+              </span>
+            </.toggle_button>
+          </div>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -1226,6 +1266,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("zoom_out", _params, socket) do
     {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level - 1, -9, 9))}
+  end
+
+  def handle_event("change_folder", %{"folder" => folder}, socket) do
+    folder = case folder do
+      "" -> nil
+      _ -> folder
+    end
+    {:noreply, push_patch(socket, to: build_url(folder, [], [], socket.assigns.is_admin))}
   end
 
   ## Utility functions
