@@ -751,7 +751,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           {@photo.folder}
         </.link>
       </:item>
-      <:item title="Tags">
+      <:item title="Tags" :if={not Enum.empty?(@photo.tags)}>
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
           <%!-- Note that @photo.tags are full structs, including id, not just a name like our other tag lists --%>
