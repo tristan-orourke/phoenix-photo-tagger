@@ -30,6 +30,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             nav_tags={@nav_tags}
             recommended_tags={@recommended_tags}
             current_tags={@tags}
+            selected_photo_ids={@selected_photo_ids}
             is_admin={@is_admin}
           />
       </div>
@@ -377,6 +378,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:current_tags, :list, required: true)
+  attr(:selected_photo_ids, :list, default: [])
   attr(:is_admin, :boolean, required: true)
 
   def tags_list(assigns) do
@@ -398,6 +400,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       assigns
       |> assign(:recommended_nav_tags, recommended_nav_tags)
       |> assign(:other_nav_tags, other_nav_tags)
+      |> assign(:selected_photos, assigns.selected_photo_ids |> Enum.map(&%{id: &1}))
 
     ~H"""
     <div>
@@ -424,7 +427,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="my-2">
             <%= for tag <- @recommended_nav_tags do %>
               <li class="mr-2 flex items-center">
-                  <.toggle_tag_button folder={@folder} tags={@current_tags} toggled_tag={tag} is_admin={@is_admin}>
+                  <.toggle_tag_button folder={@folder} tags={@current_tags} toggled_tag={tag} selected_photos={@selected_photos} is_admin={@is_admin}>
                     {tag}
                   </.toggle_tag_button>
               </li>
@@ -435,7 +438,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="py-2">
             <%= for tag <- @other_nav_tags do %>
               <li>
-                <.link class="mr-2 my-1" patch={build_url(@folder, [], [tag], @is_admin)} >
+                <.link class="mr-2 my-1" patch={build_url(@folder, @selected_photos, [tag], @is_admin)} >
                   {tag}
                 </.link>
               </li>
@@ -762,11 +765,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   toggled_tag={tag.name}
                   is_admin={@is_admin}
                 >
-                  <span class="hidden md:inline">{if(tag.name in @tags, do: "- ", else: "+ ")}</span>{tag.name}
+                  #{tag.name}
                 </.toggle_tag_button>
               <% else %>
                 <.link patch={build_url(@folder, [@photo], [tag.name], @is_admin)}>
-                  {tag.name}
+                  #{tag.name}
                 </.link>
               <% end %>
               <.form
@@ -829,7 +832,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <% end %>
         </div> --%>
       </:item>
-      <:item title="Related tags">
+      <%!-- <:item title="Related tags">
         <ul class="flex flex-wrap">
           <%= for tag <- @related_tags do %>
             <li class="mr-2 flex items-center">
@@ -851,7 +854,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             </li>
           <% end %>
         </ul>
-      </:item>
+      </:item> --%>
       <:item title="Download file">
         <.link href={ImageUploader.url({@photo.image, @photo}, :original)} download>
           {@photo.name}
