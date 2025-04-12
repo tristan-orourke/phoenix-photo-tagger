@@ -24,8 +24,8 @@ defmodule PhotoTaggerWeb.Router do
   scope "/", PhotoTaggerWeb do
     pipe_through :browser
 
-    get "/", FolderController, :index
-    get "/folders", FolderController, :index
+    live "/", GalleryLive.Main, :public
+    live "/folders", GalleryLive.Main, :public
 
     live "/folders/:folder", GalleryLive.Main, :public
     live "/folders/:folder/photos", GalleryLive.Main, :public

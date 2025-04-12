@@ -273,7 +273,6 @@ defmodule PhotoTaggerWeb.CoreComponents do
   attr :selected, :boolean, required: true
   attr :href, :string, required: true
   attr :nav_type, :atom, values: [:patch, :navigate, :href], default: :patch
-  attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -281,13 +280,11 @@ defmodule PhotoTaggerWeb.CoreComponents do
     assigns = assign(assigns, :nav, Map.put(%{}, assigns.nav_type, assigns.href))
     ~H"""
     <.link
-      class={
-        ClassHelper.tw([
+      class={[
           "border rounded-full px-1 my-1 no-underline",
           "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
           "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700",
-          @class
-        ])
+        ]
       }
       aria-selected={if(@selected, do: "true", else: "false")}
       {@nav}
@@ -596,7 +593,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
     <div class="mt-0">
       <dl class="-my-4 divide-y divide-zinc-100">
         <div :for={item <- @item} class={ClassHelper.tw(["flex gap-4 py-4 text-sm leading-6 sm:gap-8", Map.get(item, :class, "")])}>
-          <dt class="hidden lg:inline w-1/4 flex-none text-zinc-500">{item.title}</dt>
+          <%!-- <dt class="hidden lg:inline w-1/6 flex-none text-zinc-500">{item.title}</dt> --%>
           <dd class="text-zinc-700">{render_slot(item)}</dd>
         </div>
       </dl>

@@ -9,6 +9,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
   attr(:photo_folder, :string, required: true)
   attr(:is_selected, :boolean, default: false)
   attr(:collapse_groups, :boolean, default: false)
+  attr(:is_admin, :boolean, default: false)
 
   def render(assigns) do
     ~H"""
@@ -20,7 +21,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
           outline-4 outline-offset-2 outline-blue-400
           phx-click-loading:outline phx-click-loading:outline-blue-200"
         data-selected={@is_selected}
-        phx-click={if(@collapse_groups and @photo_group != nil, do: "select_gallery_group", else: "select_gallery_photo")}
+        phx-click={if(@collapse_groups and @photo_group != nil and @is_admin, do: "select_gallery_group", else: "select_gallery_photo")}
         phx-value-photo_id={@photo_id}
         phx-value-photo_group={@photo_group}
       >
