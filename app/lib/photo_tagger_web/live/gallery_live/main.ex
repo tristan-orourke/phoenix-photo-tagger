@@ -287,9 +287,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     nav_tags =
       case folder do
-        nil -> socket.assigns.all_tags
+        nil ->
+          socket.assigns.all_tags
 
-        _ -> socket.assigns.all_folders
+        _ ->
+          socket.assigns.all_folders
           |> Enum.find(fn f -> f.name == folder end)
           |> case do
             nil -> socket.assigns.all_tags
@@ -376,6 +378,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:recommended_tags, :list, required: true)
   attr(:current_tags, :list, required: true)
   attr(:is_admin, :boolean, required: true)
+
   def tags_list(assigns) do
     {recommended_nav_tags, other_nav_tags} =
       Enum.split_with(assigns.nav_tags, &(&1 in assigns.recommended_tags))
@@ -574,22 +577,41 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:is_admin, :boolean, required: true)
 
   def gallery_header(assigns) do
+    breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
+    assigns = assign(assigns, :breadcrumb_tags, breadcrumb_tags)
+
     ~H"""
-    <div class="flex">
-      <div class="flex-grow">
-        <span>Folder:</span>
-        <form class="inline" phx-change="change_folder">
-          <select value={@folder} name="folder" id="folder-select"  class="ml-2 mr-2">
-            <option value="">All folders</option>
-            <%= for folder <- @all_folders do %>
-              <option value={folder.name} selected={@folder == folder.name}>
-                {folder.name}
-              </option>
-            <% end %>
-          </select>
-        </form>
+    <div class="md:flex sticky top-0 bg-white z-50">
+      <div class="flex-grow pb-1">
+        <ul class="flex flex-wrap items-center">
+          <li>
+            <%!-- <.icon name="hero-folder" class="hidden md:inline"/> --%>
+            <span class="hidden md:inline">Folder:</span>
+            <form class="inline" phx-change="change_folder">
+              <select value={@folder} name="folder" id="folder-select"  class="ml-2 mr-2">
+                <option value="">All folders</option>
+                <%= for folder <- @all_folders do %>
+                  <option value={folder.name} selected={@folder == folder.name}>
+                    {folder.name}
+                  </option>
+                <% end %>
+              </select>
+            </form>
+          </li>
+          <%= for [tag | _] = tags <- @breadcrumb_tags do %>
+            <li class="">
+              <.icon name="hero-chevron-right" class="hero-chevron-right-mini lg:hero-chevron-right w-4 h-4 lg:w-5 lg:h-5"/>
+              <.link
+                class=""
+                patch={build_url(@folder, [], Enum.reverse(tags), @is_admin)}
+              >
+                #{tag}
+              </.link>
+            </li>
+          <% end %>
+        </ul>
       </div>
-      <div class="flex-none pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center sticky top-0 bg-white z-50">
+      <div class="flex-none pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center">
         <div class="flex-none pr-3">
           <.button class="p-1 flex items-center" phx-click="zoom_out">
             <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
@@ -1269,10 +1291,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("change_folder", %{"folder" => folder}, socket) do
-    folder = case folder do
-      "" -> nil
-      _ -> folder
-    end
+    folder =
+      case folder do
+        "" -> nil
+        _ -> folder
+      end
+
     {:noreply, push_patch(socket, to: build_url(folder, [], [], socket.assigns.is_admin))}
   end
 
