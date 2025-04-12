@@ -751,7 +751,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           {@photo.folder}
         </.link>
       </:item>
-      <:item title="Tags" :if={not Enum.empty?(@photo.tags)}>
+      <:item title="Tags" :if={@is_admin or not Enum.empty?(@photo.tags)}>
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
           <%!-- Note that @photo.tags are full structs, including id, not just a name like our other tag lists --%>
@@ -795,41 +795,49 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 type="text"
                 name="tag"
                 id="add_any_tag"
-                list="tag-list"
                 Placeholder="Add tag"
+                list="tag-list"
                 class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
               />
               <.button type="submit">Submit</.button>
-              <datalist id="tag-list">
+              <%!-- <datalist id="tag-list">
                 <%= for tag <- @all_tags do %>
                   <option value={tag} />
                 <% end %>
-              </datalist>
+              </datalist> --%>
             </div>
           </.form>
         </div>
         <%!-- TODO: restore some version of recommended tags --%>
-        <%!-- <div class="flex flex-wrap mt-2">
-          <%= for tag <- @recommended_tags do %>
-            <%= if tag not in @photo.tags do %>
-              <div class="mr-2">
-                <.form
-                  for={Component.to_form(%{"tag" => tag, "photo_id" => @photo.id})}
-                  phx-submit="add_tag"
-                >
-                  <input class="hidden" type="text" name="photo_id" value={@photo.id} />
-                  <input class="hidden" type="text" name="tag" value={tag} />
-                  <button
-                    class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800"
-                    type="submit"
-                  >
-                    {tag}
-                  </button>
-                </.form>
+        <%= if @is_admin do %>
+          <.accordion id="photo-add-related-tags" class="mt-2">
+            <:trigger>
+              <p class="text-left">Quick add</p>
+            </:trigger>
+            <:panel>
+              <div class="flex flex-wrap mt-2">
+                <%= for tag <- @related_tags do %>
+                  <div class="mr-2">
+                    <.form
+                      for={Component.to_form(%{"tag" => tag, "photo_id" => @photo.id})}
+                      phx-submit="add_tag"
+                    >
+                      <input class="hidden" type="text" name="photo_id" value={@photo.id} />
+                      <input class="hidden" type="text" name="tag" value={tag} />
+                      <button
+                        class="border border-blue-600 rounded-full hover:bg-blue-100 px-1 my-1 text-blue-600 hover:text-blue-800"
+                        type="submit"
+                      >
+                        {tag}
+                      </button>
+                    </.form>
+                  </div>
+                <% end %>
               </div>
-            <% end %>
-          <% end %>
-        </div> --%>
+            </:panel>
+          </.accordion>
+
+        <% end %>
       </:item>
       <%!-- <:item title="Related tags">
         <ul class="flex flex-wrap">
@@ -1091,7 +1099,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> Enum.map(&Gallery.get_photo!(&1))
       |> Repo.preload(:tags)
 
+    related_tags =
+      selected_photos
+      |> Enum.flat_map(&Gallery.get_related_tags/1)
+      |> Enum.map(& &1.name)
+      |> Enum.uniq()
+      |> Enum.sort_by(&String.downcase/1)
+
     assign(socket, selected_photos: selected_photos)
+    |> assign(:related_tags, related_tags)
   end
 
   def refresh_filtered_photos(socket) do
@@ -1103,9 +1119,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
       end
       |> Repo.preload(:tags)
-      |> Enum.map(&simplify_photo/1)
 
-    assign(socket, filtered_photos: filtered_photos)
+    recommended_tags =
+      filtered_photos
+      |> Enum.flat_map(& &1.tags)
+      |> Enum.map(& &1.name)
+      |> Enum.uniq()
+      |> Enum.sort_by(&String.downcase/1)
+
+    socket
+    |> assign(
+      :filtered_photos,
+      filtered_photos
+      |> Enum.map(&simplify_photo/1)
+    )
+    |> assign(:recommended_tags, recommended_tags)
   end
 
   ## Event Handlers
