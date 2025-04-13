@@ -16,7 +16,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <div class="flex flex-row gap-4 h-full">
       <div id="tags-section" class="shrink basis-0 overflow-y-auto">
-        <.tags_list
+        <%!-- <.tags_list
             folder={@folder}
             all_folders={@all_folders}
             nav_tags={@nav_tags}
@@ -24,7 +24,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             current_tags={@tags}
             selected_photo_ids={@selected_photo_ids}
             is_admin={@is_admin}
-          />
+          /> --%>
       </div>
       <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
         <.gallery_header
