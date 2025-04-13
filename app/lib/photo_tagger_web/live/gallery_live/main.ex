@@ -15,16 +15,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def render(assigns) do
     ~H"""
     <div class="flex flex-row gap-4 h-full">
-      <div id="folders-section" class="shrink basis-0 overflow-y-auto">
-        <%!-- <.folders
-          all_folders={@all_folders}
-          all_tags={@all_tags}
-          folder={@folder}
-          all_folders_selected={@folder == nil and @live_action != :index}
-          tags={@tags}
-          recommended_tags={@recommended_tags}
-          is_admin={@is_admin}
-        /> --%>
+      <div id="tags-section" class="shrink basis-0 overflow-y-auto">
         <.tags_list
             folder={@folder}
             all_folders={@all_folders}
@@ -151,10 +142,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     socket =
       if(expanded_state.folder != Map.get(socket.assigns, :folder),
-        do:
-          push_event(socket, "scroll_into_view", %{
-            selector: "##{folder_accordion_id(expanded_state.folder)}"
-          }),
+        do: push_event(socket, "scroll_to_top", %{selector: "#tags-section"}),
         else: socket
       )
 
@@ -210,6 +198,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
+
     prev_selected_photo_ids =
       case prev_selected_photos do
         nil -> nil
@@ -264,11 +253,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     related_tags = recommended_tags
-      # selected_photos
-      # |> Enum.flat_map(&Gallery.get_related_tags/1)
-      # |> Enum.map(& &1.name)
-      # |> Enum.uniq()
-      # |> Enum.sort_by(&String.downcase/1)
+    # selected_photos
+    # |> Enum.flat_map(&Gallery.get_related_tags/1)
+    # |> Enum.map(& &1.name)
+    # |> Enum.uniq()
+    # |> Enum.sort_by(&String.downcase/1)
 
     update_photo_form =
       case selected_photos do
@@ -405,126 +394,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <% end %>
       </nav>
     </div>
-    """
-  end
-
-  def folder_accordion_id(folder) do
-    if folder do
-      HtmlHelpers.escape_html_id("accordion-#{folder}")
-    else
-      "accordion-all-folders"
-    end
-  end
-
-  attr(:nav_tags, :list, required: true)
-  attr(:recommended_tags, :list, required: true)
-  attr(:nav_folder, :string, default: nil)
-  attr(:is_current_folder, :boolean, default: false)
-  attr(:tags, :list, default: [])
-  attr(:is_admin, :boolean, required: true)
-
-  def folder_nav_item(assigns) do
-    {recommended_nav_tags, other_nav_tags} =
-      Enum.split_with(assigns.nav_tags, &(&1 in assigns.recommended_tags))
-
-    recommended_nav_tags =
-      Enum.sort_by(recommended_nav_tags, fn tag ->
-        cond do
-          # show currently selected tags first
-          tag in assigns.tags -> 0
-          # tag in @recommended_tag_names -> 1 # then recommended tags
-          # then other tags
-          true -> 2
-        end
-      end)
-
-    assigns =
-      assigns
-      |> assign(:recommended_nav_tags, recommended_nav_tags)
-      |> assign(:other_nav_tags, other_nav_tags)
-
-    ~H"""
-    <li>
-      <.link
-          class="aria-expanded:font-bold"
-          data-selected={@is_current_folder}
-          patch={Util.build_url(@nav_folder, [], [], @is_admin)}
-          aria-expanded={@is_current_folder}
-        >
-        <span class="text-left">
-          {if(@nav_folder, do: @nav_folder, else: "All folders")}
-        </span>
-        <%!-- <.icon
-          class="hero-chevron-down-micro md:hero-chevron-down-mini lg:hero-chevron-down accordion-trigger-icon h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 absolute right-4 transition-all ease-in-out duration-100 top-1/2 -translate-y-1/2"
-          name={"hero-chevron-down"}
-        /> --%>
-      </.link>
-      <%= if @is_current_folder do %>
-      <div class="my-2 pl-2 list-none">
-            <%= if not Enum.empty?(@recommended_nav_tags) do %>
-              <ul class="my-2">
-                <%= for tag <- @recommended_nav_tags do %>
-                  <li class="mr-2 flex items-center">
-                      <.toggle_tag_button folder={@nav_folder} tags={@tags} toggled_tag={tag} is_admin={@is_admin}>
-                        {tag}
-                      </.toggle_tag_button>
-                  </li>
-                <% end %>
-              </ul>
-            <% end %>
-            <%= if not Enum.empty?(@other_nav_tags) do %>
-              <ul class="py-2">
-                <%= for tag <- @other_nav_tags do %>
-                  <li>
-                    <%!-- <.toggle_link selected={false}
-                      href={Util.build_url(@nav_folder, [], [tag])} >
-                      {tag}
-                    </.toggle_link> --%>
-                    <.link class="text-zinc-500 mr-2 my-1" patch={Util.build_url(@nav_folder, [], [tag], @is_admin)} >
-                      {tag}
-                    </.link>
-                  </li>
-                <% end %>
-              </ul>
-            <% end %>
-          </div>
-      <% end %>
-    </li>
-    """
-  end
-
-  attr(:all_folders, :list, required: true)
-  attr(:all_tags, :list, required: true)
-  attr(:recommended_tags, :list, required: true)
-  attr(:folder, :string, default: nil)
-  attr(:all_folders_selected, :boolean, default: false)
-  attr(:tags, :list, default: [])
-  attr(:is_admin, :boolean, required: true)
-
-  def folders(assigns) do
-    ~H"""
-    <nav>
-      <h2 class="hidden lg:block">Folders</h2>
-      <ul class="space-y-2 mt-2 text-sm md:text-base">
-        <.folder_nav_item
-          is_current_folder={@all_folders_selected}
-          nav_tags={@all_tags}
-          recommended_tags={@recommended_tags}
-          tags={@tags}
-          is_admin={@is_admin}
-        />
-        <%= for folder <- @all_folders do %>
-          <.folder_nav_item
-            is_current_folder={@folder == folder.name}
-            nav_folder={folder.name}
-            nav_tags={folder.tags}
-            recommended_tags={@recommended_tags}
-            tags={@tags}
-            is_admin={@is_admin}
-          />
-        <% end %>
-      </ul>
-    </nav>
     """
   end
 
