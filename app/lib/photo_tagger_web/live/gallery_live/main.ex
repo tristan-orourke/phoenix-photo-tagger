@@ -365,7 +365,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <div>
       <h2 class="">Tags</h2>
-      <nav class="divide-y divide-zinc-300 my-2 pl-2 list-none">
+      <nav class="my-2 pl-2 list-none">
         <%= if not Enum.empty?(@recommended_nav_tags) do %>
           <ul class="my-2">
             <%= for tag <- @recommended_nav_tags do %>
@@ -388,7 +388,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= if not Enum.empty?(@other_nav_tags) do %>
           <ul class="py-2">
             <%= for tag <- @other_nav_tags do %>
-              <li class="mr-2 my-1">
+              <li class="mr-2">
                 <.live_component
                   module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
                   id={tag}
@@ -461,7 +461,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         /> --%>
       </.link>
       <%= if @is_current_folder do %>
-      <div class="divide-y divide-zinc-300 my-2 pl-2 list-none">
+      <div class="my-2 pl-2 list-none">
             <%= if not Enum.empty?(@recommended_nav_tags) do %>
               <ul class="my-2">
                 <%= for tag <- @recommended_nav_tags do %>
