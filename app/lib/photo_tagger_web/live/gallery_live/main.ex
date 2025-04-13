@@ -622,7 +622,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </.form>
         </div>
         <%!-- TODO: restore some version of recommended tags --%>
-        <%= if @is_admin do %>
+        <%!-- <%= if @is_admin do %>
           <.accordion id="photo-add-related-tags" class="mt-2">
             <:trigger>
               <p class="text-left">Quick add</p>
@@ -649,8 +649,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               </div>
             </:panel>
           </.accordion>
-
-        <% end %>
+        <% end %> --%>
       </:item>
       <%!-- <:item title="Related tags">
         <ul class="flex flex-wrap">
