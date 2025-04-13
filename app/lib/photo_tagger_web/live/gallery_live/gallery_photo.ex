@@ -27,7 +27,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       >
         <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
         <img
-          class="w-full h-full object-cover"
+          class="w-full h-full aspect-square object-cover"
           alt={@photo_name}
           src={@photo_image_url}
         />
