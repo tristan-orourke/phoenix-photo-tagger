@@ -343,7 +343,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= if not Enum.empty?(@recommended_nav_tags) do %>
           <ul class="my-2">
             <%= for tag <- @recommended_nav_tags do %>
-              <li class="mr-2 flex items-center">
+              <li class="mr-2 flex items-center content-visible-auto">
                 <.live_component
                   module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
                   id={tag}
@@ -362,7 +362,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= if not Enum.empty?(@other_nav_tags) do %>
           <ul class="py-2">
             <%= for tag <- @other_nav_tags do %>
-              <li class="mr-2">
+              <li class="mr-2 content-visible-auto">
                 <.live_component
                   module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
                   id={tag}

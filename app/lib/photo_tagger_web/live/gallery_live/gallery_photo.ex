@@ -13,7 +13,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
 
   def render(assigns) do
     ~H"""
-    <li class="aspect-square" content-visible="auto">
+    <li class="aspect-square content-visible-auto">
       <button
         id={"gallery-photo-button-#{@photo_id}"}
         class="h-full w-full relative block

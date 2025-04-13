@@ -10,3 +10,7 @@ a {
 h2 {
    @apply text-2xl font-bold
 }
+
+.content-visible-auto {
+   content-visibility: auto;
+}
