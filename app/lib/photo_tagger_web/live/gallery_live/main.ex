@@ -188,11 +188,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {nil, [], _, _} ->
           Gallery.list_photos()
 
+        {nil, ["untagged"], _, _} ->
+          Gallery.list_photos_by_all_tags(nil) ++ Gallery.list_photos_by_all_tags(["untagged"])
+
         {nil, tags, _, _} ->
           Gallery.list_photos_by_all_tags(tags)
 
         {folder, [], _, _} ->
           Gallery.list_photos_by_folder(folder)
+
+        {folder, ["untagged"], _, _} ->
+          Gallery.list_photos_by_folder_and_tags(folder, nil) ++ Gallery.list_photos_by_folder_and_tags(folder, ["untagged"])
 
         {folder, tags, _, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, tags)

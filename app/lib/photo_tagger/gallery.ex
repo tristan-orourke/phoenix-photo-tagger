@@ -33,6 +33,17 @@ defmodule PhotoTagger.Gallery do
     )
   end
 
+  # If tag_names is nil, return all photos that have no tags
+  defp photos_ids_by_tags(nil) do
+    Repo.all(
+      from(p in Photo,
+      as: :photo,
+      where: not exists(from(pt in PhotoTag, where: pt.photo_id == parent_as(:photo).id)),
+      select: p.id
+      )
+    )
+  end
+
   defp photos_ids_by_tags([]) do
     Repo.all(from(p in Photo, select: p.id))
   end
