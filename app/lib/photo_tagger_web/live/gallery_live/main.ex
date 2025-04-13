@@ -264,12 +264,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           end
       end
 
-    related_tags =
-      selected_photos
-      |> Enum.flat_map(&Gallery.get_related_tags/1)
-      |> Enum.map(& &1.name)
-      |> Enum.uniq()
-      |> Enum.sort_by(&String.downcase/1)
+    related_tags = recommended_tags
+      # selected_photos
+      # |> Enum.flat_map(&Gallery.get_related_tags/1)
+      # |> Enum.map(& &1.name)
+      # |> Enum.uniq()
+      # |> Enum.sort_by(&String.downcase/1)
 
     update_photo_form =
       case selected_photos do
