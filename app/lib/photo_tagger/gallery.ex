@@ -100,6 +100,10 @@ defmodule PhotoTagger.Gallery do
     Repo.get!(Photo, id)
   end
 
+  def get_photos_by_ids(ids) do
+    Repo.all(from(p in Photo, where: p.id in ^ids))
+  end
+
   @doc """
   Creates a photo.
 

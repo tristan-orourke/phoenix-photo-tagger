@@ -210,11 +210,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
-
     prev_selected_photo_ids =
-      case Map.get(socket.assigns, :selected_photos, nil) do
+      case prev_selected_photos do
         nil -> nil
-        photos -> Enum.map(photos, & &1.id)
+        _ -> Enum.map(prev_selected_photos, & &1.id)
       end
 
     new_selected_photo_ids =
@@ -231,7 +230,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         # Otherwise, selections have changed, query them from the database
         {_, _} ->
           new_selected_photo_ids
-          |> Enum.map(&Gallery.get_photo!(&1))
+          |> Gallery.get_photos_by_ids()
           |> Repo.preload(:tags)
       end
 
@@ -1055,7 +1054,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     selected_photos =
       socket.assigns.selected_photos
       |> Enum.map(& &1.id)
-      |> Enum.map(&Gallery.get_photo!(&1))
+      |> Gallery.get_photos_by_ids()
       |> Repo.preload(:tags)
 
     related_tags =
