@@ -285,6 +285,20 @@ defmodule PhotoTagger.Gallery do
     Repo.all(from t in Tag, order_by: [asc: t.name])
   end
 
+  def list_tags_by_folder(folder) do
+    Repo.all(
+      from(t in Tag,
+        left_join: pt in PhotoTag,
+        on: pt.tag_id == t.id,
+        left_join: p in Photo,
+        on: pt.photo_id == p.id,
+        where: p.folder == ^folder,
+        group_by: t.id,
+        order_by: [asc: t.name]
+      )
+    )
+  end
+
   defp get_folder_path(folder) do
     Path.join([
       Application.get_env(:waffle, :storage_dir_prefix),
@@ -329,6 +343,14 @@ defmodule PhotoTagger.Gallery do
 
   def delete_tag(%Tag{} = tag) do
     Repo.delete(tag)
+  end
+
+  def delete_orphan_tags() do
+    Repo.delete_all(
+      from(t in Tag,
+        where: fragment("? NOT IN (SELECT tag_id FROM photos_tags)", t.id)
+      )
+    )
   end
 
   # Get all photos with at least one overlapping tag with photo.
