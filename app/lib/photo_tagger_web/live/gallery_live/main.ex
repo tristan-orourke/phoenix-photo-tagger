@@ -58,7 +58,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               tags={@tags}
               all_tags={@all_tags}
               recommended_tags={@recommended_tags}
-              related_tags={@related_tags}
+              related_tags={@recommended_tags}
               update_photo_form={@update_photo_form}
               is_admin={@is_admin}
             />
@@ -246,13 +246,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         _ -> Gallery.list_tags_by_folder(folder) |> Enum.map(& &1.name)
       end
 
-    related_tags = recommended_tags
-    # selected_photos
-    # |> Enum.flat_map(&Gallery.get_related_tags/1)
-    # |> Enum.map(& &1.name)
-    # |> Enum.uniq()
-    # |> Enum.sort_by(&String.downcase/1)
-
     update_photo_form =
       case selected_photos do
         [photo] -> photo
@@ -273,7 +266,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       selected_photo_ids: new_selected_photo_ids,
       recommended_tags: recommended_tags,
       nav_tags: nav_tags,
-      related_tags: related_tags,
       update_photo_form: update_photo_form
     }
   end
@@ -934,15 +926,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> Gallery.get_photos_by_ids()
       |> Repo.preload(:tags)
 
-    related_tags =
-      selected_photos
-      |> Enum.flat_map(&Gallery.get_related_tags/1)
-      |> Enum.map(& &1.name)
-      |> Enum.uniq()
-      |> Enum.sort_by(&String.downcase/1)
-
     assign(socket, selected_photos: selected_photos)
-    |> assign(:related_tags, related_tags)
   end
 
   def refresh_filtered_photos(socket) do
