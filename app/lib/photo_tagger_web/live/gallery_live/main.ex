@@ -17,14 +17,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div class="flex flex-row gap-4 h-full">
       <div id="tags-section" class="shrink basis-0 overflow-y-auto">
         <.tags_list
-            folder={@folder}
             all_folders={@all_folders}
             nav_tags={@nav_tags}
             recommended_tags={@recommended_tags}
             current_tags={@tags}
-            selected_photo_ids={@selected_photo_ids}
             is_admin={@is_admin}
           />
+            <%!-- selected_photo_ids={@selected_photo_ids} --%>
+            <%!-- folder={@folder} --%>
       </div>
       <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
         <.gallery_header
@@ -89,7 +89,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         :public -> false
         _ -> true
       end
+
     all_tags = Gallery.list_tags() |> Enum.map(& &1.name)
+
     {
       :ok,
       socket
@@ -198,7 +200,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           Gallery.list_photos_by_folder(folder)
 
         {folder, ["untagged"], _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, nil) ++ Gallery.list_photos_by_folder_and_tags(folder, ["untagged"])
+          Gallery.list_photos_by_folder_and_tags(folder, nil) ++
+            Gallery.list_photos_by_folder_and_tags(folder, ["untagged"])
 
         {folder, tags, _, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, tags)
@@ -315,11 +318,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
-  attr(:folder, :string, default: nil)
+  # attr(:folder, :string, default: nil)
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:current_tags, :list, required: true)
-  attr(:selected_photo_ids, :list, default: [])
+  # attr(:selected_photo_ids, :list, default: [])
   attr(:is_admin, :boolean, required: true)
 
   def tags_list(assigns) do
@@ -349,8 +352,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= if not Enum.empty?(@recommended_nav_tags) do %>
           <ul class="my-2">
             <%= for tag <- @recommended_nav_tags do %>
-              <li class="mr-2 flex items-center content-visible-auto">
-                <.live_component
+              <li class="mr-2 content-visible-auto">
+                <.toggle_button
+                  selected={tag in @current_tags}
+                  phx-click="toggle_tag"
+                  phx-value-tag={tag}
+                >
+                  {tag}
+                </.toggle_button>
+
+                <%!-- <.live_component
                   module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
                   id={tag}
                   tag={tag}
@@ -360,7 +371,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   is_admin={@is_admin}
                   is_recommended={true}
                   is_selected={tag in @current_tags}
-                />
+                /> --%>
               </li>
             <% end %>
           </ul>
@@ -369,7 +380,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <ul class="py-2">
             <%= for tag <- @other_nav_tags do %>
               <li class="mr-2 content-visible-auto">
-                <.live_component
+                <button class="underline text-blue-600 hover:text-blue-800 mr-2" phx-click="link_tag" phx-value-tag={tag} >
+                  {tag}
+                </button>
+                <%!-- <.live_component
                   module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
                   id={tag}
                   tag={tag}
@@ -379,7 +393,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   is_admin={@is_admin}
                   is_recommended={false}
                   is_selected={false}
-                />
+                /> --%>
               </li>
             <% end %>
           </ul>
@@ -1152,6 +1166,38 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     {:noreply, push_patch(socket, to: Util.build_url(folder, [], [], socket.assigns.is_admin))}
+  end
+
+  def handle_event("toggle_tag", %{"tag" => tag}, socket) do
+    new_tags =
+      case tag in socket.assigns.tags do
+        true -> Enum.filter(socket.assigns.tags, fn t -> t != tag end)
+        false -> socket.assigns.tags ++ [tag]
+      end
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           new_tags,
+           socket.assigns.is_admin
+         )
+     )}
+  end
+
+  def handle_event("link_tag", %{"tag" => tag}, socket) do
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           [tag],
+           socket.assigns.is_admin
+         )
+     )}
   end
 
   ## Utility functions
