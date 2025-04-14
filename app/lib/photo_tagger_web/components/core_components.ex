@@ -233,11 +233,9 @@ defmodule PhotoTaggerWeb.CoreComponents do
     <button
       type={@type}
       class={
-        ClassHelper.tw([
-          "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
-          "text-sm font-semibold leading-6 text-white active:text-white/80",
-          @class
-        ])
+        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3
+        text-sm font-semibold leading-6 text-white active:text-white/80 " <>
+        @class
       }
       {@rest}
     >
@@ -255,12 +253,10 @@ defmodule PhotoTaggerWeb.CoreComponents do
     ~H"""
     <button
       class={
-        ClassHelper.tw([
-          "border rounded-full px-1 my-1",
-          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
-          "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700",
-          @class
-        ])
+        "border rounded-full px-1 my-1
+        border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800
+        aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700" <>
+        @class
       }
       aria-selected={if(@selected, do: "true", else: "false")}
       {@rest}
