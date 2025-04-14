@@ -58,42 +58,36 @@ defmodule PhotoTagger.Gallery do
   end
 
   # If tag_names is nil, return all photos that have no tags
-  defp photos_ids_by_tags(nil) do
-    Repo.all(
-      from(p in Photo,
-        as: :photo,
-        where: not exists(from(pt in PhotoTag, where: pt.photo_id == parent_as(:photo).id)),
-        select: p.id
-      )
+  defp photos_by_tags_query(nil) do
+    from(p in Photo,
+      as: :photo,
+      where: not exists(from(pt in PhotoTag, where: pt.photo_id == parent_as(:photo).id)),
+      select: p
     )
   end
 
-  defp photos_ids_by_tags([]) do
-    Repo.all(from(p in Photo, select: p.id))
+  defp photos_by_tags_query([]) do
+    from(p in Photo, select: p)
   end
 
-  defp photos_ids_by_tags(tag_names) do
-    tags = Repo.all(from(t in Tag, where: t.name in ^tag_names))
-
-    case tags do
+  defp photos_by_tags_query(tag_names) do
+    case tag_names do
       [] ->
         []
 
-      tags ->
-        photo_ids =
-          from(p in Photo,
-            order_by: [desc: p.inserted_at],
-            order_by: [asc: p.name],
-            join: pt in PhotoTag,
-            on: pt.photo_id == p.id,
-            where: pt.tag_id in ^Enum.map(tags, & &1.id),
-            group_by: p.id,
-            having: count(pt.tag_id) == ^length(tag_names),
-            select: p.id
-          )
-          |> Repo.all()
-
-        photo_ids
+      _ ->
+        from(p in Photo,
+          order_by: [desc: p.inserted_at],
+          order_by: [asc: p.name],
+          left_join: pt in PhotoTag,
+          on: pt.photo_id == p.id,
+          left_join: t in Tag,
+          on: pt.tag_id == t.id,
+          where: t.name in ^tag_names,
+          group_by: p.id,
+          having: count(pt.tag_id) == ^length(tag_names),
+          select: p
+        )
     end
   end
 
@@ -101,11 +95,10 @@ defmodule PhotoTagger.Gallery do
   def list_photos_by_all_tags([]), do: list_photos()
 
   def list_photos_by_all_tags(tag_names) do
-    photo_ids = photos_ids_by_tags(tag_names)
+    query = photos_by_tags_query(tag_names)
 
     Repo.all(
-      from(p in Photo,
-        where: p.id in ^photo_ids,
+      from(p in query,
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
@@ -113,8 +106,8 @@ defmodule PhotoTagger.Gallery do
   end
 
   def list_photos_by_folder_and_tags(folder, tag_names) do
-    photo_ids = photos_ids_by_tags(tag_names)
-    Repo.all(from(p in Photo, where: p.id in ^photo_ids, where: p.folder == ^folder))
+    query = photos_by_tags_query(tag_names)
+    Repo.all(from(p in query, where: p.folder == ^folder))
   end
 
   @doc """
