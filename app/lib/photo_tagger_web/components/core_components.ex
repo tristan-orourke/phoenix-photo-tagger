@@ -591,10 +591,11 @@ defmodule PhotoTaggerWeb.CoreComponents do
   def list(assigns) do
     ~H"""
     <div class="mt-0">
-      <dl class="-my-4 divide-y divide-zinc-100">
-        <div :for={item <- @item} class={ClassHelper.tw(["flex gap-4 py-4 text-sm leading-6 sm:gap-8", Map.get(item, :class, "")])}>
+      <dl class="-my-4">
+        <div :for={item <- @item} class={ClassHelper.tw(["py-4 text-sm leading-6 sm:gap-8 border-b border-zinc-100 text-zinc-700", Map.get(item, :class, "")])}>
           <%!-- <dt class="hidden lg:inline w-1/6 flex-none text-zinc-500">{item.title}</dt> --%>
-          <dd class="text-zinc-700">{render_slot(item)}</dd>
+          <%!-- <dd class="text-zinc-700">{render_slot(item)}</dd> --%>
+          {render_slot(item)}
         </div>
       </dl>
     </div>

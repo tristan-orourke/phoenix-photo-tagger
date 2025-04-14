@@ -13,7 +13,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
 
   def render(assigns) do
     ~H"""
-    <li class="aspect-square">
+    <li class="aspect-square content-visible-auto">
       <button
         id={"gallery-photo-button-#{@photo_id}"}
         class="h-full w-full relative block
@@ -27,7 +27,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       >
         <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
         <img
-          class="w-full h-full object-cover"
+          class="w-full h-full aspect-square object-cover"
           alt={@photo_name}
           src={@photo_image_url}
         />

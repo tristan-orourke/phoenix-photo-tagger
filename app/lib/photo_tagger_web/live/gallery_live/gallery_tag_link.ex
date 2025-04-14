@@ -51,7 +51,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryTagLink do
     {:ok,
      socket
      |> assign(:url, url)
-      |> assign(:is_recommended, assigns.is_recommended)
+     |> assign(:is_recommended, assigns.is_recommended)
      |> assign(:is_selected, assigns.tag in assigns.current_tags)
      |> assign(:tag, assigns.tag)}
   end
