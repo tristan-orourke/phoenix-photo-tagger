@@ -41,14 +41,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= if @live_action == :index do %>
           <p>Select a folder to view photos</p>
         <% else %>
-          <.gallery
+          <.live_component
+            id="gallery-panel"
+            module={PhotoTaggerWeb.GalleryLive.GalleryPanel}
+            photos={@filtered_photos}
+            selected_photo_ids={@selected_photo_ids}
+            collapse_groups={@collapse_groups}
+            zoom_level={@zoom_level}
+            is_admin={@is_admin}
+          />
+          <%!-- <.gallery
             photos={@filtered_photos}
             folder={@folder}
             selected_photo_ids={@selected_photo_ids}
             collapse_groups={@collapse_groups}
             zoom_level={@zoom_level}
             is_admin={@is_admin}
-          />
+          /> --%>
         <% end %>
       </div>
       <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
