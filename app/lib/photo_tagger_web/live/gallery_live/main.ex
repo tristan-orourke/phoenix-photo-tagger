@@ -17,12 +17,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <div class="flex flex-row gap-4 h-full">
       <div id="tags-section" class="shrink basis-0 overflow-y-auto">
         <.tags_list
-            all_folders={@all_folders}
             nav_tags={@nav_tags}
             recommended_tags={@recommended_tags}
             current_tags={@tags}
             is_admin={@is_admin}
           />
+            <%!-- all_folders={@all_folders} --%>
             <%!-- selected_photo_ids={@selected_photo_ids} --%>
             <%!-- folder={@folder} --%>
       </div>
@@ -233,26 +233,29 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           |> Repo.preload(:tags)
       end
 
-    # If filtered photos have not changed, use cached recommended tags
-    recommended_tags =
-      case filtered_photos do
-        ^prev_filtered_photos ->
-          Map.get(socket.assigns, :recommended_tags, [])
-
-        _ ->
-          filtered_photos
-          |> Repo.preload(:tags)
-          |> Enum.flat_map(& &1.tags)
-          |> Enum.map(& &1.name)
-          |> Enum.uniq()
-          |> Enum.sort_by(&String.downcase/1)
-      end
-
     nav_tags =
       case folder do
         ^prev_folder -> Map.get(socket.assigns, :nav_tags, [])
         nil -> socket.assigns.all_tags
         _ -> Gallery.list_tags_by_folder(folder) |> Enum.map(& &1.name)
+      end
+
+    # recommended tags are the tags which can be added to the current selection of tags
+    #   without resulting in an empty gallery
+    recommended_tags =
+      case tags do
+        [] ->
+          nav_tags
+
+        ^prev_tags ->
+          Map.get(socket.assigns, :recommended_tags, [])
+
+        _ ->
+          # filtered_photos
+          # |> Repo.preload(:tags)
+          # |> Enum.flat_map(& &1.tags)
+          Gallery.list_tags_by_photos(filtered_photos |> Enum.map(& &1.id))
+          |> Enum.map(& &1.name)
       end
 
     update_photo_form =
@@ -956,14 +959,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {folder, []} -> Gallery.list_photos_by_folder(folder)
         {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
       end
-      |> Repo.preload(:tags)
 
+    # |> Repo.preload(:tags)
+
+    # filtered_photos
+    # |> Enum.flat_map(& &1.tags)
     recommended_tags =
-      filtered_photos
-      |> Enum.flat_map(& &1.tags)
-      |> Enum.map(& &1.name)
-      |> Enum.uniq()
-      |> Enum.sort_by(&String.downcase/1)
+      case socket.assigns.tags do
+        [] ->
+          socket.assigns.nav_tags
+
+        _ ->
+          # filtered_photos
+          # |> Repo.preload(:tags)
+          # |> Enum.flat_map(& &1.tags)
+          Gallery.list_tags_by_photos(filtered_photos |> Enum.map(& &1.id))
+          |> Enum.map(& &1.name)
+      end
 
     socket
     |> assign(
