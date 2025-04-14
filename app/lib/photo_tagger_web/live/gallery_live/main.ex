@@ -570,9 +570,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
-      <:item title="Image" class="max-h-[40vh] lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
-        <.link href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
-          <img class="object-contain h-full" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
+      <:item title="Image" class="w-full lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
+        <.link class="w-full block" href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
+          <img class="object-contain w-full max-h-[40vh] aspect-square" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
         </.link>
       </:item>
       <:item title="Folder" :if={@is_admin}>
