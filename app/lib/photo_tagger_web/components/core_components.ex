@@ -223,7 +223,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
   attr :type, :string, default: nil
-  attr :class, :string, default: ""
+  attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
@@ -245,7 +245,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
   end
 
   attr :selected, :boolean, required: true
-  attr :class, :string, default: ""
+  attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
   slot :inner_block, required: true
 
