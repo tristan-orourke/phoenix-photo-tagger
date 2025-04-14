@@ -16,7 +16,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <div class="flex flex-row gap-4 h-full">
       <div id="tags-section" class="shrink basis-0 overflow-y-auto">
-        <.tags_list
+        <.live_component
+            id="nav-panel"
+            module={PhotoTaggerWeb.GalleryLive.NavPanel}
             nav_tags={@nav_tags}
             recommended_tags={@recommended_tags}
             current_tags={@tags}
@@ -318,91 +320,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     >
       {render_slot(@inner_block)}
     </.toggle_link>
-    """
-  end
-
-  # attr(:folder, :string, default: nil)
-  attr(:nav_tags, :list, required: true)
-  attr(:recommended_tags, :list, required: true)
-  attr(:current_tags, :list, required: true)
-  # attr(:selected_photo_ids, :list, default: [])
-  attr(:is_admin, :boolean, required: true)
-
-  def tags_list(assigns) do
-    {recommended_nav_tags, other_nav_tags} =
-      Enum.split_with(assigns.nav_tags, &(&1 in assigns.recommended_tags))
-
-    recommended_nav_tags =
-      Enum.sort_by(recommended_nav_tags, fn tag ->
-        cond do
-          # show currently selected tags first
-          tag in assigns.current_tags -> 0
-          # tag in @recommended_tag_names -> 1 # then recommended tags
-          # then other tags
-          true -> 2
-        end
-      end)
-
-    assigns =
-      assigns
-      |> assign(:recommended_nav_tags, recommended_nav_tags)
-      |> assign(:other_nav_tags, other_nav_tags)
-
-    ~H"""
-    <div>
-      <h2 class="">Tags</h2>
-      <nav class="my-2 pl-2 list-none">
-        <%= if not Enum.empty?(@recommended_nav_tags) do %>
-          <ul class="my-2">
-            <%= for tag <- @recommended_nav_tags do %>
-              <li class="mr-2 content-visible-auto">
-                <.toggle_button
-                  selected={tag in @current_tags}
-                  phx-click="toggle_tag"
-                  phx-value-tag={tag}
-                >
-                  {tag}
-                </.toggle_button>
-
-                <%!-- <.live_component
-                  module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
-                  id={tag}
-                  tag={tag}
-                  folder={@folder}
-                  current_tags={@current_tags}
-                  selected_photo_ids={@selected_photo_ids}
-                  is_admin={@is_admin}
-                  is_recommended={true}
-                  is_selected={tag in @current_tags}
-                /> --%>
-              </li>
-            <% end %>
-          </ul>
-        <% end %>
-        <%= if not Enum.empty?(@other_nav_tags) do %>
-          <ul class="py-2">
-            <%= for tag <- @other_nav_tags do %>
-              <li class="mr-2 content-visible-auto">
-                <button class="underline text-blue-600 hover:text-blue-800 mr-2" phx-click="link_tag" phx-value-tag={tag} >
-                  {tag}
-                </button>
-                <%!-- <.live_component
-                  module={PhotoTaggerWeb.GalleryLive.GalleryTagLink}
-                  id={tag}
-                  tag={tag}
-                  folder={@folder}
-                  current_tags={@current_tags}
-                  selected_photo_ids={@selected_photo_ids}
-                  is_admin={@is_admin}
-                  is_recommended={false}
-                  is_selected={false}
-                /> --%>
-              </li>
-            <% end %>
-          </ul>
-        <% end %>
-      </nav>
-    </div>
     """
   end
 
