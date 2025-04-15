@@ -507,12 +507,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
       <:item title="Image" class="w-full lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
-          <input type="image"
-            class="object-contain w-full max-h-[40vh] aspect-square"
+        <button
+          class="relative w-full max-h-[40vh] aspect-square group"
+          phx-click={show_modal("expanded_photo")}
+        >
+          <img
+            class="object-contain w-full h-full aspect-square"
             alt={@photo.name}
-            src={ImageUploader.url({@photo.image, @photo}, :small)} p
-            phx-click={show_modal("expanded_photo")}
+            src={ImageUploader.url({@photo.image, @photo}, :small)}
           />
+          <div class="absolute top-0 right-2 lg:p-3 flex-none opacity-30 lg:opacity-20 group-hover:opacity-40 text-zinc-500">
+            <.icon name="hero-arrows-pointing-out" class="h-6 w-6 group-hover:h-7 group-hover:w-7" />
+          </div>
+        </button>
       </:item>
       <:item title="Folder" :if={@is_admin}>
         <.link
