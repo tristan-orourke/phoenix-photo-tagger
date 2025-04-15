@@ -1,5 +1,6 @@
 defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
   use PhotoTaggerWeb, :live_component
+  require Logger
 
   attr(:photos, :list, required: true)
   # attr(:folder, :string, default: nil)
@@ -9,30 +10,27 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
   attr(:is_admin, :boolean, required: true)
 
   def render(assigns) do
+    Logger.debug("Rendering GalleryPanel with assigns: #{inspect(Map.keys(assigns.__changed__))}")
     ~H"""
     <div class="p-2 lg:p-6 ">
       <ul
         id="photos-infinite-scroll"
-        phx-update="stream"
-        phx-viewport-top={@page > 1 && "prev-page"}
         phx-viewport-bottom={!@end_of_timeline? && "next-page"}
         phx-target={@myself}
         phx-page-loading
         class={[
           "grid gap-2 lg:gap-4",
-          "#{@grid_size}",
-          "md:#{@md_grid_size}",
-          "lg:#{@lg_grid_size}",
-          "xl:#{@xl_grid_size}",
-          "2xl:#{@_2xl_grid_size}",
-          if(@end_of_timeline?, do: "pb-10", else: "pb-[calc(200vh)]"),
-          if(@page == 1, do: "pt-10", else: "pt-[calc(200vh)]")
+          "#{get_grid_size(@zoom_level, 1)}",
+          "md:#{get_grid_size(@zoom_level, 2)}",
+          "lg:#{get_grid_size(@zoom_level, 4)}",
+          "xl:#{get_grid_size(@zoom_level, 4)}",
+          "2xl:#{get_grid_size(@zoom_level, 6)}"
         ]}
       >
-        <%= for {id, photo} <- @streams.photos do %>
+        <%= for photo <- Enum.take(@photos, @page * @per_page) do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
-            id={id}
+            id={photo.id}
             photo_id={photo.id}
             photo_group={photo.group}
             photo_name={photo.name}
@@ -44,23 +42,29 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
           />
         <% end %>
       </ul>
-      <div id="infinite-scroll-marker" phx-hook="InfiniteScroll" data-page={@page}></div>
+      <%= if not @end_of_timeline? do %>
+        <div
+          id="load-more"
+          class="flex justify-center items-center w-full p-10"
+        >
+          <.icon name="hero-arrow-path" class="w-10 h-10 animate-spin"/>
+        </div>
+      <% end %>
     </div>
     """
   end
 
   def mount(socket) do
-    {:ok, socket
-      |> assign(page: 1, per_page: 20)
-      |> assign(photos: nil)
-    }
+    {:ok,
+     socket
+     |> assign(page: 1, per_page: 30, end_of_timeline?: false)}
   end
 
   def update(assigns, socket) do
     socket =
       case assigns.collapse_groups do
         false ->
-          socket
+          assign(socket, :photos, assigns.photos)
 
         true ->
           grouped_photos = Enum.group_by(assigns.photos, & &1.group)
@@ -75,26 +79,24 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
           )
       end
 
-
-
     socket =
       socket
-      |> assign(:grid_size, get_grid_size(assigns.zoom_level, 1))
-      |> assign(:md_grid_size, get_grid_size(assigns.zoom_level, 2))
-      |> assign(:lg_grid_size, get_grid_size(assigns.zoom_level, 4))
-      |> assign(:xl_grid_size, get_grid_size(assigns.zoom_level, 4))
-      |> assign(:_2xl_grid_size, get_grid_size(assigns.zoom_level, 6))
+      # |> assign(:grid_size, get_grid_size(assigns.zoom_level, 1))
+      # |> assign(:md_grid_size, get_grid_size(assigns.zoom_level, 2))
+      # |> assign(:lg_grid_size, get_grid_size(assigns.zoom_level, 4))
+      # |> assign(:xl_grid_size, get_grid_size(assigns.zoom_level, 4))
+      # |> assign(:_2xl_grid_size, get_grid_size(assigns.zoom_level, 6))
 
     {:ok,
      socket
      |> assign(:selected_photo_ids, assigns.selected_photo_ids)
-     |> assign(:all_photos, assigns.photos)
-     |> then(fn socket ->
-       case socket.assigns.photos do
-         nil -> paginate_photos(socket, 1) # We only want to do this in handle_params the first time
-         _ -> socket
-       end
-     end)
+     |> assign(:photos, assigns.photos)
+     #  |> then(fn socket ->
+     #    case socket.assigns.photos do
+     #      nil -> paginate_photos(socket, 1) # We only want to do this in handle_params the first time
+     #      _ -> socket
+     #    end
+     #  end)
      |> assign(:collapse_groups, assigns.collapse_groups)
      |> assign(:is_admin, assigns.is_admin)}
   end
@@ -103,46 +105,17 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
 
   def get_grid_size(zoom_level, base_size) do
     size = clamp(base_size - zoom_level, 1, 9)
+    Logger.debug("Zoom level being calculated")
     "grid-cols-#{size}"
   end
 
-
-  defp paginate_photos(socket, new_page) when new_page >= 1 do
-    %{per_page: per_page, page: cur_page} = socket.assigns
-    photos = Enum.slice(socket.assigns.all_photos, ((new_page - 1) * per_page)..(new_page * per_page - 1))
-
-    {photos, at, limit} =
-      if new_page >= cur_page do
-        {photos, -1, per_page * 3 * -1}
-      else
-        {Enum.reverse(photos), 0, per_page * 3}
-      end
-
-    case photos do
-      [] ->
-        assign(socket, end_of_timeline?: at == -1)
-
-      [_ | _] = photos ->
-        socket
-        |> assign(end_of_timeline?: false)
-        |> assign(:page, new_page)
-        |> stream(:photos, photos, at: at, limit: limit)
-    end
-  end
-
   def handle_event("next-page", _, socket) do
-    {:noreply, paginate_photos(socket, socket.assigns.page + 1)}
-  end
+    new_page = socket.assigns.page + 1
+    finished = new_page * socket.assigns.per_page >= Enum.count(socket.assigns.photos)
 
-  def handle_event("prev-page", %{"_overran" => true}, socket) do
-    {:noreply, paginate_photos(socket, 1)}
-  end
-
-  def handle_event("prev-page", _, socket) do
-    if socket.assigns.page > 1 do
-      {:noreply, paginate_photos(socket, socket.assigns.page - 1)}
-    else
-      {:noreply, socket}
-    end
+    {:noreply,
+     socket
+     |> assign(:page, new_page)
+     |> assign(:end_of_timeline?, finished)}
   end
 end
