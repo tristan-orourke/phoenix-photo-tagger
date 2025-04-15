@@ -41,7 +41,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= if @live_action == :index do %>
           <p>Select a folder to view photos</p>
         <% else %>
-          <.live_component
+          <%!-- <.live_component
             id="gallery-panel"
             module={PhotoTaggerWeb.GalleryLive.GalleryPanel}
             photos={@filtered_photos}
@@ -49,15 +49,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             collapse_groups={@collapse_groups}
             zoom_level={@zoom_level}
             is_admin={@is_admin}
-          />
-          <%!-- <.gallery
+          /> --%>
+          <.gallery
             photos={@filtered_photos}
-            folder={@folder}
             selected_photo_ids={@selected_photo_ids}
             collapse_groups={@collapse_groups}
             zoom_level={@zoom_level}
             is_admin={@is_admin}
-          /> --%>
+          />
         <% end %>
       </div>
       <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
@@ -418,22 +417,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   attr(:photos, :list, required: true)
-  attr(:folder, :string, default: nil)
   attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
 
   def gallery(assigns) do
-    grouped_photos = Enum.group_by(assigns.photos, & &1.group)
-    assigns = assign(assigns, :grouped_photos, grouped_photos)
-
     assigns =
       case assigns.collapse_groups do
         false ->
           assigns
 
         true ->
+          grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+
           assign(
             assigns,
             :photos,
@@ -444,27 +441,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           )
       end
 
-    get_grid_size = fn zoom_level, base_size ->
-      size = clamp(base_size - zoom_level, 1, 9)
-      "grid-cols-#{size}"
-    end
-
-    assigns =
-      assigns
-      |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
-      |> assign(:md_grid_size, get_grid_size.(assigns.zoom_level, 2))
-      |> assign(:lg_grid_size, get_grid_size.(assigns.zoom_level, 4))
-      |> assign(:xl_grid_size, get_grid_size.(assigns.zoom_level, 4))
-      |> assign(:_2xl_grid_size, get_grid_size.(assigns.zoom_level, 6))
-
     ~H"""
     <div class="p-2 lg:p-6 ">
       <ul class={"grid gap-2 lg:gap-4
-      #{@grid_size}
-      md:#{@md_grid_size}
-      lg:#{@lg_grid_size}
-      xl:#{@xl_grid_size}
-      2xl:#{@_2xl_grid_size}"}>
+      #{get_grid_size(@zoom_level, 1)}
+      md:#{get_grid_size(@zoom_level, 2)}
+      lg:#{get_grid_size(@zoom_level, 4)}
+      xl:#{get_grid_size(@zoom_level, 4)}
+      2xl:#{get_grid_size(@zoom_level, 6)}"}>
         <%= for photo <- @photos do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
@@ -482,6 +466,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </ul>
     </div>
     """
+  end
+
+  defp get_grid_size(zoom_level, base_size) do
+    size = clamp(base_size - zoom_level, 1, 9)
+    "grid-cols-#{size}"
   end
 
   attr(:photo, :map, required: true)
