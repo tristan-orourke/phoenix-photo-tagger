@@ -6,9 +6,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Uploaders.ImageUploader
-  alias PhotoTaggerWeb.HtmlHelpers
+  # alias PhotoTaggerWeb.HtmlHelpers
   alias PhotoTaggerWeb.GalleryLive.Util
-  import PhotoTaggerWeb.Components.Accordion
+  # import PhotoTaggerWeb.Components.Accordion
 
   require Logger
 
