@@ -95,10 +95,43 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <div class="min-w-3xl p-4 sm:p-6 lg:py-8 w-full min-h-screen lg:h-screen flex items-center justify-center">
         <%= case @selected_photos do %>
           <% [photo] -> %>
-            <img
-              class="object-contain w-full max-w-full lg:max-h-full"
-              alt={photo.name}
-              src={ImageUploader.url({photo.image, photo}, :original)} />
+            <div
+              phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
+            >
+              <img
+                class="object-contain w-full max-w-full lg:max-h-full"
+                alt={photo.name}
+                src={ImageUploader.url({photo.image, photo}, :original)}
+              />
+              <div class="absolute top-4 left-4 text-sm">
+                <ul>
+                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 md:ring-2 rounded-full p-1 m-2 md:p-2 w-min text-sm md:text-base">
+                    #{tag.name}
+                  </li>
+                </ul>
+                <div :if={@is_admin} class="mt-4">
+                  <.form for={Component.to_form(%{"tag" => "", "photo_id" => photo.id})} phx-submit="add_tag">
+                    <input class="hidden" type="text" name="photo_id" value={photo.id} />
+                      <%!-- TODO: convert this simple inline form to a component --%>
+                      <%!-- <.label for="add_any_tag">Add tag</.label> --%>
+                    <input
+                      type="text"
+                      name="tag"
+                      id="add_any_tag"
+                      Placeholder="Add tag"
+                      list="tag-list"
+                      class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 block mb-2 text-sm md:text-base"
+                    />
+                    <.button type="submit" class="text-sm md:text-base">Submit</.button>
+                      <%!-- <datalist id="tag-list">
+                        <%= for tag <- @all_tags do %>
+                          <option value={tag} />
+                        <% end %>
+                      </datalist> --%>
+                  </.form>
+                </div>
+              </div>
+            </div>
           <% [] -> %>
             <p class="text-center">Select a photo to view details</p>
           <% _ -> %>
