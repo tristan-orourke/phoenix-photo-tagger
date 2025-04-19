@@ -1,7 +1,8 @@
 defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
   use PhotoTaggerWeb, :live_component
 
-  # attr(:folder, :string, default: nil)
+  attr(:folder, :string, required: true)
+  attr(:all_folders, :list, required: true)
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:current_tags, :list, required: true)
@@ -28,6 +29,17 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
             <.icon name="hero-chevron-left" class="w-5 h-5" />
           </.button>
         </div>
+        <h2 class="pt-4">Folders</h2>
+        <form class="my-2" phx-change="change_folder">
+          <select value={@folder} name="folder" id="folder-select"  class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm">
+            <option value="">All folders</option>
+            <%= for folder <- @all_folders do %>
+              <option value={folder} selected={@folder == folder}>
+                {folder}
+              </option>
+            <% end %>
+          </select>
+        </form>
         <h2 class="">Tags</h2>
         <nav class="my-2 pl-2 list-none">
           <%= if not Enum.empty?(@recommended_nav_tags) do %>
@@ -106,6 +118,8 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
 
     {:ok,
      socket
+     |> assign(:folder, assigns.folder)
+     |> assign(:all_folders, assigns.all_folders)
      |> assign(:current_tags, assigns.current_tags)
      |> assign(:recommended_nav_tags, recommended_nav_tags)
      |> assign(:other_nav_tags, other_nav_tags)
