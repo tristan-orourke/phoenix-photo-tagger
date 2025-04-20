@@ -6,91 +6,140 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   alias PhotoTagger.Gallery
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Uploaders.ImageUploader
-  alias PhotoTaggerWeb.HtmlHelpers
+  # alias PhotoTaggerWeb.HtmlHelpers
   alias PhotoTaggerWeb.GalleryLive.Util
-  import PhotoTaggerWeb.Components.Accordion
+  # import PhotoTaggerWeb.Components.Accordion
 
   require Logger
 
   def render(assigns) do
     ~H"""
-    <div class="flex flex-row gap-4 h-full">
-      <div id="tags-section" class="shrink basis-0 overflow-y-auto">
-        <.live_component
-            id="nav-panel"
-            module={PhotoTaggerWeb.GalleryLive.NavPanel}
-            folder={@folder}
-            all_folders={@all_folders}
-            nav_tags={@nav_tags}
-            recommended_tags={@recommended_tags}
-            current_tags={@tags}
-            is_admin={@is_admin}
-          />
-            <%!-- all_folders={@all_folders} --%>
-            <%!-- selected_photo_ids={@selected_photo_ids} --%>
-            <%!-- folder={@folder} --%>
-      </div>
-      <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
-        <.gallery_header
-          folder={@folder}
-          tags={@tags}
-          item_count={Enum.count(@filtered_photos)}
-          multiselect_active={@multiselect_active}
-          collapse_groups={@collapse_groups}
-          is_admin={@is_admin}
-        />
-        <%= if @live_action == :index do %>
-          <p>Select a folder to view photos</p>
-        <% else %>
+    <div class="h-full">
+      <div class="flex flex-row gap-4 h-full">
+        <div id="tags-section" class="shrink basis-0 overflow-y-auto">
           <.live_component
-            id="gallery-panel"
-            module={PhotoTaggerWeb.GalleryLive.GalleryPanel}
-            photos={@filtered_photos}
-            selected_photo_ids={@selected_photo_ids}
-            collapse_groups={@collapse_groups}
-            zoom_level={@zoom_level}
-            is_admin={@is_admin}
-          />
-          <%!-- <.gallery
-            photos={@filtered_photos}
-            folder={@folder}
-            selected_photo_ids={@selected_photo_ids}
-            collapse_groups={@collapse_groups}
-            zoom_level={@zoom_level}
-            is_admin={@is_admin}
-          /> --%>
-        <% end %>
-      </div>
-      <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
-        <%= case @selected_photos do %>
-          <% [photo] -> %>
-            <.photo
-              photo={photo}
+              id="nav-panel"
+              module={PhotoTaggerWeb.GalleryLive.NavPanel}
               folder={@folder}
-              tags={@tags}
-              all_tags={@all_tags}
+              all_folders={@all_folders}
+              nav_tags={@nav_tags}
               recommended_tags={@recommended_tags}
-              related_tags={@recommended_tags}
-              update_photo_form={@update_photo_form}
+              current_tags={@tags}
               is_admin={@is_admin}
             />
-          <% [] -> %>
-            <p class="text-center">Select a photo to view details</p>
-          <% _ -> %>
-            <%= if @is_admin do %>
-              <.multi_photo_selection
-                photos={@selected_photos}
+              <%!-- all_folders={@all_folders} --%>
+              <%!-- selected_photo_ids={@selected_photo_ids} --%>
+              <%!-- folder={@folder} --%>
+        </div>
+        <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
+          <.gallery_header
+            folder={@folder}
+            tags={@tags}
+            item_count={Enum.count(@filtered_photos)}
+            multiselect_active={@multiselect_active}
+            collapse_groups={@collapse_groups}
+            is_admin={@is_admin}
+          />
+          <%= if @live_action == :index do %>
+            <p>Select a folder to view photos</p>
+          <% else %>
+            <%!-- <.live_component
+              id="gallery-panel"
+              module={PhotoTaggerWeb.GalleryLive.GalleryPanel}
+              photos={@filtered_photos}
+              selected_photo_ids={@selected_photo_ids}
+              collapse_groups={@collapse_groups}
+              zoom_level={@zoom_level}
+              is_admin={@is_admin}
+            /> --%>
+            <.gallery
+              photos={@filtered_photos}
+              selected_photo_ids={@selected_photo_ids}
+              collapse_groups={@collapse_groups}
+              zoom_level={@zoom_level}
+              is_admin={@is_admin}
+            />
+          <% end %>
+        </div>
+        <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
+          <%= case @selected_photos do %>
+            <% [photo] -> %>
+              <.photo
+                photo={photo}
                 folder={@folder}
                 tags={@tags}
                 all_tags={@all_tags}
                 recommended_tags={@recommended_tags}
+                related_tags={@recommended_tags}
+                update_photo_form={@update_photo_form}
                 is_admin={@is_admin}
               />
-            <% else %>
-              <p class="text-center">Please select a single photo</p>
-            <% end %>
-        <% end %>
+            <% [] -> %>
+              <p class="text-center">Select a photo to view details</p>
+            <% _ -> %>
+              <%= if @is_admin do %>
+                <.multi_photo_selection
+                  photos={@selected_photos}
+                  folder={@folder}
+                  tags={@tags}
+                  all_tags={@all_tags}
+                  recommended_tags={@recommended_tags}
+                  is_admin={@is_admin}
+                />
+              <% else %>
+                <p class="text-center">Please select a single photo</p>
+              <% end %>
+          <% end %>
+        </div>
       </div>
+      <.modal id="expanded_photo">
+        <div class="min-w-3xl p-4 sm:p-6 lg:py-8 w-full min-h-screen lg:h-screen flex items-center justify-center">
+        <%= case @selected_photos do %>
+          <% [photo] -> %>
+            <div
+              phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
+            >
+              <img
+                class="object-contain w-full max-w-full lg:max-h-full"
+                alt={photo.name}
+                src={ImageUploader.url({photo.image, photo}, :original)}
+              />
+              <div class="absolute top-4 left-4 text-sm">
+                <ul>
+                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 md:ring-2 rounded-full p-1 m-2 md:p-2 w-min text-sm md:text-base">
+                    #{tag.name}
+                  </li>
+                </ul>
+                <div :if={@is_admin} class="mt-4">
+                  <.form for={Component.to_form(%{"tag" => "", "photo_id" => photo.id})} phx-submit="add_tag">
+                    <input class="hidden" type="text" name="photo_id" value={photo.id} />
+                      <%!-- TODO: convert this simple inline form to a component --%>
+                      <%!-- <.label for="add_any_tag">Add tag</.label> --%>
+                    <input
+                      type="text"
+                      name="tag"
+                      id="add_any_tag"
+                      Placeholder="Add tag"
+                      list="tag-list"
+                      class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 block mb-2 text-sm md:text-base"
+                    />
+                    <.button type="submit" class="text-sm md:text-base">Submit</.button>
+                      <%!-- <datalist id="tag-list">
+                        <%= for tag <- @all_tags do %>
+                          <option value={tag} />
+                        <% end %>
+                      </datalist> --%>
+                  </.form>
+                </div>
+              </div>
+            </div>
+          <% [] -> %>
+            <p class="text-center">Select a photo to view details</p>
+          <% _ -> %>
+            <p class="text-center">Please select a single photo</p>
+        <% end %>
+        </div>
+      </.modal>
     </div>
     """
   end
@@ -113,7 +162,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
       |> assign(:zoom_level, 0)
-      |> assign(:is_admin, is_admin),
+      |> assign(:is_admin, is_admin)
+      |> assign(:expand_photo, false),
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -413,22 +463,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   attr(:photos, :list, required: true)
-  attr(:folder, :string, default: nil)
   attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
 
   def gallery(assigns) do
-    grouped_photos = Enum.group_by(assigns.photos, & &1.group)
-    assigns = assign(assigns, :grouped_photos, grouped_photos)
-
     assigns =
       case assigns.collapse_groups do
         false ->
           assigns
 
         true ->
+          grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+
           assign(
             assigns,
             :photos,
@@ -439,27 +487,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           )
       end
 
-    get_grid_size = fn zoom_level, base_size ->
-      size = clamp(base_size - zoom_level, 1, 9)
-      "grid-cols-#{size}"
-    end
-
-    assigns =
-      assigns
-      |> assign(:grid_size, get_grid_size.(assigns.zoom_level, 1))
-      |> assign(:md_grid_size, get_grid_size.(assigns.zoom_level, 2))
-      |> assign(:lg_grid_size, get_grid_size.(assigns.zoom_level, 4))
-      |> assign(:xl_grid_size, get_grid_size.(assigns.zoom_level, 4))
-      |> assign(:_2xl_grid_size, get_grid_size.(assigns.zoom_level, 6))
-
     ~H"""
     <div class="p-2 lg:p-6 ">
       <ul class={"grid gap-2 lg:gap-4
-      #{@grid_size}
-      md:#{@md_grid_size}
-      lg:#{@lg_grid_size}
-      xl:#{@xl_grid_size}
-      2xl:#{@_2xl_grid_size}"}>
+      #{get_grid_size(@zoom_level, 1)}
+      md:#{get_grid_size(@zoom_level, 2)}
+      lg:#{get_grid_size(@zoom_level, 4)}
+      xl:#{get_grid_size(@zoom_level, 4)}
+      2xl:#{get_grid_size(@zoom_level, 6)}"}>
         <%= for photo <- @photos do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
@@ -479,6 +514,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
+  defp get_grid_size(zoom_level, base_size) do
+    size = clamp(base_size - zoom_level, 1, 9)
+    "grid-cols-#{size}"
+  end
+
   attr(:photo, :map, required: true)
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
@@ -495,9 +535,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
       <:item title="Image" class="w-full lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
-        <.link class="w-full block" href={ImageUploader.url({@photo.image, @photo}, :original)} target="_blank">
-          <img class="object-contain w-full max-h-[40vh] aspect-square" img={@photo.name} src={ImageUploader.url({@photo.image, @photo}, :small)} />
-        </.link>
+        <button
+          class="relative w-full max-h-[40vh] aspect-square group"
+          phx-click={show_modal("expanded_photo")}
+        >
+          <img
+            class="object-contain w-full h-full aspect-square"
+            alt={@photo.name}
+            src={ImageUploader.url({@photo.image, @photo}, :small)}
+          />
+          <div class="absolute top-0 right-2 lg:p-3 flex-none opacity-30 lg:opacity-20 group-hover:opacity-40 text-zinc-500">
+            <.icon name="hero-arrows-pointing-out" class="h-6 w-6 group-hover:h-7 group-hover:w-7" />
+          </div>
+        </button>
       </:item>
       <:item title="Folder" :if={@is_admin}>
         <.link
