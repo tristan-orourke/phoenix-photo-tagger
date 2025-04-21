@@ -14,3 +14,7 @@ h2 {
 .content-visible-auto {
    content-visibility: auto;
 }
+
+.contain-strict {
+   contain: size layout style;
+}

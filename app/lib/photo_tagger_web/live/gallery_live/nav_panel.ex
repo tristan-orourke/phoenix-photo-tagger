@@ -102,7 +102,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
             <%= if @selected_index != nil do %>
               <%= for tag <- Map.get(@indexed_tags, @selected_index) do %>
                 <%= if tag in @current_tags or tag in @recommended_nav_tags do %>
-                  <li class="mr-2 content-visible-auto">
+                  <li class="mr-2 contain-strict">
                     <.toggle_button
                       selected={tag in @current_tags}
                       phx-click="toggle_tag"
@@ -112,7 +112,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
                     </.toggle_button>
                   </li>
                 <% else %>
-                  <li class="mr-2 content-visible-auto">
+                  <li class="mr-2 contain-strict">
                     <button
                       class="underline text-blue-600 hover:text-blue-800 mr-2"
                       phx-click="link_tag"
