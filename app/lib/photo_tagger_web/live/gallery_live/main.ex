@@ -16,10 +16,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <div class="h-full">
       <div class="flex flex-row gap-4 h-full">
-        <div id="tags-section" class="shrink basis-0 overflow-y-auto">
+        <div id="tags-section" class="shrink basis-2/7 lg:basis-1/7 overflow-y-auto">
           <.live_component
               id="nav-panel"
               module={PhotoTaggerWeb.GalleryLive.NavPanel}
+              folder={@folder}
+              all_folders={@all_folders}
               nav_tags={@nav_tags}
               recommended_tags={@recommended_tags}
               current_tags={@tags}
@@ -29,10 +31,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <%!-- selected_photo_ids={@selected_photo_ids} --%>
               <%!-- folder={@folder} --%>
         </div>
-        <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-2/7 overflow-y-auto">
+        <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-4/7 overflow-y-auto">
           <.gallery_header
             folder={@folder}
-            all_folders={@all_folders}
             tags={@tags}
             item_count={Enum.count(@filtered_photos)}
             multiselect_active={@multiselect_active}
@@ -383,7 +384,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   attr(:folder, :string, default: nil)
-  attr(:all_folders, :list, required: true)
   attr(:tags, :list, default: [])
   attr(:item_count, :integer, required: true)
   attr(:multiselect_active, :boolean, required: true)
@@ -396,27 +396,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     ~H"""
     <div class="md:flex sticky top-0 bg-white z-50">
-      <div class="flex-grow pb-1">
+      <nav aria-label="Breadcrumb" class="flex-grow pb-1">
         <ul class="flex flex-wrap items-center">
-          <li>
-            <%!-- <.icon name="hero-folder" class="hidden md:inline"/> --%>
-            <span class="hidden md:inline">Folder:</span>
-            <form class="inline" phx-change="change_folder">
-              <select value={@folder} name="folder" id="folder-select"  class="ml-2 mr-2">
-                <option value="">All folders</option>
-                <%= for folder <- @all_folders do %>
-                  <option value={folder} selected={@folder == folder}>
-                    {folder}
-                  </option>
-                <% end %>
-              </select>
-            </form>
+          <li class="align-middle pr-2">
+            <.icon name="hero-folder" class=" w-4 h-4 lg:w-5 lg:h-5"/>
+            <.link
+              aria-current={if(length(@breadcrumb_tags) == 0, do: "page", else: "false")}
+              patch={Util.build_url(@folder, [], [], @is_admin)}
+            >
+              {@folder}
+            </.link>
           </li>
-          <%= for [tag | _] = tags <- @breadcrumb_tags do %>
+          <%= for {[tag | _] = tags, index} <- Enum.with_index(@breadcrumb_tags) do %>
             <li class="">
               <.icon name="hero-chevron-right" class="hero-chevron-right-mini lg:hero-chevron-right w-4 h-4 lg:w-5 lg:h-5"/>
               <.link
-                class=""
+                aria-current={if(index == length(@breadcrumb_tags) - 1, do: "page", else: "false")}
                 patch={Util.build_url(@folder, [], Enum.reverse(tags), @is_admin)}
               >
                 #{tag}
@@ -424,7 +419,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             </li>
           <% end %>
         </ul>
-      </div>
+      </nav>
       <div class="flex-none pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center">
         <div class="flex-none pr-3">
           <.button class="p-1 flex items-center" phx-click="zoom_out">
