@@ -79,7 +79,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
             </ul>
           <% end %>
           <h3 class="text-sm font-bold">All tags</h3>
-          <ul id="index-selectors" class="flex flex-wrap my-2">
+          <ul id="index-selectors" class="flex flex-wrap my-2 sticky top-0">
             <%= for {index, tags} <- Enum.sort(@indexed_tags) do %>
               <li>
                 <%= if Enum.empty?(tags) do %>
