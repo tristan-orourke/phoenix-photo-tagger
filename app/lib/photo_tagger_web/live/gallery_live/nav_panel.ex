@@ -44,6 +44,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
         <h2 class="">Tags</h2>
         <nav class="my-2 pl-2 list-none">
           <%= if not Enum.empty?(@current_tags) do %>
+            <h3 class="text-sm font-bold">Current tags</h3>
             <ul class="my-2">
               <%= for tag <- @current_tags do %>
                 <li class="mr-2">
@@ -62,6 +63,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
             and (@max_recommended_tags < 0
             or Enum.count(@recommended_nav_tags) <= @max_recommended_tags)
           do %>
+            <h3 class="text-sm font-bold">Recommended tags</h3>
             <ul class="my-2">
               <%= for tag <- @recommended_nav_tags do %>
                 <li class="mr-2">
@@ -76,7 +78,8 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
               <% end %>
             </ul>
           <% end %>
-          <ul id="index-selecors" class="flex flex-wrap mb-2">
+          <h3 class="text-sm font-bold">All tags</h3>
+          <ul id="index-selectors" class="flex flex-wrap my-2">
             <%= for {index, tags} <- Enum.sort(@indexed_tags) do %>
               <li>
                 <%= if Enum.empty?(tags) do %>
@@ -95,33 +98,33 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
               </li>
             <% end %>
           </ul>
-          <%= if @selected_index != nil do %>
-            <%= for tag <- Map.get(@indexed_tags, @selected_index) do %>
-              <ul>
-              <%= if tag in @current_tags or tag in @recommended_nav_tags do %>
-                <li class="mr-2 content-visible-auto">
-                  <.toggle_button
-                    selected={tag in @current_tags}
-                    phx-click="toggle_tag"
-                    phx-value-tag={tag}
-                  >
-                    {tag}
-                  </.toggle_button>
-                </li>
-              <% else %>
-                <li class="mr-2 content-visible-auto">
-                  <button
-                    class="underline text-blue-600 hover:text-blue-800 mr-2"
-                    phx-click="link_tag"
-                    phx-value-tag={tag}
-                  >
-                    {tag}
-                  </button>
-                </li>
+          <ul class="pb-96">
+            <%= if @selected_index != nil do %>
+              <%= for tag <- Map.get(@indexed_tags, @selected_index) do %>
+                <%= if tag in @current_tags or tag in @recommended_nav_tags do %>
+                  <li class="mr-2 content-visible-auto">
+                    <.toggle_button
+                      selected={tag in @current_tags}
+                      phx-click="toggle_tag"
+                      phx-value-tag={tag}
+                    >
+                      {tag}
+                    </.toggle_button>
+                  </li>
+                <% else %>
+                  <li class="mr-2 content-visible-auto">
+                    <button
+                      class="underline text-blue-600 hover:text-blue-800 mr-2"
+                      phx-click="link_tag"
+                      phx-value-tag={tag}
+                    >
+                      {tag}
+                    </button>
+                  </li>
+                <% end %>
               <% end %>
-              </ul>
             <% end %>
-          <% end %>
+          </ul>
         </nav>
       <% end %>
     </div>
