@@ -404,7 +404,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               aria-current={if(length(@breadcrumb_tags) == 0, do: "page", else: "false")}
               patch={Util.build_url(@folder, [], [], @is_admin)}
             >
-              {@folder}
+              {@folder || "All folders"}
             </.link>
           </li>
           <%= for {[tag | _] = tags, index} <- Enum.with_index(@breadcrumb_tags) do %>
