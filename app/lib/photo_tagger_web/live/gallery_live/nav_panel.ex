@@ -59,28 +59,9 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
               <% end %>
             </ul>
           <% end %>
-          <%= if not Enum.empty?(@recommended_nav_tags)
-            and (@max_recommended_tags < 0
-            or Enum.count(@recommended_nav_tags) <= @max_recommended_tags)
-          do %>
-            <h3 class="text-sm font-bold">Recommended tags</h3>
-            <ul class="my-2">
-              <%= for tag <- @recommended_nav_tags do %>
-                <li class="mr-2">
-                  <.toggle_button
-                    selected={tag in @current_tags}
-                    phx-click="toggle_tag"
-                    phx-value-tag={tag}
-                  >
-                    {tag}
-                  </.toggle_button>
-                </li>
-              <% end %>
-            </ul>
-          <% end %>
           <h3 class="text-sm font-bold">All tags</h3>
-          <ul id="index-selectors" class="flex flex-wrap my-2 sticky top-0">
-            <%= for {index, tags} <- Enum.sort(@indexed_tags) do %>
+          <ul id="index-selectors" class="flex flex-wrap my-2 sticky top-0 bg-white z-10">
+            <%= for {index, tags} <- Enum.sort_by(@indexed_tags, &index_sort_mapper/1) do %>
               <li>
                 <%= if Enum.empty?(tags) do %>
                   {index}
@@ -102,7 +83,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
             <%= if @selected_index != nil do %>
               <%= for tag <- Map.get(@indexed_tags, @selected_index) do %>
                 <%= if tag in @current_tags or tag in @recommended_nav_tags do %>
-                  <li class="mr-2 contain-strict">
+                  <li class="mr-2">
                     <.toggle_button
                       selected={tag in @current_tags}
                       phx-click="toggle_tag"
@@ -112,7 +93,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
                     </.toggle_button>
                   </li>
                 <% else %>
-                  <li class="mr-2 contain-strict">
+                  <li class="mr-2">
                     <button
                       class="underline text-blue-600 hover:text-blue-800 mr-2"
                       phx-click="link_tag"
@@ -154,6 +135,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
           "#"
         end
       end)
+      |> Map.put("Recommended", assigns.recommended_tags)
 
     index = case assigns.folder != Map.get(socket.assigns, :folder, nil) do
         true ->
@@ -192,5 +174,14 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
     |> String.normalize(:nfkd)
     # Remove diacritical marks (Unicode "Mark, Nonspacing")
     |> String.replace(~r/\p{Mn}/u, "")
+  end
+
+  defp index_sort_mapper({index, _}) do
+    if (String.length(index) > 1) do
+      # Ensure that words are sorted after single characters
+      "Z_" <> index
+    else
+      index
+    end
   end
 end
