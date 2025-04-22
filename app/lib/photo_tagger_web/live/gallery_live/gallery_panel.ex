@@ -10,7 +10,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
 
   def render(assigns) do
     ~H"""
-    <div class="p-2 lg:p-6 ">
+    <div class="p-2 lg:p-6 will-change-auto hover:will-change-scroll">
       <ul class={"grid gap-2 lg:gap-4
       #{@grid_size}
       md:#{@md_grid_size}
