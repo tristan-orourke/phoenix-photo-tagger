@@ -18,29 +18,27 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       <div class="absolute top-4 left-4 text-sm">
         <ul>
           <li :for={tag <- @tags} class={case {tag in @photo_tags, tag in @prev_photo_tags} do
-              {true, true} -> "h-5"
-              {true, false} -> "h-5 new-tag hidden"
-              {false, true} -> "h-5 old-tag"
-              {false, false} -> "h-5"
+              {true, true} -> "h-6"
+              {true, false} -> "h-6 new-tag"
+              {false, true} -> "h-6 old-tag"
+              {false, false} -> "h-6"
             end}
             id={"tag-#{tag}"}
             data-hide={
               #JS.add_class("opacity-0", to: "#tag-#{tag} > p")
-            JS.hide(
+            JS.transition({"transition-all transform ease-out duration-1000",
+                "h-6 opacity-100",
+                "h-0 opacity-0"},
               to: "#tag-#{tag}",
               time: 1000,
-              transition:
-                {"transition-all transform ease-out duration-1000",
-                "h-5 opacity-100",
-                "h-0 opacity-0"}
+
             )}
-            data-show={JS.show(
-              to: "#tag-#{tag}",
-              time: 1000,
-              transition:
-                {"transition-all transform ease-in duration-1000",
+            data-show={JS.transition(
+                {"transition-all transform ease-out duration-1000",
                 "h-0 opacity-0",
-                "h-5 opacity-100"}
+                "h-6 opacity-100"},
+              to: "#tag-#{tag}",
+              time: 1000
             )}
             phx-click={JS.exec("data-hide")}
           >
