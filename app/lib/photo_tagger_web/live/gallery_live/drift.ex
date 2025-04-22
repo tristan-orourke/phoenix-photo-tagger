@@ -56,7 +56,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
         >
           <.icon name="hero-clock" class="w-5 h-5" />
           {case @interval_ms do
-            1000 -> "1s"
+            2000 -> "2s"
             5000 -> "5s"
             10000 -> "10s"
             15000 -> "15s"
@@ -215,10 +215,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   def handle_event("increase_tempo", _, socket) do
     new_interval_ms =
       case socket.assigns.interval_ms do
-        1000 -> 5000
+        2000 -> 5000
         5000 -> 10000
         10000 -> 15000
-        15000 -> 1000
+        15000 -> 2000
         _ -> 5000
       end
 
