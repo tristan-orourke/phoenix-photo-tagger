@@ -209,7 +209,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
         0
       end
 
-    1 + folder_score * 5 + tag_score * 10 + focus_score * 100
+    1 + folder_score * 5 + tag_score * 10 + focus_score * 200
   end
 
   def handle_event("increase_tempo", _, socket) do
