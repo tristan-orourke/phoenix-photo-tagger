@@ -717,6 +717,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
         </.form>
       </:item>
+      <:item title="Drift">
+        <.link
+          class="text-blue-600 hover:text-blue-800"
+          patch={Util.build_url(@folder, [@photo.id], @tags, @is_admin, "drift")}
+        >
+          drift<.icon name="hero-arrow-up-right" class="w-3 h-3 ml-1" />
+        </.link>
+      </:item>
     </.list>
     """
   end
