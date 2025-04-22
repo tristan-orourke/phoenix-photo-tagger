@@ -104,9 +104,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :original)}
               />
-              <div class="absolute top-4 left-4 text-sm">
-                <ul>
-                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-min text-sm">
+              <div class="flex justify-center">
+                <ul class="flex flex-row items-center flex-wrap">
+                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 m-1 w-min text-sm">
                     #{tag.name}
                   </li>
                 </ul>
