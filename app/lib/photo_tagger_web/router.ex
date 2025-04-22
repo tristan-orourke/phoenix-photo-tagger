@@ -30,8 +30,10 @@ defmodule PhotoTaggerWeb.Router do
     live "/folders/:folder", GalleryLive.Main, :public
     live "/folders/:folder/photos", GalleryLive.Main, :public
     live "/folders/:folder/photos/:photo_id", GalleryLive.Main, :public
+    live "/folders/:folder/photos/:photo_id/drift", GalleryLive.Drift, :folder
     live "/photos", GalleryLive.Main, :public
     live "/photos/:photo_id", GalleryLive.Main, :public
+    live "/photos/:photo_id/drift", GalleryLive.Drift, :all_folders
   end
 
   scope "/admin", PhotoTaggerWeb do
