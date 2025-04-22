@@ -721,7 +721,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Drift">
         <.link
           class="text-blue-600 hover:text-blue-800"
-          patch={Util.build_url(@folder, [@photo.id], @tags, @is_admin, "drift")}
+          patch={Util.build_url(@folder, [@photo.id], @tags, false, "drift")}
         >
           drift<.icon name="hero-arrow-up-right" class="w-3 h-3 ml-1" />
         </.link>

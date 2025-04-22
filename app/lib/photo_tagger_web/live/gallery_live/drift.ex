@@ -42,7 +42,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
             )}
           >
             <p class="data-[attention]:ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800
-              bg-white data-[attention]:bg-cyan-100 rounded-full px-1 text-sm"
+              bg-white data-[attention]:bg-cyan-100 rounded-full px-1 w-max text-sm"
               data-attention={tag == @focus_tag}
             >
               #{tag}
