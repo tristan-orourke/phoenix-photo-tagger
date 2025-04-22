@@ -97,7 +97,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <%= case @selected_photos do %>
           <% [photo] -> %>
             <div
-              class="lg:h-full p-2"
+              class="lg:h-full p-2 flex items-center justify-center"
               phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
             >
               <img
@@ -107,7 +107,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               />
               <div class="absolute top-4 left-4 text-sm">
                 <ul>
-                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-min text-sm">
+                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-fit text-sm">
                     #{tag.name}
                   </li>
                 </ul>
