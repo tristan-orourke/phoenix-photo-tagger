@@ -40,7 +40,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
               to: "#tag-#{tag}",
               time: 1000
             )}
-            phx-click={JS.exec("data-hide")}
           >
             <p class="shadow-zinc-700/10 ring-zinc-800 ring-1 shadow-2xl
             bg-white rounded-full px-1 w-min text-sm">
