@@ -132,7 +132,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   end
 
   def handle_event("switch_photos", _, socket) do
-    switch_photos(socket)
+    start_timer(socket, socket.assigns.interval_ms)
+    |> switch_photos()
   end
 
   def switch_photos(socket) do
@@ -152,9 +153,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
 
     focus_tag =
       case {focus_tag in new_photo_tags, Enum.empty?(new_photo_tags)} do
-        {true, _} -> focus_tag # keep the same focus tag if possible
-        {false, false} -> Enum.random(new_photo_tags) # otherwise pick a new one
-        {false, true} -> nil # or lose focus if nothing to focus on
+        # keep the same focus tag if possible
+        {true, _} -> focus_tag
+        # otherwise pick a new one
+        {false, false} -> Enum.random(new_photo_tags)
+        # or lose focus if nothing to focus on
+        {false, true} -> nil
       end
 
     # Save the new photo
