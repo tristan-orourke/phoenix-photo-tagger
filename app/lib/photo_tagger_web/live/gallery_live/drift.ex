@@ -22,23 +22,55 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
           </li>
         </ul>
       </div>
+      <div class="absolute top-4 right-4 text-sm">
+        <.button
+          phx-click="increase_tempo"
+        >
+          <.icon name="hero-clock" class="w-5 h-5" />
+          {case @interval_ms do
+            1000 -> "1s"
+            5000 -> "5s"
+            10000 -> "10s"
+            15000 -> "15s"
+            _ -> ""
+          end}
+        </.button>
+      </div>
     </div>
     """
   end
 
   def mount(_params, _session, socket) do
-    if connected?(socket), do: :timer.send_interval(5 * 1000, self(), :switch_photos)
+    interval_ms = 5*1000
 
-    {:ok, socket}
+    {:ok, socket |> start_timer(interval_ms)}
   end
 
   def handle_params(params, _session, socket) do
     folder = Map.get(params, "folder", nil)
-    {:ok, photo_id} = Map.fetch(params, "photo_id")
 
+    {:ok, photo_id} = Map.fetch(params, "photo_id")
     photo = Gallery.get_photo!(String.to_integer(photo_id)) |> Repo.preload(:tags)
 
+    socket = if Map.has_key?(params, "tempo") and params["tempo"] != socket.assigns.interval_ms do
+      socket |> start_timer(String.to_integer(params["tempo"]))
+    else
+      socket
+    end
+
     {:noreply, socket |> assign(:photo, photo) |> assign(:folder, folder)}
+  end
+
+  def start_timer(socket, interval_ms) do
+    if (Map.get(socket.assigns, :timer_ref) != nil) do
+      {:ok, _} = :timer.cancel(socket.assigns.timer_ref)
+    end
+
+    {:ok, timer_ref} = case connected?(socket) do
+      true -> :timer.send_interval(interval_ms, self(), :switch_photos)
+      false -> {:ok, nil}
+    end
+    assign(socket, :timer_ref, timer_ref) |> assign(:interval_ms, interval_ms)
   end
 
   def handle_info(:switch_photos, socket) do
@@ -86,5 +118,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       |> length()
 
     folder_score + tag_score
+  end
+
+  def handle_event("increase_tempo", _, socket) do
+    new_interval_ms = case socket.assigns.interval_ms do
+      1000 -> 5000
+      5000 -> 10000
+      10000 -> 15000
+      15000 -> 1000
+      _ -> 5000
+    end
+
+    {:noreply, socket |> start_timer(new_interval_ms)}
   end
 end
