@@ -93,14 +93,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
       </div>
       <.modal id="expanded_photo">
-        <div class="min-w-3xl p-4 sm:p-6 lg:py-8 w-full min-h-screen lg:h-screen flex items-center justify-center">
+        <div class="w-full min-h-screen lg:h-screen flex items-center justify-center">
         <%= case @selected_photos do %>
           <% [photo] -> %>
             <div
+              class="lg:h-full p-2"
               phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
             >
               <img
-                class="object-contain w-full max-w-full lg:max-h-full"
+                class="object-contain max-w-full lg:max-h-full"
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :original)}
               />
