@@ -93,20 +93,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
       </div>
       <.modal id="expanded_photo">
-        <div class="min-w-3xl p-4 sm:p-6 lg:py-8 w-full min-h-screen lg:h-screen flex items-center justify-center">
+        <div class="w-full min-h-screen lg:h-screen flex items-center justify-center">
         <%= case @selected_photos do %>
           <% [photo] -> %>
             <div
+              class="lg:h-full p-2"
               phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
             >
               <img
-                class="object-contain w-full max-w-full lg:max-h-full"
+                class="object-contain max-w-full lg:max-h-full"
                 alt={photo.name}
                 src={ImageUploader.url({photo.image, photo}, :original)}
               />
               <div class="absolute top-4 left-4 text-sm">
                 <ul>
-                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 md:ring-2 rounded-full p-1 m-2 md:p-2 w-min text-sm md:text-base">
+                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-min text-sm">
                     #{tag.name}
                   </li>
                 </ul>
@@ -716,6 +717,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <input class="hidden" type="text" name="photo_id" value={@photo.id} />
           <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
         </.form>
+      </:item>
+      <:item title="Drift">
+        <.link
+          class="text-blue-600 hover:text-blue-800"
+          patch={Util.build_url(@folder, [@photo.id], @tags, @is_admin, "drift")}
+        >
+          drift<.icon name="hero-arrow-up-right" class="w-3 h-3 ml-1" />
+        </.link>
       </:item>
     </.list>
     """
