@@ -27,6 +27,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   end
 
   def mount(_params, _session, socket) do
+    if connected?(socket), do: :timer.send_interval(5 * 1000, self(), :switch_photos)
+
     {:ok, socket}
   end
 
@@ -39,13 +41,25 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
     {:noreply, socket |> assign(:photo, photo) |> assign(:folder, folder)}
   end
 
+  def handle_info(:switch_photos, socket) do
+    # Get the current photo and folder from the socket
+    photo = socket.assigns.photo
+    folder = socket.assigns.folder
+
+    # Pick a new photo based on the current one
+    new_photo = pick_next_photo(photo, folder)
+
+    # Save the new photo
+    {:noreply, socket |> assign(:photo, new_photo)}
+  end
+
   # NOTE: this is an expensive operation, and should be done in a background job
   def pick_next_photo(photo, folder) do
     # Get all photos in our selection, excluding the current one
     photos =
       case folder do
         nil -> Gallery.list_photos()
-        folder -> Gallery.list_photos_in_folder(folder)
+        folder -> Gallery.list_photos_by_folder(folder)
       end
       |> Enum.reject(&(&1.id == photo.id))
       |> Repo.preload(:tags)
