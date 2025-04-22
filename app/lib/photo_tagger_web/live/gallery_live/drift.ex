@@ -17,7 +17,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       />
       <div class="absolute top-4 left-4 text-sm">
         <ul>
-          <li :for={tag <- @photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 md:ring-2 rounded-full p-1 m-2 md:p-2 w-min text-sm md:text-base">
+          <li :for={tag <- @photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-min text-sm">
             #{tag.name}
           </li>
         </ul>
