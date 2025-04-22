@@ -41,8 +41,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
               time: 1000
             )}
           >
-            <p class="shadow-zinc-700/10 ring-zinc-800 ring-1 shadow-2xl
-            bg-white rounded-full px-1 w-min text-sm">
+            <p class="data-[attention]:ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800
+              bg-white data-[attention]:bg-cyan-100 rounded-full px-1 w-min text-sm"
+              data-attention={tag == @focus_tag}
+            >
               #{tag}
             </p>
           </li>
@@ -95,12 +97,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       |> Enum.uniq()
       |> Enum.sort()
 
+    focus_tag =
+      case Enum.empty?(photo_tags) do
+        true -> nil
+        false -> Enum.random(photo_tags)
+      end
+
     {:noreply,
      socket
      |> assign(:photo, photo)
      |> assign(:folder, folder)
      |> assign(:tags, tags)
      |> assign(:photo_tags, photo_tags)
+     |> assign(:focus_tag, focus_tag)
      |> push_event("show", %{selector: ".new-tag"})}
   end
 
@@ -130,15 +139,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
     # Get the current photo and folder from the socket
     photo = socket.assigns.photo
     folder = socket.assigns.folder
+    focus_tag = socket.assigns.focus_tag
 
     # Pick a new photo based on the current one
-    new_photo = pick_next_photo(photo, folder)
+    new_photo = pick_next_photo(photo, folder, focus_tag)
     new_photo_tags = Enum.map(new_photo.tags, & &1.name)
 
     tags =
       (new_photo_tags ++ socket.assigns.photo_tags)
       |> Enum.uniq()
       |> Enum.sort()
+
+    focus_tag =
+      case {focus_tag in new_photo_tags, Enum.empty?(new_photo_tags)} do
+        {true, _} -> focus_tag # keep the same focus tag if possible
+        {false, false} -> Enum.random(new_photo_tags) # otherwise pick a new one
+        {false, true} -> nil # or lose focus if nothing to focus on
+      end
 
     # Save the new photo
     {:noreply,
@@ -147,12 +164,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
      |> assign(:photo, new_photo)
      |> assign(:photo_tags, new_photo_tags)
      |> assign(:tags, tags)
+     |> assign(:focus_tag, focus_tag)
      |> push_event("show", %{selector: ".new-tag"})
      |> push_event("hide", %{selector: ".old-tag"})}
   end
 
   # NOTE: this is an expensive operation, and should be done in a background job
-  def pick_next_photo(photo, folder) do
+  def pick_next_photo(photo, folder, focus) do
     # Get all photos in our selection, excluding the current one
     photos =
       case folder do
@@ -165,7 +183,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
     # Get the similarity scores for each photo, and build a weighted list
     weighted_list =
       photos
-      |> Enum.map(fn p -> {p, similarity_score(photo, p)} end)
+      |> Enum.map(fn p -> {p, similarity_score(photo, p, focus)} end)
       |> WeightedList.new()
 
     # Sample a photo from the weighted list
@@ -173,7 +191,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   end
 
   # One point for sharing the same folder. One point for each tag in common.
-  def similarity_score(photo1, photo2) do
+  def similarity_score(photo1, photo2, focus_tag \\ nil) do
     folder_score = if photo1.folder == photo2.folder, do: 1, else: 0
 
     tags1 = Enum.map(photo1.tags, & &1.id)
@@ -184,7 +202,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       |> Enum.filter(&(&1 in tags2))
       |> length()
 
-    1 + folder_score * 5 + tag_score * 10
+    focus_score =
+      if focus_tag != nil and focus_tag in tags1 and focus_tag in tags2 do
+        1
+      else
+        0
+      end
+
+    1 + folder_score * 5 + tag_score * 10 + focus_score * 100
   end
 
   def handle_event("increase_tempo", _, socket) do
