@@ -10,10 +10,11 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
   attr(:is_selected, :boolean, default: false)
   attr(:collapse_groups, :boolean, default: false)
   attr(:is_admin, :boolean, default: false)
+  attr(:bg_colour, :string, default: nil)
 
   def render(assigns) do
     ~H"""
-    <li class="aspect-square">
+    <li class={"aspect-square p-1 lg:p-2 #{if(@bg_colour != nil and !@collapse_groups, do: "bg-#{@bg_colour}-200", else: "")}"}>
       <button
         id={"gallery-photo-button-#{@photo_id}"}
         class="h-full w-full relative block
@@ -32,8 +33,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
           src={@photo_image_url}
         />
         <%= if @collapse_groups and @photo_group do %>
-          <div class="w-full h-full -z-10 absolute left-1 bottom-1 bg-gray-500" />
-          <div class="w-full h-full -z-20 absolute left-2 bottom-2 bg-gray-400" />
+          <div class={"w-full h-full -z-10 absolute left-1 bottom-1 bg-#{@bg_colour}-500"} />
+          <div class={"w-full h-full -z-20 absolute left-2 bottom-2 bg-#{@bg_colour}-400"} />
         <% end %>
       </button>
     </li>

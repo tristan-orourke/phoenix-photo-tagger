@@ -470,6 +470,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:is_admin, :boolean, required: true)
 
   def gallery(assigns) do
+    groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
+    colours = [
+      "red",
+      "orange",
+      "yellow",
+      "lime",
+      "emerald",
+      "cyan",
+      "blue",
+      "fuchsia",
+    ]
+    n_colours = 1..(length(groups)) |> Enum.map(&Enum.at(colours, rem(&1, length(colours))))
+    assigns = assign(assigns, :group_colours, Enum.zip(groups, n_colours) |> Enum.into(%{}))
+
     assigns =
       case assigns.collapse_groups do
         false ->
@@ -490,7 +504,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     ~H"""
     <div class="p-2 lg:p-6 ">
-      <ul class={"grid gap-2 lg:gap-4
+      <ul class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
       lg:#{get_grid_size(@zoom_level, 4)}
@@ -508,6 +522,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             is_selected={photo.id in @selected_photo_ids}
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}
+            bg_colour={
+              if(photo.group != nil, do: @group_colours[photo.group], else: nil)
+            }
           />
         <% end %>
       </ul>
