@@ -487,7 +487,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assigns =
       case assigns.collapse_groups do
         false ->
-          assigns
+          # Ensure photos in a group appear next to each other, without otherwise changing the order.
+          # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
+          group_header_positions = Enum.map(groups,
+              fn group ->
+                {group, Enum.find_index(assigns.photos, &(&1.group == group))}
+              end
+          ) |> Enum.into(%{})
+          assign(
+            assigns,
+            :photos,
+            assigns.photos
+            |> Enum.with_index()
+            |> Enum.sort_by(fn {photo, index} ->
+              case photo.group do
+                nil -> {index, 0}
+                group -> {group_header_positions[group] || index, index}
+              end
+            end)
+            |> Enum.map(fn {photo, _index} -> photo end)
+          )
 
         true ->
           grouped_photos = Enum.group_by(assigns.photos, & &1.group)
