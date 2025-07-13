@@ -537,7 +537,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <%!-- On medium screens and above, sticky the image section to the top --%>
       <:item title="Image" class="w-full lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
         <button
-          class="relative w-full max-h-[40vh] aspect-square group"
+          class="relative w-full max-h-[40vh] square-image group"
           phx-click={show_modal("expanded_photo")}
         >
           <img

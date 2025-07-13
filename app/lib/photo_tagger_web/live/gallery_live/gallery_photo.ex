@@ -16,7 +16,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
     <li class="aspect-square">
       <button
         id={"gallery-photo-button-#{@photo_id}"}
-        class="h-full w-full relative block
+        class="relative block
+          square-image
           data-[selected]:outline
           outline-4 outline-offset-2 outline-blue-400
           phx-click-loading:outline phx-click-loading:outline-blue-200"
@@ -27,7 +28,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       >
         <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
         <img
-          class="w-full h-full aspect-square object-cover"
+          class="aspect-square object-cover"
           alt={@photo_name}
           src={@photo_image_url}
         />
