@@ -471,29 +471,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery(assigns) do
     groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
-    colours = [
-      "red",
-      "orange",
-      "yellow",
-      "lime",
-      "emerald",
-      "cyan",
-      "blue",
-      "fuchsia",
-    ]
-    n_colours = 1..(length(groups)) |> Enum.map(&Enum.at(colours, rem(&1, length(colours))))
-    assigns = assign(assigns, :group_colours, Enum.zip(groups, n_colours) |> Enum.into(%{}))
 
     assigns =
       case assigns.collapse_groups do
         false ->
           # Ensure photos in a group appear next to each other, without otherwise changing the order.
           # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
-          group_header_positions = Enum.map(groups,
+          group_header_positions =
+            Enum.map(
+              groups,
               fn group ->
                 {group, Enum.find_index(assigns.photos, &(&1.group == group))}
               end
-          ) |> Enum.into(%{})
+            )
+            |> Enum.into(%{})
+
           assign(
             assigns,
             :photos,
@@ -522,14 +514,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     ~H"""
-    <div class="p-2 lg:p-6 ">
+    <div class="p-2 lg:p-6">
       <ul class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
       lg:#{get_grid_size(@zoom_level, 4)}
       xl:#{get_grid_size(@zoom_level, 4)}
       2xl:#{get_grid_size(@zoom_level, 6)}"}>
-        <%= for photo <- @photos do %>
+        <%= for {photo, index} <- Enum.with_index(@photos) do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
             id={photo.id}
@@ -541,8 +533,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             is_selected={photo.id in @selected_photo_ids}
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}
-            bg_colour={
-              if(photo.group != nil, do: @group_colours[photo.group], else: nil)
+            group_left={photo.group != nil and index > 0 and photo.group == Enum.at(@photos, index - 1).group}
+            group_right={
+              photo.group != nil and index < length(@photos) - 1 and photo.group == Enum.at(@photos, index + 1).group
             }
           />
         <% end %>

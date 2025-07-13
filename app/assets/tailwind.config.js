@@ -31,9 +31,6 @@ module.exports = {
       pattern: /grid-cols-[123456789]/, 
       variants: ['sm', 'md', 'lg', 'xl', '2xl'],
     },
-    {
-      pattern: /bg-(red|orange|yellow|lime|emerald|cyan|blue|fuchsia)-(200|400|500)/
-    }
   ],
   plugins: [
     require("@tailwindcss/forms"),
