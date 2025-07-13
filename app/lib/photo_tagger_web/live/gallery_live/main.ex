@@ -56,6 +56,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               photos={@filtered_photos}
               selected_photo_ids={@selected_photo_ids}
               collapse_groups={@collapse_groups}
+              collapse_group_exceptions={@collapse_group_exceptions}
               zoom_level={@zoom_level}
               is_admin={@is_admin}
             />
@@ -162,6 +163,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:nav_tags, all_tags)
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
+      |> assign(:collapse_group_exceptions, %{})
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false),
@@ -466,52 +468,42 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:photos, :list, required: true)
   attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
+  attr(:collapse_group_exceptions, :map, default: %{})
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
 
   def gallery(assigns) do
     groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
 
-    assigns =
-      case assigns.collapse_groups do
-        false ->
-          # Ensure photos in a group appear next to each other, without otherwise changing the order.
-          # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
-          group_header_positions =
-            Enum.map(
-              groups,
-              fn group ->
-                {group, Enum.find_index(assigns.photos, &(&1.group == group))}
-              end
-            )
-            |> Enum.into(%{})
+    # Filter out photos in collapse groups, excepting the first in any group
+    grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+    filtered_photos = Enum.filter(assigns.photos, fn photo ->
+       photo.group == nil or !Map.get(assigns.collapse_group_exceptions, photo.group, assigns.collapse_groups) or photo == List.first(grouped_photos[photo.group])
+      end)
+    group_header_positions =
+      Enum.map(
+        groups,
+        fn group ->
+          {group, Enum.find_index(filtered_photos, &(&1.group == group))}
+        end
+      )
+      |> Enum.into(%{})
 
-          assign(
-            assigns,
-            :photos,
-            assigns.photos
-            |> Enum.with_index()
-            |> Enum.sort_by(fn {photo, index} ->
-              case photo.group do
-                nil -> {index, 0}
-                group -> {group_header_positions[group] || index, index}
-              end
-            end)
-            |> Enum.map(fn {photo, _index} -> photo end)
-          )
-
-        true ->
-          grouped_photos = Enum.group_by(assigns.photos, & &1.group)
-
-          assign(
-            assigns,
-            :photos,
-            # Filter out photos that are in a group, excepting the first in any group
-            Enum.filter(assigns.photos, fn photo ->
-              photo.group == nil or photo == List.first(grouped_photos[photo.group])
-            end)
-          )
-      end
+    # Ensure photos in a group appear next to each other, without otherwise changing the order.
+    # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
+    assigns = assign(
+      assigns,
+      :photos,
+      filtered_photos
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {photo, index} ->
+        case photo.group do
+          nil -> {index, 0}
+          group -> {group_header_positions[group] || index, index}
+        end
+      end)
+      |> Enum.map(fn {photo, _index} -> photo end)
+    )
 
     ~H"""
     <div class="p-2 lg:p-6">
@@ -531,7 +523,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             photo_image={photo.image}
             photo_folder={photo.folder}
             is_selected={photo.id in @selected_photo_ids}
-            collapse_groups={@collapse_groups}
+            is_group_collapsed={Map.get(@collapse_group_exceptions, photo.group, @collapse_groups)}
+            is_group_topper={
+              photo.group != nil and
+                (index == 0 or photo.group != Enum.at(@photos, index - 1).group)
+            }
             is_admin={@is_admin}
             group_left={photo.group != nil and index > 0 and photo.group == Enum.at(@photos, index - 1).group}
             group_right={
@@ -1002,7 +998,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
-    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups)}
+    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups) |> assign(:collapse_group_exceptions, %{})}
+  end
+
+  def handle_event("toggle_collapse_single_group", %{"photo_group" => photo_group}, socket) do
+    {:noreply, assign(socket, :collapse_group_exceptions, Map.update(socket.assigns.collapse_group_exceptions, photo_group, !socket.assigns.collapse_groups, &(!&1)))}
   end
 
   # Holding ctrl while clicking a photo will select multiple
