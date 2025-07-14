@@ -869,7 +869,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <% end %>
           </ul>
         <% end %>
-        <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
+        <%!-- <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
           <div class="flex flex-wrap gap-2">
             <input
               type="text"
@@ -880,6 +880,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               value={if(Enum.count(@groups) == 1, do: Enum.at(@groups, 0), else: "")}
             />
             <.button type="submit">Submit</.button>
+          </div>
+        </.form> --%>
+        <.form phx-submit="form_group_from_selected">
+          <div class="flex flex-wrap gap-2">
+            <.button type="submit">Form group</.button>
           </div>
         </.form>
       </:item>
@@ -1105,6 +1110,28 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("set_group_bulk", %{"group" => group}, socket) do
     selected_photos = socket.assigns.selected_photos
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
+    end)
+
+    {:noreply,
+     socket
+     |> refresh_selected_photos()
+     |> refresh_filtered_photos()}
+  end
+
+  def handle_event("form_group_from_selected", _params, socket) do
+    selected_photos = socket.assigns.selected_photos
+
+    # If some of the selected photos have a group, and they all have the same group, use that group
+    # Otherwise, use the current timestamp as the group
+    existing_groups = Enum.map(selected_photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
+    group =
+      case existing_groups do
+        [single_group] -> single_group
+        _ -> DateTime.utc_now() |> DateTime.to_iso8601()
+      end
 
     Enum.each(selected_photos, fn photo ->
       {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
