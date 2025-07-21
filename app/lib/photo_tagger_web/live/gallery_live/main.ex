@@ -861,31 +861,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
       </:item>
       <:item title="Group">
-        <%= if Enum.count(@groups) > 1 do %>
-          <p>Photos belong to multiple groups:</p>
-          <ul class="list-disc list-inside mb-2">
-            <%= for group <- @groups do %>
-              <li>{if group != nil, do: group, else: "No group"}</li>
-            <% end %>
-          </ul>
-        <% end %>
-        <%!-- <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
-          <div class="flex flex-wrap gap-2">
-            <input
-              type="text"
-              name="group"
-              id="bulk_group_input"
-              Placeholder="group"
-              class="w-full max-w-40 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
-              value={if(Enum.count(@groups) == 1, do: Enum.at(@groups, 0), else: "")}
-            />
-            <.button type="submit">Submit</.button>
-          </div>
-        </.form> --%>
+        <p :if={Enum.count(@groups) > 1}>Photos belong to multiple groups:</p>
+        <ul class="list-disc list-inside mb-2">
+          <%= for group <- @groups do %>
+            <li>{if group != nil, do: group, else: "No group"}</li>
+          <% end %>
+        </ul>
         <.form phx-submit="form_group_from_selected">
           <div class="flex flex-wrap gap-2">
             <.button type="submit">Form group</.button>
           </div>
+        </.form>
+        <.form :if={Enum.count(@groups) > 0} class="pt-2" for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
+          <input
+            class="hidden"
+            type="text"
+            name="group"
+            id="bulk_group_input"
+            value=""
+          />
+          <.button type="submit">Ungroup</.button>
         </.form>
       </:item>
       <:item title="Delete">
