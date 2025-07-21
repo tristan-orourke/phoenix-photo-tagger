@@ -56,6 +56,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               photos={@filtered_photos}
               selected_photo_ids={@selected_photo_ids}
               collapse_groups={@collapse_groups}
+              collapse_group_exceptions={@collapse_group_exceptions}
               zoom_level={@zoom_level}
               is_admin={@is_admin}
             />
@@ -162,6 +163,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:nav_tags, all_tags)
       |> assign(:multiselect_active, false)
       |> assign(:collapse_groups, false)
+      |> assign(:collapse_group_exceptions, %{})
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false),
@@ -466,37 +468,52 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:photos, :list, required: true)
   attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
+  attr(:collapse_group_exceptions, :map, default: %{})
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
 
   def gallery(assigns) do
-    assigns =
-      case assigns.collapse_groups do
-        false ->
-          assigns
+    groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
 
-        true ->
-          grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+    # Filter out photos in collapse groups, excepting the first in any group
+    grouped_photos = Enum.group_by(assigns.photos, & &1.group)
+    filtered_photos = Enum.filter(assigns.photos, fn photo ->
+       photo.group == nil or !Map.get(assigns.collapse_group_exceptions, photo.group, assigns.collapse_groups) or photo == List.first(grouped_photos[photo.group])
+      end)
+    group_header_positions =
+      Enum.map(
+        groups,
+        fn group ->
+          {group, Enum.find_index(filtered_photos, &(&1.group == group))}
+        end
+      )
+      |> Enum.into(%{})
 
-          assign(
-            assigns,
-            :photos,
-            # Filter out photos that are in a group, excepting the first in any group
-            Enum.filter(assigns.photos, fn photo ->
-              photo.group == nil or photo == List.first(grouped_photos[photo.group])
-            end)
-          )
-      end
+    # Ensure photos in a group appear next to each other, without otherwise changing the order.
+    # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
+    assigns = assign(
+      assigns,
+      :photos,
+      filtered_photos
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {photo, index} ->
+        case photo.group do
+          nil -> {index, 0}
+          group -> {group_header_positions[group] || index, index}
+        end
+      end)
+      |> Enum.map(fn {photo, _index} -> photo end)
+    )
 
     ~H"""
-    <div class="p-2 lg:p-6 ">
-      <ul class={"grid gap-2 lg:gap-4
+    <div class="p-2 lg:p-6">
+      <ul class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
       lg:#{get_grid_size(@zoom_level, 4)}
       xl:#{get_grid_size(@zoom_level, 4)}
       2xl:#{get_grid_size(@zoom_level, 6)}"}>
-        <%= for photo <- @photos do %>
+        <%= for {photo, index} <- Enum.with_index(@photos) do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
             id={photo.id}
@@ -506,8 +523,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             photo_image={photo.image}
             photo_folder={photo.folder}
             is_selected={photo.id in @selected_photo_ids}
-            collapse_groups={@collapse_groups}
+            is_group_collapsed={Map.get(@collapse_group_exceptions, photo.group, @collapse_groups)}
+            is_group_topper={
+              photo.group != nil and
+                (index == 0 or photo.group != Enum.at(@photos, index - 1).group)
+            }
             is_admin={@is_admin}
+            group_left={photo.group != nil and index > 0 and photo.group == Enum.at(@photos, index - 1).group}
+            group_right={
+              photo.group != nil and index < length(@photos) - 1 and photo.group == Enum.at(@photos, index + 1).group
+            }
           />
         <% end %>
       </ul>
@@ -836,26 +861,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
       </:item>
       <:item title="Group">
-        <%= if Enum.count(@groups) > 1 do %>
-          <p>Photos belong to multiple groups:</p>
-          <ul class="list-disc list-inside mb-2">
-            <%= for group <- @groups do %>
-              <li>{if group != nil, do: group, else: "No group"}</li>
-            <% end %>
-          </ul>
-        <% end %>
-        <.form for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
+        <p :if={Enum.count(@groups) > 1}>Photos belong to multiple groups:</p>
+        <ul class="list-disc list-inside mb-2">
+          <%= for group <- @groups do %>
+            <li>{if group != nil, do: group, else: "No group"}</li>
+          <% end %>
+        </ul>
+        <.form phx-submit="form_group_from_selected">
           <div class="flex flex-wrap gap-2">
-            <input
-              type="text"
-              name="group"
-              id="bulk_group_input"
-              Placeholder="group"
-              class="w-full max-w-40 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
-              value={if(Enum.count(@groups) == 1, do: Enum.at(@groups, 0), else: "")}
-            />
-            <.button type="submit">Submit</.button>
+            <.button type="submit">Form group</.button>
           </div>
+        </.form>
+        <.form :if={Enum.count(@groups) > 0} class="pt-2" for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
+          <input
+            class="hidden"
+            type="text"
+            name="group"
+            id="bulk_group_input"
+            value=""
+          />
+          <.button type="submit">Ungroup</.button>
         </.form>
       </:item>
       <:item title="Delete">
@@ -973,7 +998,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
-    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups)}
+    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups) |> assign(:collapse_group_exceptions, %{})}
+  end
+
+  def handle_event("toggle_collapse_single_group", %{"photo_group" => photo_group}, socket) do
+    {:noreply, assign(socket, :collapse_group_exceptions, Map.update(socket.assigns.collapse_group_exceptions, photo_group, !socket.assigns.collapse_groups, &(!&1)))}
   end
 
   # Holding ctrl while clicking a photo will select multiple
@@ -1076,6 +1105,28 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("set_group_bulk", %{"group" => group}, socket) do
     selected_photos = socket.assigns.selected_photos
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
+    end)
+
+    {:noreply,
+     socket
+     |> refresh_selected_photos()
+     |> refresh_filtered_photos()}
+  end
+
+  def handle_event("form_group_from_selected", _params, socket) do
+    selected_photos = socket.assigns.selected_photos
+
+    # If some of the selected photos have a group, and they all have the same group, use that group
+    # Otherwise, use the current timestamp as the group
+    existing_groups = Enum.map(selected_photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
+    group =
+      case existing_groups do
+        [single_group] -> single_group
+        _ -> DateTime.utc_now() |> DateTime.to_iso8601()
+      end
 
     Enum.each(selected_photos, fn photo ->
       {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
