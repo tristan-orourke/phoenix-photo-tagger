@@ -21,17 +21,18 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       #{if(@group_right, do: "pr-1 lg:pr-2", else: "pr-1.5 lg:mr-0.5")}
       #{if(@photo_group != nil and !@is_group_collapsed, do: "bg-blue-200", else: "")}"}
 
-      >
+    >
       <div class="aspect-square w-full h-full">
-      <button :if={@is_group_topper} class="z-50 absolute w-8 h-8 right-0 top-0"
-        phx-click="toggle_collapse_single_group"
-        phx-value-photo_group={@photo_group}
-      >
-        <p>{if(@is_group_collapsed, do: "[+]", else: "[-]")}</p>
-      </button>
+        <button :if={@is_group_topper} class="z-50 absolute w-8 h-8 right-0 top-0"
+          phx-click="toggle_collapse_single_group"
+          phx-value-photo_group={@photo_group}
+        >
+          <p>{if(@is_group_collapsed, do: "[+]", else: "[-]")}</p>
+        </button>
         <button
           id={"gallery-photo-button-#{@photo_id}"}
           class="h-full w-full relative block
+            square-image
             data-[selected]:outline
             outline-4 outline-offset-2 outline-blue-400
             phx-click-loading:outline phx-click-loading:outline-blue-200"
