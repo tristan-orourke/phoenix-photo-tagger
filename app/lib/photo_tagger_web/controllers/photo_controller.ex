@@ -14,7 +14,8 @@ defmodule PhotoTaggerWeb.PhotoController do
 
   def new(conn, _params) do
     changeset = Gallery.new_photo_changeset(%Photo{})
-    render(conn, :new, changeset: changeset)
+    folders = Gallery.list_folders()
+    render(conn, :new, %{changeset: changeset, folders: folders})
   end
 
   def create(conn, %{"photo" => photo_params}) do

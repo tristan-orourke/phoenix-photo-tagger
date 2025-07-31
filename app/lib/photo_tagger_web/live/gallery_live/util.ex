@@ -1,5 +1,4 @@
 defmodule PhotoTaggerWeb.GalleryLive.Util do
-
   def build_url(folder, selected_photo_ids, tags, is_admin, tail \\ nil) do
     {photo_id, selected_photo_ids} =
       case selected_photo_ids do

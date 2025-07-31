@@ -7,7 +7,6 @@ defmodule PhotoTagger.Gallery.Photo do
 
   schema "photos" do
     field :name, :string
-    field :folder, :string
     field :image, PhotoTagger.Uploaders.ImageUploader.Type
     field :description, :string
     field :notes, :string
@@ -20,20 +19,22 @@ defmodule PhotoTagger.Gallery.Photo do
       join_through: "photos_tags",
       unique: true,
       preload_order: [asc: :name]
+
+    belongs_to :folder, PhotoTagger.Gallery.Folder
   end
 
   @doc false
   def changeset_create(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :folder, :description, :notes, :image_last_modified, :group])
+    |> cast(attrs, [:name, :folder_id, :description, :notes, :image_last_modified, :group])
     |> cast_attachments(attrs, [:image], allow_urls: true)
-    |> validate_required([:name, :folder, :image, :image_last_modified])
-    |> unique_constraint([:name, :folder])
+    |> validate_required([:name, :folder_id, :image, :image_last_modified])
+    |> unique_constraint([:name, :folder_id])
   end
 
   def changeset_update(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :image, :folder, :description, :notes, :group])
-    |> unique_constraint([:name, :folder])
+    |> cast(attrs, [:name, :image, :folder_id, :description, :notes, :group])
+    |> unique_constraint([:name, :folder_id])
   end
 end

@@ -13,7 +13,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
           </h1>
           <nav>
             <ul class="text-center align-middle h-full text-2xl space-y-4">
-              <%= for folder <- @folders do %>
+              <%= for %{name: folder} <- @folders do %>
                 <li>
                   <.link href={~p"/folders/#{folder}"} class="text-blue-500 hover:underline">
                     <%= folder %>
@@ -37,7 +37,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
     </.header>
 
     <ul>
-      <%= for folder <- @folders do %>
+      <%= for %{name: folder} <- @folders do %>
         <li class="mb-8">
           <p class="font-bold">{folder}</p>
           <div class="ml-4">
