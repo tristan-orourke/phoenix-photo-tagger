@@ -8,6 +8,25 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :index, folders: folders)
   end
 
+  def create(conn, %{"name" => name}) do
+    result = Gallery.create_folder(name)
+
+    case result do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Folder created successfully.")
+        |> redirect(to: ~p"/admin/edit-folders")
+
+      {:error, failed_op, failed_value, _changes_so_far} ->
+        conn
+        |> put_flash(
+          :error,
+          "Failed to create folder! Error #{failed_value} in step #{failed_op}."
+        )
+        |> redirect(to: ~p"/admin/edit-folders")
+    end
+  end
+
   def edit_folders(conn, _params) do
     folders = Gallery.list_folders()
     render(conn, :edit_folders, folders: folders)

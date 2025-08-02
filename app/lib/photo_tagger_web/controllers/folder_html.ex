@@ -32,9 +32,9 @@ defmodule PhotoTaggerWeb.FolderHTML do
 
   def edit_folders(assigns) do
     ~H"""
-    <.header>
+    <h2>
       Edit Folders
-    </.header>
+    </h2>
 
     <ul>
       <%= for %{name: folder} <- @folders do %>
@@ -71,6 +71,19 @@ defmodule PhotoTaggerWeb.FolderHTML do
       <% end %>
     </ul>
 
+    <h2>Create Folder</h2>
+    <.form for={%{}} action={~p"/admin/folders"} method="post">
+      <div class="flex items-center space-x-4">
+        <.label for={"new_folder_name"}>Name</.label>
+        <input
+          type="text"
+          name="name"
+          id={"new_folder_name"}
+          class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
+        />
+        <.button type="submit">Create folder</.button>
+      </div>
+    </.form>
     <.back navigate={~p"/admin/photos"}>Back to photos</.back>
     """
   end

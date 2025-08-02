@@ -46,7 +46,7 @@ defmodule PhotoTagger.Gallery do
   def list_photos_by_folder(folder_name) do
     Repo.all(
       from(p in Photo,
-        left_join: f in assoc(p, :folder),
+        inner_join: f in assoc(p, :folder),
         where: f.name == ^folder_name,
         preload: [folder: f],
         order_by: [desc: p.inserted_at],
@@ -59,7 +59,7 @@ defmodule PhotoTagger.Gallery do
     Repo.all(
       from(p in Photo,
         left_join: t in assoc(p, :tags),
-        left_join: f in assoc(p, :folder),
+        inner_join: f in assoc(p, :folder),
         where: f.name == ^folder_name,
         preload: [tags: t],
         preload: [folder: f],
@@ -91,9 +91,9 @@ defmodule PhotoTagger.Gallery do
         from(p in Photo,
           order_by: [desc: p.inserted_at],
           order_by: [asc: p.name],
-          left_join: pt in PhotoTag,
+          inner_join: pt in PhotoTag,
           on: pt.photo_id == p.id,
-          left_join: t in Tag,
+          inner_join: t in Tag,
           on: pt.tag_id == t.id,
           where: t.name in ^tag_names,
           group_by: p.id,
@@ -314,13 +314,14 @@ defmodule PhotoTagger.Gallery do
 
   def list_folders_include_tags() do
     Repo.all(
-      from(p in Photo,
-        left_join: pt in PhotoTag,
-        on: pt.photo_id == p.id,
-        left_join: t in Tag,
-        on: pt.tag_id == t.id,
-        left_join: f in Folder,
+      from(
+        f in Folder,
+        left_join: p in Photo,
         on: p.folder_id == f.id,
+        inner_join: pt in PhotoTag,
+        on: pt.photo_id == p.id,
+        inner_join: t in Tag,
+        on: pt.tag_id == t.id,
         group_by: f.id,
         select: %{
           name: f.name,
@@ -374,6 +375,22 @@ defmodule PhotoTagger.Gallery do
     ])
   end
 
+  def create_folder(name) do
+    changeset = %Folder{} |> Folder.changeset(%{name: name})
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(:create_folder_db, changeset)
+    |> Ecto.Multi.run(:create_folder_path, fn _repo, _changes ->
+      path = get_folder_path(name)
+
+      case File.mkdir(path) do
+        :ok -> {:ok, path}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Repo.transaction()
+  end
+
   def rename_folder(folder_name, new_folder_name) do
     changeset =
       Repo.get_by(Folder, name: folder_name)
@@ -397,13 +414,13 @@ defmodule PhotoTagger.Gallery do
     Ecto.Multi.new()
     |> Ecto.Multi.delete_all(
       :photos,
-      from(p in Photo, left_join: f in assoc(p, :folder), where: f.name == ^folder_name)
+      from(p in Photo, inner_join: f in assoc(p, :folder), where: f.name == ^folder_name)
     )
     |> Ecto.Multi.delete_all(
       :tags,
       from(t in Tag, where: fragment("? NOT IN (SELECT tag_id FROM photos_tags)", t.id))
     )
-    |> Ecto.Multi.delete(:folders, from(f in Folder, where: f.name == ^folder_name))
+    |> Ecto.Multi.delete(:folders, Repo.get_by(Folder, name: folder_name))
     |> Ecto.Multi.run(:delete_folder, fn _repo, _changes ->
       File.rm_rf(get_folder_path(folder_name))
     end)
