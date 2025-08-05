@@ -8,7 +8,7 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :index, folders: folders)
   end
 
-  def create(conn, %{"name" => name} = attrs) do
+  def create(conn, %{"name" => name, "is_public" => is_public} = attrs) do
     result = Gallery.create_folder(attrs)
 
     case result do

@@ -95,17 +95,19 @@ defmodule PhotoTaggerWeb.FolderHTML do
           class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
         />
       </div>
-                <div class="flex items-center space-x-4 mt-4">
-                  <.label for="new_folder_is_public">Is public</.label>
-                  <input
-                    type="checkbox"
-                    id="new_folder_is_public"
-                    name="is_public"
-                    value={false}
-                    class="rounded focus:ring-0"
-                  />
+      <div class="flex items-center space-x-4 mt-4">
+        <.label for="new_folder_is_public">Is public</.label>
+        <input type="hidden" name="is_public" value="false" />
+        <input
+          type="checkbox"
+          id="new_folder_is_public"
+          name="is_public"
+          value="true"
+          checked={false}
+          class="rounded focus:ring-0"
+        />
       </div>
-        <.button type="submit">Create folder</.button>
+      <.button type="submit">Create folder</.button>
     </.form>
     <.back navigate={~p"/admin/photos"}>Back to photos</.back>
     """
