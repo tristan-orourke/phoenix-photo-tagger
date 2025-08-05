@@ -47,6 +47,7 @@ defmodule PhotoTaggerWeb.Router do
     live "/folders/:folder", GalleryLive.Main, :folder
     get "/edit-folders", FolderController, :edit_folders
     post "/folders", FolderController, :create
+    put "/folders/:folder", FolderController, :update
     post "/folders/:folder/rename", FolderController, :rename
     delete "/folders/:folder", FolderController, :delete
     live "/photos", GalleryLive.Main, :photos

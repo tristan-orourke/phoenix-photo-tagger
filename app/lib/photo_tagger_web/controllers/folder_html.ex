@@ -37,23 +37,36 @@ defmodule PhotoTaggerWeb.FolderHTML do
     </h2>
 
     <ul>
-      <%= for %{name: folder} <- @folders do %>
+      <%= for %{name: folder, is_public: is_public} <- @folders do %>
         <li class="mb-8">
           <p class="font-bold">{folder}</p>
           <div class="ml-4">
             <div>
-              <.form for={%{}} action={~p"/admin/folders/#{folder}/rename"} method="post">
+              <.form for={%{}} action={~p"/admin/folders/#{folder}"} method="put">
                 <div class="flex items-center space-x-4">
-                  <.label for={"folder_#{folder}"}>Name</.label>
+                  <.label for={"folder_name_#{folder}"}>Name</.label>
                   <input
                     type="text"
-                    name="new_name"
-                    id={"folder_#{folder}"}
+                    name="name"
+                    id={"folder_name_#{folder}"}
                     placeholder={folder}
+                    value={folder}
                     class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
                   />
-                  <.button type="submit">Rename folder</.button>
                 </div>
+                <div class="flex items-center space-x-4 mt-4">
+                  <.label for={"folder_is_public_#{folder}"}>Is public</.label>
+                  <input type="hidden" name="is_public" value="false" />
+                  <input
+                    type="checkbox"
+                    id={"folder_is_public_#{folder}"}
+                    name="is_public"
+                    checked={is_public}
+                    value="true"
+                    class="rounded focus:ring-0"
+                  />
+                </div>
+                <.button class="mt-4" type="submit">Update folder</.button>
               </.form>
             </div>
             <div class="mt-8">
@@ -81,8 +94,18 @@ defmodule PhotoTaggerWeb.FolderHTML do
           id={"new_folder_name"}
           class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
         />
-        <.button type="submit">Create folder</.button>
       </div>
+                <div class="flex items-center space-x-4 mt-4">
+                  <.label for="new_folder_is_public">Is public</.label>
+                  <input
+                    type="checkbox"
+                    id="new_folder_is_public"
+                    name="is_public"
+                    value={false}
+                    class="rounded focus:ring-0"
+                  />
+      </div>
+        <.button type="submit">Create folder</.button>
     </.form>
     <.back navigate={~p"/admin/photos"}>Back to photos</.back>
     """

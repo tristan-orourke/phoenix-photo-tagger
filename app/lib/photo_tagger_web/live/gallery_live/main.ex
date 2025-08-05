@@ -68,14 +68,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <.photo
                 photo={photo}
                 folder={@folder}
-                all_folders={@all_folders}
-                tags={@tags}
-                all_tags={@all_tags}
-                recommended_tags={@recommended_tags}
-                related_tags={@recommended_tags}
-                update_photo_form={@update_photo_form}
-                is_admin={@is_admin}
-              />
+                all_folders={@all_folders} tags={@tags} all_tags={@all_tags} recommended_tags={@recommended_tags} related_tags={@recommended_tags} update_photo_form={@update_photo_form} is_admin={@is_admin} />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
             <% _ -> %>

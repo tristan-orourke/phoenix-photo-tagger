@@ -375,8 +375,12 @@ defmodule PhotoTagger.Gallery do
     ])
   end
 
-  def create_folder(name) do
-    changeset = %Folder{} |> Folder.changeset(%{name: name})
+  def get_folder_by_name!(name) do
+    Repo.get_by!(Folder, name: name)
+  end
+
+  def create_folder(%{"name" => name} = attrs) do
+    changeset = %Folder{} |> Folder.changeset(attrs)
 
     Ecto.Multi.new()
     |> Ecto.Multi.insert(:create_folder_db, changeset)
@@ -386,6 +390,27 @@ defmodule PhotoTagger.Gallery do
       case File.mkdir(path) do
         :ok -> {:ok, path}
         {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Repo.transaction()
+  end
+
+  def update_folder(%Folder{} = folder, attrs) do
+    changeset = Folder.changeset(folder, attrs)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:update_folder_db, changeset)
+    |> Ecto.Multi.run(:update_folder_path, fn _repo, _changes ->
+      old_path = get_folder_path(folder.name)
+      new_path = get_folder_path(attrs["name"])
+
+      if old_path == new_path do
+        {:ok, old_path}
+      else
+        case File.rename(old_path, new_path) do
+          :ok -> {:ok, new_path}
+          {:error, reason} -> {:error, reason}
+        end
       end
     end)
     |> Repo.transaction()

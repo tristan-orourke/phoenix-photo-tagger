@@ -10,6 +10,7 @@ defmodule PhotoTagger.Gallery.Folder do
 
   schema "folders" do
     field :name, :string
+    field :is_public, :boolean
 
     timestamps(type: :utc_datetime)
 
@@ -21,7 +22,7 @@ defmodule PhotoTagger.Gallery.Folder do
   @doc false
   def changeset(folder, attrs) do
     folder
-    |> cast(attrs, [:name])
+    |> cast(attrs, [:name, :is_public])
     |> validate_required([:name])
     |> unique_constraint(:name)
   end
