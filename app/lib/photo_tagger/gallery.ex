@@ -11,6 +11,38 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.Folder
   alias PhotoTagger.Uploaders.ImageUploader
 
+  defp only_public_photos(query) do
+    case Ecto.Query.has_named_binding?(query, :folder) do
+      true ->
+        from([folder: f] in query,
+          where: f.is_public == true
+        )
+
+      false ->
+        from(p in query,
+          left_join: f in assoc(p, :folder),
+          as: :folder,
+          where: f.is_public == true
+        )
+    end
+  end
+
+  defp only_public_photos_unless_forced(query, options \\ []) do
+    if Keyword.get(options, :include_private, false) do
+      query
+    else
+      only_public_photos(query)
+    end
+  end
+
+  defp only_public_folders_unless_forced(query, options) do
+    if Keyword.get(options, :include_private, false) do
+      query
+    else
+      from(f in query, where: f.is_public == true)
+    end
+  end
+
   @doc """
   Returns the list of photos.
 
@@ -20,17 +52,18 @@ defmodule PhotoTagger.Gallery do
       [%Photo{}, ...]
 
   """
-  def list_photos do
+  def list_photos(options \\ []) do
     Repo.all(
       from(p in Photo,
         preload: [:folder],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_preload_tags do
+  def list_photos_preload_tags(options \\ []) do
     Repo.all(
       from(p in Photo,
         left_join: t in assoc(p, :tags),
@@ -40,32 +73,37 @@ defmodule PhotoTagger.Gallery do
         order_by: [asc: p.name],
         select: p
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_folder(folder_name) do
+  def list_photos_by_folder(folder_name, options \\ []) do
     Repo.all(
       from(p in Photo,
         inner_join: f in assoc(p, :folder),
+        as: :folder,
         where: f.name == ^folder_name,
         preload: [folder: f],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_folder_preload_tags(folder_name) do
+  def list_photos_by_folder_preload_tags(folder_name, options \\ []) do
     Repo.all(
       from(p in Photo,
         left_join: t in assoc(p, :tags),
         inner_join: f in assoc(p, :folder),
+        as: :folder,
         where: f.name == ^folder_name,
         preload: [tags: t],
         preload: [folder: f],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
@@ -104,9 +142,10 @@ defmodule PhotoTagger.Gallery do
   end
 
   # Returns all photos that have ALL the specified tags
-  def list_photos_by_all_tags([]), do: list_photos()
+  def list_photos_by_all_tags(tag_names, options \\ [])
+  def list_photos_by_all_tags([], options), do: list_photos(options)
 
-  def list_photos_by_all_tags(tag_names) do
+  def list_photos_by_all_tags(tag_names, options) do
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
@@ -115,18 +154,21 @@ defmodule PhotoTagger.Gallery do
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_folder_and_tags(folder_name, tag_names) do
+  def list_photos_by_folder_and_tags(folder_name, tag_names, options \\ []) do
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
       from(p in query,
         join: f in assoc(p, :folder),
+        as: :folder,
         where: f.name == ^folder_name,
         preload: [folder: f]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
@@ -308,11 +350,14 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  def list_folders() do
-    Repo.all(from f in Folder, order_by: [asc: f.name])
+  def list_folders(options \\ []) do
+    Repo.all(
+      from(f in Folder, order_by: [asc: f.name])
+      |> only_public_folders_unless_forced(options)
+    )
   end
 
-  def list_folders_include_tags() do
+  def list_folders_include_tags(options \\ []) do
     Repo.all(
       from(
         f in Folder,
@@ -328,6 +373,7 @@ defmodule PhotoTagger.Gallery do
           tags: fragment("array_agg(DISTINCT ?)", t.name)
         }
       )
+      |> only_public_folders_unless_forced(options)
     )
     # Filter out any tags that are nil or empty strings
     |> Enum.map(fn folder ->
@@ -335,10 +381,12 @@ defmodule PhotoTagger.Gallery do
     end)
   end
 
+  # TODO: be more careful about this when individual photos can be private
   def list_tags() do
     Repo.all(from t in Tag, order_by: [asc: t.name])
   end
 
+  # TODO: be more careful about this when individual photos can be private
   def list_tags_by_folder(folder_name) do
     Repo.all(
       from(t in Tag,
@@ -379,7 +427,7 @@ defmodule PhotoTagger.Gallery do
     Repo.get_by!(Folder, name: name)
   end
 
-  def create_folder(%{"name" => name} = attrs) do
+  def create_folder(%{"name" => name, "is_public" => _is_public} = attrs) do
     changeset = %Folder{} |> Folder.changeset(attrs)
 
     Ecto.Multi.new()
