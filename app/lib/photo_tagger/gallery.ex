@@ -127,15 +127,22 @@ defmodule PhotoTagger.Gallery do
 
       _ ->
         from(p in Photo,
+          inner_join:
+            sub in subquery(
+              from(p in Photo,
+                inner_join: pt in PhotoTag,
+                on: pt.photo_id == p.id,
+                inner_join: t in Tag,
+                on: pt.tag_id == t.id,
+                where: t.name in ^tag_names,
+                group_by: p.id,
+                select: %{photo_id: p.id, tag_count: count(pt.tag_id)}
+              )
+            ),
+          on: sub.photo_id == p.id,
+          where: sub.tag_count == ^length(tag_names),
           order_by: [desc: p.inserted_at],
           order_by: [asc: p.name],
-          inner_join: pt in PhotoTag,
-          on: pt.photo_id == p.id,
-          inner_join: t in Tag,
-          on: pt.tag_id == t.id,
-          where: t.name in ^tag_names,
-          group_by: p.id,
-          having: count(pt.tag_id) == ^length(tag_names),
           select: p
         )
     end

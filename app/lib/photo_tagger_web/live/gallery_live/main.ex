@@ -152,7 +152,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {
       :ok,
       socket
-      |> assign(:all_folders, Gallery.list_folders())
+      |> assign(:all_folders, Gallery.list_folders(include_private: is_admin))
       |> assign(:all_tags, all_tags)
       |> assign(:nav_tags, all_tags)
       |> assign(:multiselect_active, false)
@@ -234,6 +234,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_tags = Map.get(socket.assigns, :tags, [])
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
     action = Map.get(socket.assigns, :live_action, nil)
+    is_admin = Map.get(socket.assigns, :is_admin, false)
 
     filtered_photos =
       case {folder, tags, prev_filtered_photos, action} do
@@ -247,23 +248,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           prev_filtered_photos
 
         {nil, [], _, _} ->
-          Gallery.list_photos()
+          Gallery.list_photos(include_private: is_admin)
 
         {nil, ["untagged"], _, _} ->
-          Gallery.list_photos_by_all_tags(nil) ++ Gallery.list_photos_by_all_tags(["untagged"])
+          Gallery.list_photos_by_all_tags(nil, include_private: is_admin) ++
+            Gallery.list_photos_by_all_tags(["untagged"], include_private: is_admin)
 
         {nil, tags, _, _} ->
-          Gallery.list_photos_by_all_tags(tags)
+          Gallery.list_photos_by_all_tags(tags, include_private: is_admin)
 
         {folder, [], _, _} ->
-          Gallery.list_photos_by_folder(folder)
+          Gallery.list_photos_by_folder(folder, include_private: is_admin)
 
         {folder, ["untagged"], _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, nil) ++
-            Gallery.list_photos_by_folder_and_tags(folder, ["untagged"])
+          Gallery.list_photos_by_folder_and_tags(folder, nil, include_private: is_admin) ++
+            Gallery.list_photos_by_folder_and_tags(folder, ["untagged"],
+              include_private: is_admin
+            )
 
         {folder, tags, _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, tags)
+          Gallery.list_photos_by_folder_and_tags(folder, tags, include_private: is_admin)
       end
 
     prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
@@ -958,12 +962,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def refresh_filtered_photos(socket) do
+    is_admin = socket.assigns.is_admin
+
     filtered_photos =
       case {socket.assigns.folder, socket.assigns.tags} do
-        {nil, []} -> Gallery.list_photos()
-        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
-        {folder, []} -> Gallery.list_photos_by_folder(folder)
-        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+        {nil, []} ->
+          Gallery.list_photos(include_private: is_admin)
+
+        {nil, tags} ->
+          Gallery.list_photos_by_all_tags(tags, include_private: is_admin)
+
+        {folder, []} ->
+          Gallery.list_photos_by_folder(folder, include_private: is_admin)
+
+        {folder, tags} ->
+          Gallery.list_photos_by_folder_and_tags(folder, tags, include_private: is_admin)
       end
 
     # |> Repo.preload([:tags, :folder])
@@ -1156,11 +1169,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
     photo = Gallery.get_photo!(id)
     result = Gallery.update_photo(photo, photo_params)
+    is_admin = socket.assigns.is_admin
 
     case result do
       {:ok, _photo} ->
         {:noreply,
-         assign(socket, :all_folders, Gallery.list_folders())
+         assign(socket, :all_folders, Gallery.list_folders(include_private: is_admin))
          |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
@@ -1181,7 +1195,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders())
+     |> assign(:all_folders, Gallery.list_folders(include_private: socket.assigns.is_admin))
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(
@@ -1199,7 +1213,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders())
+     |> assign(:all_folders, Gallery.list_folders(include_private: socket.assings.is_admin))
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(

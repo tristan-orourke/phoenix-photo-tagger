@@ -28,7 +28,7 @@ defmodule PhotoTaggerWeb.FolderController do
   end
 
   def edit_folders(conn, _params) do
-    folders = Gallery.list_folders()
+    folders = Gallery.list_folders(include_private: true)
     render(conn, :edit_folders, folders: folders)
   end
 
