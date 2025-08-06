@@ -12,6 +12,7 @@ defmodule PhotoTagger.Gallery.Photo do
     field :notes, :string
     field :image_last_modified, :utc_datetime
     field :group, :string
+    field :is_public, :boolean, default: false
 
     timestamps(type: :utc_datetime)
 
@@ -26,7 +27,15 @@ defmodule PhotoTagger.Gallery.Photo do
   @doc false
   def changeset_create(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :folder_id, :description, :notes, :image_last_modified, :group])
+    |> cast(attrs, [
+      :name,
+      :folder_id,
+      :description,
+      :notes,
+      :image_last_modified,
+      :group,
+      :is_public
+    ])
     |> cast_attachments(attrs, [:image], allow_urls: true)
     |> validate_required([:name, :folder_id, :image, :image_last_modified])
     |> unique_constraint([:name, :folder_id])
@@ -34,7 +43,7 @@ defmodule PhotoTagger.Gallery.Photo do
 
   def changeset_update(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :image, :folder_id, :description, :notes, :group])
+    |> cast(attrs, [:name, :image, :folder_id, :description, :notes, :group, :is_public])
     |> unique_constraint([:name, :folder_id])
   end
 end

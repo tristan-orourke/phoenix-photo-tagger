@@ -712,6 +712,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
           <input class="hidden" type="text" name="photo_id" value={@update_photo_form.data.id} />
           <.input field={@update_photo_form[:name]} name="photo[name]" type="text" label="Name" />
+          <.input class="mt-1" field={@update_photo_form[:is_public]} name="photo[is_public]" type="checkbox"
+            label="Is public" />
           <.input field={@update_photo_form[:folder_id]} name="photo[folder_id]" type="select"
             label="Folder" required options={Enum.map(@all_folders, &([key: &1.name, value: &1.id]))} />
           <.input
@@ -1213,7 +1215,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders(include_private: socket.assings.is_admin))
+     |> assign(:all_folders, Gallery.list_folders(include_private: socket.assigns.is_admin))
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(

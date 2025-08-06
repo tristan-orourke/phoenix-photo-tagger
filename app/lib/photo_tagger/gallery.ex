@@ -14,15 +14,17 @@ defmodule PhotoTagger.Gallery do
   defp only_public_photos(query) do
     case Ecto.Query.has_named_binding?(query, :folder) do
       true ->
-        from([folder: f] in query,
-          where: f.is_public == true
+        from([p, folder: f] in query,
+          where: f.is_public == true,
+          where: p.is_public == true
         )
 
       false ->
         from(p in query,
           left_join: f in assoc(p, :folder),
           as: :folder,
-          where: f.is_public == true
+          where: f.is_public == true,
+          where: p.is_public == true
         )
     end
   end
