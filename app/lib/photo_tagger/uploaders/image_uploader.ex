@@ -1,6 +1,7 @@
 defmodule PhotoTagger.Uploaders.ImageUploader do
   use Waffle.Definition
   use Waffle.Ecto.Definition
+  alias PhotoTagger.Repo
 
   require Logger
 
@@ -36,7 +37,13 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   # Override the storage directory:
   def storage_dir(_version, {_file, scope}) do
-    "uploads/images/#{scope.folder}"
+    folder_name =
+      case scope do
+        %{folder: %{name: name}} -> name
+        %{folder_id: folder_id} -> Repo.get(PhotoTagger.Gallery.Folder, folder_id).name
+      end
+
+    "uploads/images/#{folder_name}"
   end
 
   # Provide a default URL if there hasn't been a file uploaded

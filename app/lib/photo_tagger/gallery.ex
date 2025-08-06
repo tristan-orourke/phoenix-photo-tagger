@@ -8,7 +8,42 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.Photo
   alias PhotoTagger.Gallery.Tag
   alias PhotoTagger.Gallery.PhotoTag
+  alias PhotoTagger.Gallery.Folder
   alias PhotoTagger.Uploaders.ImageUploader
+
+  defp only_public_photos(query) do
+    case Ecto.Query.has_named_binding?(query, :folder) do
+      true ->
+        from([p, folder: f] in query,
+          where: f.is_public == true,
+          where: p.is_public == true
+        )
+
+      false ->
+        from(p in query,
+          left_join: f in assoc(p, :folder),
+          as: :folder,
+          where: f.is_public == true,
+          where: p.is_public == true
+        )
+    end
+  end
+
+  defp only_public_photos_unless_forced(query, options \\ []) do
+    if Keyword.get(options, :include_private, false) do
+      query
+    else
+      only_public_photos(query)
+    end
+  end
+
+  defp only_public_folders_unless_forced(query, options) do
+    if Keyword.get(options, :include_private, false) do
+      query
+    else
+      from(f in query, where: f.is_public == true)
+    end
+  end
 
   @doc """
   Returns the list of photos.
@@ -19,41 +54,58 @@ defmodule PhotoTagger.Gallery do
       [%Photo{}, ...]
 
   """
-  def list_photos do
-    Repo.all(from(p in Photo, order_by: [desc: p.inserted_at], order_by: [asc: p.name]))
+  def list_photos(options \\ []) do
+    Repo.all(
+      from(p in Photo,
+        preload: [:folder],
+        order_by: [desc: p.inserted_at],
+        order_by: [asc: p.name]
+      )
+      |> only_public_photos_unless_forced(options)
+    )
   end
 
-  def list_photos_preload_tags do
+  def list_photos_preload_tags(options \\ []) do
     Repo.all(
       from(p in Photo,
         left_join: t in assoc(p, :tags),
         preload: [tags: t],
+        preload: [:folder],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name],
         select: p
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_folder(folder) do
+  def list_photos_by_folder(folder_name, options \\ []) do
     Repo.all(
       from(p in Photo,
-        where: p.folder == ^folder,
+        inner_join: f in assoc(p, :folder),
+        as: :folder,
+        where: f.name == ^folder_name,
+        preload: [folder: f],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_folder_preload_tags(folder) do
+  def list_photos_by_folder_preload_tags(folder_name, options \\ []) do
     Repo.all(
       from(p in Photo,
-        where: p.folder == ^folder,
         left_join: t in assoc(p, :tags),
+        inner_join: f in assoc(p, :folder),
+        as: :folder,
+        where: f.name == ^folder_name,
         preload: [tags: t],
+        preload: [folder: f],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
@@ -77,37 +129,56 @@ defmodule PhotoTagger.Gallery do
 
       _ ->
         from(p in Photo,
+          inner_join:
+            sub in subquery(
+              from(p in Photo,
+                inner_join: pt in PhotoTag,
+                on: pt.photo_id == p.id,
+                inner_join: t in Tag,
+                on: pt.tag_id == t.id,
+                where: t.name in ^tag_names,
+                group_by: p.id,
+                select: %{photo_id: p.id, tag_count: count(pt.tag_id)}
+              )
+            ),
+          on: sub.photo_id == p.id,
+          where: sub.tag_count == ^length(tag_names),
           order_by: [desc: p.inserted_at],
           order_by: [asc: p.name],
-          left_join: pt in PhotoTag,
-          on: pt.photo_id == p.id,
-          left_join: t in Tag,
-          on: pt.tag_id == t.id,
-          where: t.name in ^tag_names,
-          group_by: p.id,
-          having: count(pt.tag_id) == ^length(tag_names),
           select: p
         )
     end
   end
 
   # Returns all photos that have ALL the specified tags
-  def list_photos_by_all_tags([]), do: list_photos()
+  def list_photos_by_all_tags(tag_names, options \\ [])
+  def list_photos_by_all_tags([], options), do: list_photos(options)
 
-  def list_photos_by_all_tags(tag_names) do
+  def list_photos_by_all_tags(tag_names, options) do
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
       from(p in query,
+        preload: [:folder],
         order_by: [desc: p.inserted_at],
         order_by: [asc: p.name]
       )
+      |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_folder_and_tags(folder, tag_names) do
+  def list_photos_by_folder_and_tags(folder_name, tag_names, options \\ []) do
     query = photos_by_tags_query(tag_names)
-    Repo.all(from(p in query, where: p.folder == ^folder))
+
+    Repo.all(
+      from(p in query,
+        join: f in assoc(p, :folder),
+        as: :folder,
+        where: f.name == ^folder_name,
+        preload: [folder: f]
+      )
+      |> only_public_photos_unless_forced(options)
+    )
   end
 
   @doc """
@@ -124,12 +195,18 @@ defmodule PhotoTagger.Gallery do
       ** (Ecto.NoResultsError)
 
   """
-  def get_photo!(id) do
-    Repo.get!(Photo, id)
+  def get_photo!(id, options \\ []) do
+    photo = Repo.get!(Photo, id)
+
+    if Keyword.get(options, :include_private, false) or photo.is_public do
+      photo
+    else
+      raise Ecto.NoResultsError
+    end
   end
 
-  def get_photos_by_ids(ids) do
-    Repo.all(from(p in Photo, where: p.id in ^ids))
+  def get_photos_by_ids(ids, options \\ []) do
+    Repo.all(from(p in Photo, where: p.id in ^ids) |> only_public_photos_unless_forced(options))
   end
 
   @doc """
@@ -155,9 +232,10 @@ defmodule PhotoTagger.Gallery do
   defp photo_full_path(%Photo{} = photo, version) do
     # TODO if the image_uploader transform function changes, it might not be .jpg
     ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".jpg")
+    photo = Repo.preload(photo, :folder)
 
     Path.join([
-      get_folder_path(photo.folder),
+      get_folder_path(photo.folder.name),
       ImageUploader.filename(version, {photo.image, photo}) <> ext
     ])
   end
@@ -183,6 +261,8 @@ defmodule PhotoTagger.Gallery do
       )
 
     changeset = Photo.changeset_update(photo, attrs)
+
+    Repo.preload(photo, :folder)
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:photo, changeset)
@@ -285,23 +365,30 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  def list_folders() do
-    Repo.all(from(p in Photo, group_by: p.folder, select: p.folder))
+  def list_folders(options \\ []) do
+    Repo.all(
+      from(f in Folder, order_by: [asc: f.name])
+      |> only_public_folders_unless_forced(options)
+    )
   end
 
-  def list_folders_include_tags() do
+  def list_folders_include_tags(options \\ []) do
     Repo.all(
-      from(p in Photo,
-        left_join: pt in PhotoTag,
+      from(
+        f in Folder,
+        left_join: p in Photo,
+        on: p.folder_id == f.id,
+        inner_join: pt in PhotoTag,
         on: pt.photo_id == p.id,
-        left_join: t in Tag,
+        inner_join: t in Tag,
         on: pt.tag_id == t.id,
-        group_by: p.folder,
+        group_by: f.id,
         select: %{
-          name: p.folder,
+          name: f.name,
           tags: fragment("array_agg(DISTINCT ?)", t.name)
         }
       )
+      |> only_public_folders_unless_forced(options)
     )
     # Filter out any tags that are nil or empty strings
     |> Enum.map(fn folder ->
@@ -309,18 +396,22 @@ defmodule PhotoTagger.Gallery do
     end)
   end
 
+  # TODO: be more careful about this when individual photos can be private
   def list_tags() do
     Repo.all(from t in Tag, order_by: [asc: t.name])
   end
 
-  def list_tags_by_folder(folder) do
+  # TODO: be more careful about this when individual photos can be private
+  def list_tags_by_folder(folder_name) do
     Repo.all(
       from(t in Tag,
         left_join: pt in PhotoTag,
         on: pt.tag_id == t.id,
         left_join: p in Photo,
         on: pt.photo_id == p.id,
-        where: p.folder == ^folder,
+        left_join: f in assoc(p, :folder),
+        on: pt.photo_id == p.id,
+        where: f.name == ^folder_name,
         group_by: t.id,
         order_by: [asc: t.name]
       )
@@ -340,21 +431,64 @@ defmodule PhotoTagger.Gallery do
     )
   end
 
-  defp get_folder_path(folder) do
+  defp get_folder_path(folder_name) do
     Path.join([
       Application.get_env(:waffle, :storage_dir_prefix),
-      ImageUploader.storage_dir(nil, {nil, %{folder: folder}})
+      ImageUploader.storage_dir(nil, {nil, %{folder: %{name: folder_name}}})
     ])
   end
 
-  def rename_folder(folder, new_folder) do
+  def get_folder_by_name!(name) do
+    Repo.get_by!(Folder, name: name)
+  end
+
+  def create_folder(%{"name" => name, "is_public" => _is_public} = attrs) do
+    changeset = %Folder{} |> Folder.changeset(attrs)
+
     Ecto.Multi.new()
-    |> Ecto.Multi.update_all(:photos, from(p in Photo, where: p.folder == ^folder),
-      set: [folder: new_folder]
-    )
-    |> Ecto.Multi.run(:rename_folder, fn _repo, _changes ->
-      old_path = get_folder_path(folder)
-      new_path = get_folder_path(new_folder)
+    |> Ecto.Multi.insert(:create_folder_db, changeset)
+    |> Ecto.Multi.run(:create_folder_path, fn _repo, _changes ->
+      path = get_folder_path(name)
+
+      case File.mkdir(path) do
+        :ok -> {:ok, path}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Repo.transaction()
+  end
+
+  def update_folder(%Folder{} = folder, attrs) do
+    changeset = Folder.changeset(folder, attrs)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:update_folder_db, changeset)
+    |> Ecto.Multi.run(:update_folder_path, fn _repo, _changes ->
+      old_path = get_folder_path(folder.name)
+      new_path = get_folder_path(attrs["name"])
+
+      if old_path == new_path do
+        {:ok, old_path}
+      else
+        case File.rename(old_path, new_path) do
+          :ok -> {:ok, new_path}
+          {:error, reason} -> {:error, reason}
+        end
+      end
+    end)
+    |> Repo.transaction()
+  end
+
+  def rename_folder(folder_name, new_folder_name) do
+    changeset =
+      Repo.get_by(Folder, name: folder_name)
+      |> Folder.changeset(%{name: new_folder_name})
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:rename_folder_db, changeset)
+    |> Ecto.Multi.run(:rename_folder_path, fn _repo, _changes ->
+      old_path = get_folder_path(folder_name)
+      new_path = get_folder_path(new_folder_name)
 
       case File.rename(old_path, new_path) do
         :ok -> {:ok, new_path}
@@ -364,15 +498,19 @@ defmodule PhotoTagger.Gallery do
     |> Repo.transaction()
   end
 
-  def delete_folder(folder) do
+  def delete_folder(folder_name) do
     Ecto.Multi.new()
-    |> Ecto.Multi.delete_all(:photos, from(p in Photo, where: p.folder == ^folder))
+    |> Ecto.Multi.delete_all(
+      :photos,
+      from(p in Photo, inner_join: f in assoc(p, :folder), where: f.name == ^folder_name)
+    )
     |> Ecto.Multi.delete_all(
       :tags,
       from(t in Tag, where: fragment("? NOT IN (SELECT tag_id FROM photos_tags)", t.id))
     )
+    |> Ecto.Multi.delete(:folders, Repo.get_by(Folder, name: folder_name))
     |> Ecto.Multi.run(:delete_folder, fn _repo, _changes ->
-      File.rm_rf(get_folder_path(folder))
+      File.rm_rf(get_folder_path(folder_name))
     end)
     |> Repo.transaction()
   end

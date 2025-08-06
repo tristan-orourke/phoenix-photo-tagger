@@ -68,13 +68,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <.photo
                 photo={photo}
                 folder={@folder}
-                tags={@tags}
-                all_tags={@all_tags}
-                recommended_tags={@recommended_tags}
-                related_tags={@recommended_tags}
-                update_photo_form={@update_photo_form}
-                is_admin={@is_admin}
-              />
+                all_folders={@all_folders} tags={@tags} all_tags={@all_tags} recommended_tags={@recommended_tags} related_tags={@recommended_tags} update_photo_form={@update_photo_form} is_admin={@is_admin} />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
             <% _ -> %>
@@ -158,7 +152,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {
       :ok,
       socket
-      |> assign(:all_folders, Gallery.list_folders())
+      |> assign(:all_folders, Gallery.list_folders(include_private: is_admin))
       |> assign(:all_tags, all_tags)
       |> assign(:nav_tags, all_tags)
       |> assign(:multiselect_active, false)
@@ -240,6 +234,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_tags = Map.get(socket.assigns, :tags, [])
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
     action = Map.get(socket.assigns, :live_action, nil)
+    is_admin = Map.get(socket.assigns, :is_admin, false)
 
     filtered_photos =
       case {folder, tags, prev_filtered_photos, action} do
@@ -253,23 +248,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           prev_filtered_photos
 
         {nil, [], _, _} ->
-          Gallery.list_photos()
+          Gallery.list_photos(include_private: is_admin)
 
         {nil, ["untagged"], _, _} ->
-          Gallery.list_photos_by_all_tags(nil) ++ Gallery.list_photos_by_all_tags(["untagged"])
+          Gallery.list_photos_by_all_tags(nil, include_private: is_admin) ++
+            Gallery.list_photos_by_all_tags(["untagged"], include_private: is_admin)
 
         {nil, tags, _, _} ->
-          Gallery.list_photos_by_all_tags(tags)
+          Gallery.list_photos_by_all_tags(tags, include_private: is_admin)
 
         {folder, [], _, _} ->
-          Gallery.list_photos_by_folder(folder)
+          Gallery.list_photos_by_folder(folder, include_private: is_admin)
 
         {folder, ["untagged"], _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, nil) ++
-            Gallery.list_photos_by_folder_and_tags(folder, ["untagged"])
+          Gallery.list_photos_by_folder_and_tags(folder, nil, include_private: is_admin) ++
+            Gallery.list_photos_by_folder_and_tags(folder, ["untagged"],
+              include_private: is_admin
+            )
 
         {folder, tags, _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, tags)
+          Gallery.list_photos_by_folder_and_tags(folder, tags, include_private: is_admin)
       end
 
     prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
@@ -294,8 +292,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         # Otherwise, selections have changed, query them from the database
         {_, _} ->
           new_selected_photo_ids
-          |> Gallery.get_photos_by_ids()
-          |> Repo.preload(:tags)
+          |> Gallery.get_photos_by_ids(include_private: is_admin)
+          |> Repo.preload([:tags, :folder])
       end
 
     nav_tags =
@@ -477,9 +475,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     # Filter out photos in collapse groups, excepting the first in any group
     grouped_photos = Enum.group_by(assigns.photos, & &1.group)
-    filtered_photos = Enum.filter(assigns.photos, fn photo ->
-       photo.group == nil or !Map.get(assigns.collapse_group_exceptions, photo.group, assigns.collapse_groups) or photo == List.first(grouped_photos[photo.group])
+
+    filtered_photos =
+      Enum.filter(assigns.photos, fn photo ->
+        photo.group == nil or
+          !Map.get(assigns.collapse_group_exceptions, photo.group, assigns.collapse_groups) or
+          photo == List.first(grouped_photos[photo.group])
       end)
+
     group_header_positions =
       Enum.map(
         groups,
@@ -491,19 +494,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     # Ensure photos in a group appear next to each other, without otherwise changing the order.
     # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
-    assigns = assign(
-      assigns,
-      :photos,
-      filtered_photos
-      |> Enum.with_index()
-      |> Enum.sort_by(fn {photo, index} ->
-        case photo.group do
-          nil -> {index, 0}
-          group -> {group_header_positions[group] || index, index}
-        end
-      end)
-      |> Enum.map(fn {photo, _index} -> photo end)
-    )
+    assigns =
+      assign(
+        assigns,
+        :photos,
+        filtered_photos
+        |> Enum.with_index()
+        |> Enum.sort_by(fn {photo, index} ->
+          case photo.group do
+            nil -> {index, 0}
+            group -> {group_header_positions[group] || index, index}
+          end
+        end)
+        |> Enum.map(fn {photo, _index} -> photo end)
+      )
 
     ~H"""
     <div class="p-2 lg:p-6">
@@ -555,7 +559,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:is_admin, :boolean, required: true)
 
   def photo(assigns) do
-    assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder)
+    assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder.name)
 
     ~H"""
     <.list>
@@ -578,10 +582,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Folder" :if={@is_admin}>
         <.link
           class="data-[active]:font-bold"
-          patch={Util.build_url(@photo.folder, [@photo.id], @tags, @is_admin)}
+          patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @is_admin)}
           data-active={@folder_is_active}
         >
-          {@photo.folder}
+          {@photo.folder.name}
         </.link>
       </:item>
       <:item title="Tags" :if={@is_admin or not Enum.empty?(@photo.tags)}>
@@ -708,7 +712,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
           <input class="hidden" type="text" name="photo_id" value={@update_photo_form.data.id} />
           <.input field={@update_photo_form[:name]} name="photo[name]" type="text" label="Name" />
-          <.input field={@update_photo_form[:folder]} name="photo[folder]" type="text" label="Folder" />
+          <.input class="mt-1" field={@update_photo_form[:is_public]} name="photo[is_public]" type="checkbox"
+            label="Is public" />
+          <.input field={@update_photo_form[:folder_id]} name="photo[folder_id]" type="select"
+            label="Folder" required options={Enum.map(@all_folders, &([key: &1.name, value: &1.id]))} />
           <.input
             field={@update_photo_form[:notes]}
             name="photo[notes]"
@@ -950,22 +957,31 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     selected_photos =
       socket.assigns.selected_photos
       |> Enum.map(& &1.id)
-      |> Gallery.get_photos_by_ids()
-      |> Repo.preload(:tags)
+      |> Gallery.get_photos_by_ids(include_private: socket.assigns.is_admin)
+      |> Repo.preload([:tags, :folder])
 
     assign(socket, selected_photos: selected_photos)
   end
 
   def refresh_filtered_photos(socket) do
+    is_admin = socket.assigns.is_admin
+
     filtered_photos =
       case {socket.assigns.folder, socket.assigns.tags} do
-        {nil, []} -> Gallery.list_photos()
-        {nil, tags} -> Gallery.list_photos_by_all_tags(tags)
-        {folder, []} -> Gallery.list_photos_by_folder(folder)
-        {folder, tags} -> Gallery.list_photos_by_folder_and_tags(folder, tags)
+        {nil, []} ->
+          Gallery.list_photos(include_private: is_admin)
+
+        {nil, tags} ->
+          Gallery.list_photos_by_all_tags(tags, include_private: is_admin)
+
+        {folder, []} ->
+          Gallery.list_photos_by_folder(folder, include_private: is_admin)
+
+        {folder, tags} ->
+          Gallery.list_photos_by_folder_and_tags(folder, tags, include_private: is_admin)
       end
 
-    # |> Repo.preload(:tags)
+    # |> Repo.preload([:tags, :folder])
 
     # filtered_photos
     # |> Enum.flat_map(& &1.tags)
@@ -976,7 +992,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
         _ ->
           # filtered_photos
-          # |> Repo.preload(:tags)
+          # |> Repo.preload([:tags, :folder])
           # |> Enum.flat_map(& &1.tags)
           Gallery.list_tags_by_photos(filtered_photos |> Enum.map(& &1.id))
           |> Enum.map(& &1.name)
@@ -998,11 +1014,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
-    {:noreply, assign(socket, :collapse_groups, !socket.assigns.collapse_groups) |> assign(:collapse_group_exceptions, %{})}
+    {:noreply,
+     assign(socket, :collapse_groups, !socket.assigns.collapse_groups)
+     |> assign(:collapse_group_exceptions, %{})}
   end
 
   def handle_event("toggle_collapse_single_group", %{"photo_group" => photo_group}, socket) do
-    {:noreply, assign(socket, :collapse_group_exceptions, Map.update(socket.assigns.collapse_group_exceptions, photo_group, !socket.assigns.collapse_groups, &(!&1)))}
+    {:noreply,
+     assign(
+       socket,
+       :collapse_group_exceptions,
+       Map.update(
+         socket.assigns.collapse_group_exceptions,
+         photo_group,
+         !socket.assigns.collapse_groups,
+         &(!&1)
+       )
+     )}
   end
 
   # Holding ctrl while clicking a photo will select multiple
@@ -1052,7 +1080,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
-    photo = Gallery.get_photo!(photo_id)
+    photo = Gallery.get_photo!(photo_id, include_private: socket.assigns.is_admin)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
 
     socket =
@@ -1068,7 +1096,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
-    photo = Gallery.get_photo!(photo_id)
+    photo = Gallery.get_photo!(photo_id, include_private: socket.assigns.is_admin)
     {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
 
     {:noreply,
@@ -1121,7 +1149,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     # If some of the selected photos have a group, and they all have the same group, use that group
     # Otherwise, use the current timestamp as the group
-    existing_groups = Enum.map(selected_photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
+    existing_groups =
+      Enum.map(selected_photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
+
     group =
       case existing_groups do
         [single_group] -> single_group
@@ -1139,13 +1169,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
-    photo = Gallery.get_photo!(id)
+    photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
     result = Gallery.update_photo(photo, photo_params)
+    is_admin = socket.assigns.is_admin
 
     case result do
       {:ok, _photo} ->
         {:noreply,
-         assign(socket, :all_folders, Gallery.list_folders())
+         assign(socket, :all_folders, Gallery.list_folders(include_private: is_admin))
          |> refresh_selected_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
@@ -1161,12 +1192,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("delete_photo", %{"photo_id" => id}, socket) do
-    photo = Gallery.get_photo!(id)
+    photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
     {:ok, _photo} = Gallery.delete_photo(photo)
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders())
+     |> assign(:all_folders, Gallery.list_folders(include_private: socket.assigns.is_admin))
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(
@@ -1184,7 +1215,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      socket
-     |> assign(:all_folders, Gallery.list_folders())
+     |> assign(:all_folders, Gallery.list_folders(include_private: socket.assigns.is_admin))
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(

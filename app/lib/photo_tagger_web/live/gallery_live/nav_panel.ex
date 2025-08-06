@@ -34,7 +34,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
         <form class="my-2" phx-change="change_folder">
           <select value={@folder} name="folder" id="folder-select"  class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm">
             <option value="">All folders</option>
-            <%= for folder <- @all_folders do %>
+            <%= for %{name: folder} <- @all_folders do %>
               <option value={folder} selected={@folder == folder}>
                 {folder}
               </option>
@@ -137,7 +137,8 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
       end)
       |> Map.put("Recommended", assigns.recommended_tags)
 
-    index = case assigns.folder != Map.get(socket.assigns, :folder, nil) do
+    index =
+      case assigns.folder != Map.get(socket.assigns, :folder, nil) do
         true ->
           # if the folder changed, we need to reset the selected index
           nil
@@ -177,7 +178,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
   end
 
   defp index_sort_mapper({index, _}) do
-    if (String.length(index) > 1) do
+    if String.length(index) > 1 do
       # Ensure that words are sorted after single characters
       "Z_" <> index
     else
