@@ -184,14 +184,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       |> Enum.reject(&(&1.id == photo.id))
       |> Repo.preload(:tags)
 
-    # Get the similarity scores for each photo, and build a weighted list
-    weighted_list =
-      photos
-      |> Enum.map(fn p -> {p, similarity_score(photo, p, focus)} end)
-      |> WeightedList.new()
+    if photos == [] do
+      # If there are no other options, we must keep the same photo
+      photo
+    else
+      # Get the similarity scores for each photo, and build a weighted list
+      weighted_list =
+        photos
+        |> Enum.map(fn p -> {p, similarity_score(photo, p, focus)} end)
+        |> WeightedList.new()
 
-    # Sample a photo from the weighted list
-    WeightedList.sample(weighted_list)
+      # Sample a photo from the weighted list
+      WeightedList.sample(weighted_list)
+    end
   end
 
   # One point for sharing the same folder. One point for each tag in common.

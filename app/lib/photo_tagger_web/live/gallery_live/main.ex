@@ -292,7 +292,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         # Otherwise, selections have changed, query them from the database
         {_, _} ->
           new_selected_photo_ids
-          |> Gallery.get_photos_by_ids()
+          |> Gallery.get_photos_by_ids(include_private: is_admin)
           |> Repo.preload([:tags, :folder])
       end
 
@@ -957,7 +957,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     selected_photos =
       socket.assigns.selected_photos
       |> Enum.map(& &1.id)
-      |> Gallery.get_photos_by_ids()
+      |> Gallery.get_photos_by_ids(include_private: socket.assigns.is_admin)
       |> Repo.preload([:tags, :folder])
 
     assign(socket, selected_photos: selected_photos)
@@ -1080,7 +1080,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
-    photo = Gallery.get_photo!(photo_id)
+    photo = Gallery.get_photo!(photo_id, include_private: socket.assigns.is_admin)
     {:ok, _} = Gallery.add_tag_to_photo(photo, tag)
 
     socket =
@@ -1096,7 +1096,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("remove_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do
-    photo = Gallery.get_photo!(photo_id)
+    photo = Gallery.get_photo!(photo_id, include_private: socket.assigns.is_admin)
     {:ok, _} = Gallery.remove_tag_from_photo(photo, tag)
 
     {:noreply,
@@ -1169,7 +1169,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
-    photo = Gallery.get_photo!(id)
+    photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
     result = Gallery.update_photo(photo, photo_params)
     is_admin = socket.assigns.is_admin
 
@@ -1192,7 +1192,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("delete_photo", %{"photo_id" => id}, socket) do
-    photo = Gallery.get_photo!(id)
+    photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
     {:ok, _photo} = Gallery.delete_photo(photo)
 
     {:noreply,

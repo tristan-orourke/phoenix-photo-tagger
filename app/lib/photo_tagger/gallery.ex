@@ -195,12 +195,18 @@ defmodule PhotoTagger.Gallery do
       ** (Ecto.NoResultsError)
 
   """
-  def get_photo!(id) do
-    Repo.get!(Photo, id)
+  def get_photo!(id, options \\ []) do
+    photo = Repo.get!(Photo, id)
+
+    if Keyword.get(options, :include_private, false) or photo.is_public do
+      photo
+    else
+      raise Ecto.NoResultsError
+    end
   end
 
-  def get_photos_by_ids(ids) do
-    Repo.all(from(p in Photo, where: p.id in ^ids))
+  def get_photos_by_ids(ids, options \\ []) do
+    Repo.all(from(p in Photo, where: p.id in ^ids) |> only_public_photos_unless_forced(options))
   end
 
   @doc """
