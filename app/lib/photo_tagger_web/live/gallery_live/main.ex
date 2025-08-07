@@ -156,7 +156,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:all_tags, all_tags)
       |> assign(:nav_tags, all_tags)
       |> assign(:multiselect_active, false)
-      |> assign(:collapse_groups, false)
+      |> assign(:collapse_groups, true)
       |> assign(:collapse_group_exceptions, %{})
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
@@ -437,13 +437,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div class="flex-none pr-3">
           <.toggle_button
-            selected={@collapse_groups}
+            selected={!@collapse_groups}
             phx-click="toggle_collapse_groups"
             class="flex items-center pl-3 pr-3 inline mr-1"
           >
             <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
             <span class="sr-only lg:not-sr-only lg:ml-1">
-              Collapse groups
+              {if(@collapse_groups, do: "Expand groups", else: "Collapse groups")}
             </span>
           </.toggle_button>
           <.toggle_button
