@@ -483,33 +483,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       assign(assigns, :total_pages, Util.ceiling_div(assigns.total_items, assigns.pg_size))
 
     ~H"""
-    <div :if={@total_pages > 1} class="flex justify-center my-4">
+    <div :if={@total_pages > 1} class="flex flex-col md:flex-row justify-center mb-2 mb:mb-4">
       <.button
         phx-click="change_page"
         phx-value-pg={1}
-        class={"mr-2 #{if @pg > 2, do: "", else: "invisible"}"}
+        class={"m-1 py-1 lg:py-2 #{if @pg > 2, do: "", else: "hidden md:inline md:invisible"}"}
       >
         First
       </.button>
       <.button
         phx-click="change_page"
         phx-value-pg={@pg - 1}
-        class={"mr-2 #{if(@pg > 1, do: "", else: "invisible")}"}
+        class={"m-1 py-1 lg:py-2 #{if(@pg > 1, do: "", else: "hidden md:inline md:invisible")}"}
       >
         Previous
       </.button>
-      <span class="self-center">Page {@pg} of {@total_pages}</span>
+      <span class="self-center"><span class="hidden lg:inline">Page </span>{@pg} of {@total_pages}</span>
       <.button
         phx-click="change_page"
         phx-value-pg={@pg + 1}
-        class={"ml-2 #{if(@pg < @total_pages, do: "", else: "invisible")}"}
+        class={"m-1 py-1 lg:py-2 #{if(@pg < @total_pages, do: "", else: "hidden md:inline md:hidden md:inline md:invisible")}"}
       >
         Next
       </.button>
       <.button
         phx-click="change_page"
         phx-value-pg={@total_pages}
-        class={"ml-2 #{if @pg < (@total_pages - 1), do: "", else: "invisible"}"}
+        class={"m-1 py-1 lg:py-2 #{if @pg < (@total_pages - 1), do: "", else: "hidden md:inline md:invisible"}"}
       >
         Last
       </.button>
