@@ -1,4 +1,6 @@
 defmodule PhotoTaggerWeb.GalleryLive.Util do
+  require Logger
+
   def build_url(folder, selected_photo_ids, tags, is_admin, tail \\ nil) do
     {photo_id, selected_photo_ids} =
       case selected_photo_ids do
@@ -40,5 +42,27 @@ defmodule PhotoTaggerWeb.GalleryLive.Util do
       end
 
     URI.to_string(uri)
+  end
+
+  def safe_integer_parse(value, default) do
+    case Integer.parse(value) do
+      {int, _} -> int
+      :error -> default
+    end
+  end
+
+  def ceiling_div(dividend, divisor) do
+    Logger.debug("Ceiling division: #{dividend} / #{divisor}")
+    remainder = rem(dividend, divisor)
+
+    result =
+      if remainder == 0 do
+        div(dividend, divisor)
+      else
+        div(dividend, divisor) + 1
+      end
+
+    Logger.debug("Ceiling division result: #{result}")
+    result
   end
 end

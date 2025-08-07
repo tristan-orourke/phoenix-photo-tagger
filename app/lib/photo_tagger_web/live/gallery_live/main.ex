@@ -12,6 +12,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   require Logger
 
+  @default_pg_size 100
+
   def render(assigns) do
     ~H"""
     <div class="h-full">
@@ -59,6 +61,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               collapse_group_exceptions={@collapse_group_exceptions}
               zoom_level={@zoom_level}
               is_admin={@is_admin}
+              pg={@pg}
+              pg_size={@pg_size}
             />
           <% end %>
         </div>
@@ -178,6 +182,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     tags = Map.get(params, "query_tags", [])
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
+    pg = Map.get(params, "pg", "1") |> Util.safe_integer_parse(1)
+
+    pg_size =
+      Map.get(params, "pg_size", Integer.to_string(@default_pg_size))
+      |> Util.safe_integer_parse(@default_pg_size)
+
+    socket = assign(socket, %{pg: pg, pg_size: pg_size})
 
     # zoom_level =
     #   Map.get(params, "zoom", "0")
@@ -463,12 +474,57 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     """
   end
 
+  attr(:pg, :integer, default: 1)
+  attr(:pg_size, :integer, default: @default_pg_size)
+  attr(:total_items, :integer, required: true)
+
+  def pagination(assigns) do
+    assigns =
+      assign(assigns, :total_pages, Util.ceiling_div(assigns.total_items, assigns.pg_size))
+
+    ~H"""
+    <div :if={@total_pages > 1} class="flex justify-center my-4">
+      <.button
+        phx-click="change_page"
+        phx-value-pg={1}
+        class={"mr-2 #{if @pg > 2, do: "", else: "invisible"}"}
+      >
+        First
+      </.button>
+      <.button
+        phx-click="change_page"
+        phx-value-pg={@pg - 1}
+        class={"mr-2 #{if(@pg > 1, do: "", else: "invisible")}"}
+      >
+        Previous
+      </.button>
+      <span class="self-center">Page {@pg} of {@total_pages}</span>
+      <.button
+        phx-click="change_page"
+        phx-value-pg={@pg + 1}
+        class={"ml-2 #{if(@pg < @total_pages, do: "", else: "invisible")}"}
+      >
+        Next
+      </.button>
+      <.button
+        phx-click="change_page"
+        phx-value-pg={@total_pages}
+        class={"ml-2 #{if @pg < (@total_pages - 1), do: "", else: "invisible"}"}
+      >
+        Last
+      </.button>
+    </div>
+    """
+  end
+
   attr(:photos, :list, required: true)
   attr(:selected_photo_ids, :list, default: [])
   attr(:collapse_groups, :boolean, default: false)
   attr(:collapse_group_exceptions, :map, default: %{})
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
+  attr(:pg, :integer, default: 1)
+  attr(:pg_size, :integer, default: @default_pg_size)
 
   def gallery(assigns) do
     groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
@@ -494,23 +550,31 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     # Ensure photos in a group appear next to each other, without otherwise changing the order.
     # For each group, the first photo in the group is kept in its original position, with the rest of the group directly following, retaining their relaitve ordering.
+    sorted_photos =
+      filtered_photos
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {photo, index} ->
+        case photo.group do
+          nil -> {index, 0}
+          group -> {group_header_positions[group] || index, index}
+        end
+      end)
+      |> Enum.map(fn {photo, _index} -> photo end)
+
+    paginated_photos =
+      Enum.slice(sorted_photos, (assigns.pg - 1) * assigns.pg_size, assigns.pg_size)
+
     assigns =
       assign(
         assigns,
         :photos,
-        filtered_photos
-        |> Enum.with_index()
-        |> Enum.sort_by(fn {photo, index} ->
-          case photo.group do
-            nil -> {index, 0}
-            group -> {group_header_positions[group] || index, index}
-          end
-        end)
-        |> Enum.map(fn {photo, _index} -> photo end)
+        paginated_photos
       )
+      |> assign(:total_items, Enum.count(sorted_photos))
 
     ~H"""
     <div class="p-2 lg:p-6">
+      <.pagination total_items={@total_items} pg={@pg} pg_size={@pg_size} />
       <ul class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
@@ -540,6 +604,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           />
         <% end %>
       </ul>
+      <.pagination total_items={@total_items} pg={@pg} pg_size={@pg_size} />
     </div>
     """
   end
@@ -1272,6 +1337,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.is_admin
          )
      )}
+  end
+
+  def handle_event("change_page", %{"pg" => pg}, socket) do
+    pg = Util.safe_integer_parse(pg, 1)
+
+    {:noreply, assign(socket, :pg, pg)}
   end
 
   ## Utility functions
