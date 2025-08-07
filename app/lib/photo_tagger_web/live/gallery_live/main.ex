@@ -1342,7 +1342,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("change_page", %{"pg" => pg}, socket) do
     pg = Util.safe_integer_parse(pg, 1)
 
-    {:noreply, assign(socket, :pg, pg)}
+    {:noreply,
+     assign(socket, :pg, pg) |> push_event("scroll_to_top", %{selector: "#gallery-section"})}
   end
 
   ## Utility functions
