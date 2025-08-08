@@ -48,6 +48,7 @@ defmodule PhotoTagger.Gallery do
 
   defp list_photos_query() do
     from(p in Photo,
+      as: :photo,
       preload: [:folder],
       order_by: [desc: p.inserted_at],
       order_by: [asc: p.name],
@@ -181,7 +182,9 @@ defmodule PhotoTagger.Gallery do
         # This is a special case where we look for untagged photos.
         # TODO: maybe give untagged photos their own function?
         nil ->
-          list_photos_by_tags_query(nil)
+          from(p in query,
+            where: not exists(from(pt in PhotoTag, where: pt.photo_id == parent_as(:photo).id))
+          )
 
         _ ->
           from(p in query,
