@@ -7,6 +7,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
   attr(:nav_tags, :list, required: true)
   attr(:recommended_tags, :list, required: true)
   attr(:current_tags, :list, required: true)
+  attr(:exclude_tags, :list, required: true)
   # attr(:selected_photo_ids, :list, default: [])
   attr(:is_admin, :boolean, required: true)
 
@@ -44,7 +45,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
         <h2 class="">Tags</h2>
         <nav class="my-2 pl-2 list-none">
           <%= if not Enum.empty?(@current_tags) do %>
-            <h3 class="text-sm font-bold">Current tags</h3>
+            <h3 class="text-sm font-bold">Current filters</h3>
             <ul class="my-2">
               <%= for tag <- @current_tags do %>
                 <li class="mr-2">
@@ -57,9 +58,28 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
                   </.toggle_button>
                 </li>
               <% end %>
+              <%= for tag <- @exclude_tags do %>
+                <li class="mr-2">
+                  <.toggle_button_red
+                    selected={true}
+                    phx-click="toggle_exclude_tag"
+                    phx-value-tag={tag}
+                  >
+                    -{tag}
+                  </.toggle_button_red>
+                </li>
+              <% end %>
             </ul>
           <% end %>
           <h3 class="text-sm font-bold">All tags</h3>
+          <.toggle_button_blue_red
+            selected={@is_exclude_mode}
+            phx-click="toggle_exclude_mode"
+            class="mb-2"
+            phx-target={@myself}
+          >
+            Filtering {if(@is_exclude_mode, do: "Out", else: "In")}
+          </.toggle_button_blue_red>
           <ul id="index-selectors" class="flex flex-wrap my-2 sticky top-0 bg-white z-10">
             <%= for {index, tags} <- Enum.sort_by(@indexed_tags, &index_sort_mapper/1) do %>
               <li>
@@ -82,26 +102,38 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
           <ul class="pb-96">
             <%= if @selected_index != nil do %>
               <%= for tag <- Map.get(@indexed_tags, @selected_index) do %>
-                <%= if tag in @current_tags or tag in @recommended_nav_tags do %>
+                <%= if @is_exclude_mode do %>
                   <li class="mr-2">
-                    <.toggle_button
-                      selected={tag in @current_tags}
-                      phx-click="toggle_tag"
+                    <.toggle_button_red
+                      selected={tag in @exclude_tags}
+                      phx-click="toggle_exclude_tag"
                       phx-value-tag={tag}
                     >
-                      {tag}
-                    </.toggle_button>
+                      -{tag}
+                    </.toggle_button_red>
                   </li>
                 <% else %>
-                  <li class="mr-2">
-                    <button
-                      class="underline text-blue-600 hover:text-blue-800 mr-2"
-                      phx-click="link_tag"
-                      phx-value-tag={tag}
-                    >
-                      {tag}
-                    </button>
-                  </li>
+                  <%= if tag in @current_tags or tag in @recommended_nav_tags do %>
+                    <li class="mr-2">
+                      <.toggle_button
+                        selected={tag in @current_tags}
+                        phx-click="toggle_tag"
+                        phx-value-tag={tag}
+                      >
+                        {tag}
+                      </.toggle_button>
+                    </li>
+                  <% else %>
+                    <li class="mr-2">
+                      <button
+                        class="underline text-blue-600 hover:text-blue-800 mr-2"
+                        phx-click="link_tag"
+                        phx-value-tag={tag}
+                      >
+                        {tag}
+                      </button>
+                    </li>
+                  <% end %>
                 <% end %>
               <% end %>
             <% end %>
@@ -113,7 +145,11 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
   end
 
   def mount(socket) do
-    {:ok, socket |> assign(:is_open, true) |> assign(:selected_index, nil)}
+    {:ok,
+     socket
+     |> assign(:is_open, true)
+     |> assign(:selected_index, nil)
+     |> assign(:is_exclude_mode, false)}
   end
 
   def update(assigns, socket) do
@@ -152,6 +188,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
      |> assign(:folder, assigns.folder)
      |> assign(:all_folders, assigns.all_folders)
      |> assign(:current_tags, assigns.current_tags)
+     |> assign(:exclude_tags, assigns.exclude_tags)
      |> assign(:recommended_nav_tags, recommended_nav_tags)
      |> assign(:indexed_tags, indexed_tags)
      |> assign(:is_admin, assigns.is_admin)
@@ -166,6 +203,10 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
   def handle_event("select_index", %{"index" => index}, socket) do
     # Get the tags for the selected index
     {:noreply, socket |> assign(:selected_index, index)}
+  end
+
+  def handle_event("toggle_exclude_mode", _, socket) do
+    {:noreply, socket |> update(:is_exclude_mode, fn is_exclude_mode -> not is_exclude_mode end)}
   end
 
   # Util functions
