@@ -18,7 +18,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       <div class="absolute top-4 left-4 text-sm">
         <ul>
           <li :for={tag <- @tags} class={case {tag in @photo_tags, tag in @prev_photo_tags} do
-              {true, true} -> "h-6"
+              {true, true} -> "h-6 shared-tag"
               {true, false} -> "h-6 new-tag"
               {false, true} -> "h-6 old-tag"
               {false, false} -> "h-6"
@@ -30,8 +30,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
                 "h-6 opacity-100",
                 "h-0 opacity-0"},
               to: "#tag-#{tag}",
-              time: 1000,
-
+              time: 1000
             )}
             data-show={JS.transition(
                 {"transition-all transform ease-out duration-1000",
@@ -41,9 +40,24 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
               time: 1000
             )}
           >
-            <p class="data-[attention]:ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800
-              bg-white data-[attention]:bg-cyan-100 rounded-full px-1 w-max text-sm"
-              data-attention={tag == @focus_tag}
+            <% 
+              is_shared = tag in @photo_tags and tag in @prev_photo_tags
+              is_focus = tag == @focus_tag
+              bg_class = cond do
+                is_shared -> "bg-green-50"
+                is_focus -> "bg-cyan-100"
+                true -> ""
+              end
+              ring_class = cond do
+                is_focus -> "ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800"
+                is_shared -> "ring-2 ring-green-400 ring-offset-1 ring-offset-zinc-800"
+                true -> ""
+              end
+            %>
+            <p class={"bg-white rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
+              data-attention{is_focus}
+              data-shared={is_shared}
+              id={"tag-p-#{tag}"}
             >
               #{tag}
             </p>
@@ -224,7 +238,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
      |> assign(:focus_tag, focus_tag)
      |> assign(:timer_start_time, timer_start_time)
      |> push_event("show", %{selector: ".new-tag"})
-     |> push_event("hide", %{selector: ".old-tag"})}
+     |> push_event("hide", %{selector: ".old-tag"})
+     |> push_event("highlight_shared", %{selector: ".shared-tag"})}
   end
 
   # NOTE: this is an expensive operation, and should be done in a background job
