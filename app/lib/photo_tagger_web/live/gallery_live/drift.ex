@@ -50,7 +50,44 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
           </li>
         </ul>
       </div>
-      <div class="absolute top-4 right-4 text-sm">
+      <div class="absolute top-4 right-4 text-sm flex items-center gap-2">
+        <div
+          id="countdown-timer"
+          phx-hook="CountdownTimer"
+          data-interval-ms={@interval_ms}
+          data-timer-start-time={@timer_start_time}
+          class="relative w-12 h-12"
+        >
+          <svg class="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+            <circle
+              cx="18"
+              cy="18"
+              r="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="text-zinc-600 opacity-20"
+            />
+            <g transform="translate(18, 18) scale(1, -1) translate(-18, -18)">
+              <circle
+                id="progress-circle"
+                cx="18"
+                cy="18"
+                r="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-dasharray="100.53"
+                stroke-dashoffset="0"
+                class="text-white transition-all duration-100"
+                stroke-linecap="round"
+              />
+            </g>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="countdown-seconds" class="text-white text-xs font-semibold">0</span>
+          </div>
+        </div>
         <.button
           phx-click="increase_tempo"
         >
@@ -74,7 +111,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   def mount(_params, _session, socket) do
     interval_ms = 5 * 1000
 
-    {:ok, socket |> start_timer(interval_ms) |> assign(:prev_photo_tags, [])}
+    {:ok,
+     socket
+     |> start_timer(interval_ms)
+     |> assign(:prev_photo_tags, [])}
   end
 
   def handle_params(params, _session, socket) do
@@ -87,7 +127,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       if Map.has_key?(params, "tempo") and params["tempo"] != socket.assigns.interval_ms do
         socket |> start_timer(String.to_integer(params["tempo"]))
       else
+        # Ensure timer_start_time is set even if timer doesn't change
         socket
+        |> assign(
+          :timer_start_time,
+          Map.get(socket.assigns, :timer_start_time, System.system_time(:millisecond))
+        )
       end
 
     photo_tags = Enum.map(photo.tags, & &1.name)
@@ -124,7 +169,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
         false -> {:ok, nil}
       end
 
-    assign(socket, :timer_ref, timer_ref) |> assign(:interval_ms, interval_ms)
+    timer_start_time = System.system_time(:millisecond)
+
+    assign(socket, :timer_ref, timer_ref)
+    |> assign(:interval_ms, interval_ms)
+    |> assign(:timer_start_time, timer_start_time)
   end
 
   def handle_info(:switch_photos, socket) do
@@ -132,7 +181,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   end
 
   def handle_event("switch_photos", _, socket) do
-    start_timer(socket, socket.assigns.interval_ms)
+    socket
+    |> start_timer(socket.assigns.interval_ms)
     |> switch_photos()
   end
 
@@ -161,6 +211,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
         {false, true} -> nil
       end
 
+    # Reset timer start time when photos switch
+    timer_start_time = System.system_time(:millisecond)
+
     # Save the new photo
     {:noreply,
      socket
@@ -169,6 +222,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
      |> assign(:photo_tags, new_photo_tags)
      |> assign(:tags, tags)
      |> assign(:focus_tag, focus_tag)
+     |> assign(:timer_start_time, timer_start_time)
      |> push_event("show", %{selector: ".new-tag"})
      |> push_event("hide", %{selector: ".old-tag"})}
   end
