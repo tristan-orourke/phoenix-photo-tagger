@@ -6,6 +6,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryTagLink do
   attr(:tag, :string, required: true)
   attr(:folder, :string, required: true)
   attr(:current_tags, :list, required: true)
+  attr(:exclude_tags, :list, required: true)
   attr(:selected_photo_ids, :list, required: true)
   attr(:is_admin, :boolean, default: false)
   attr(:is_recommended, :boolean, default: false)
@@ -46,7 +47,14 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryTagLink do
           [assigns.tag]
       end
 
-    url = Util.build_url(assigns.folder, assigns.selected_photo_ids, tags_list, assigns.is_admin)
+    url =
+      Util.build_url(
+        assigns.folder,
+        assigns.selected_photo_ids,
+        tags_list,
+        assigns.exclude_tags,
+        assigns.is_admin
+      )
 
     {:ok,
      socket

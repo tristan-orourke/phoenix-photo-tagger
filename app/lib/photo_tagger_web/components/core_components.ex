@@ -269,6 +269,54 @@ defmodule PhotoTaggerWeb.CoreComponents do
   end
 
   attr :selected, :boolean, required: true
+  attr :class, :string, default: nil
+  attr :rest, :global, include: ~w(disabled form name value)
+  slot :inner_block, required: true
+
+  def toggle_button_red(assigns) do
+    ~H"""
+    <button
+      class={
+        ClassHelper.tw([
+          "border rounded-full px-1 my-1",
+          "border border-red-600 text-red-600 bg-white hover:bg-red-100 hover:text-red-800",
+          "aria-selected:bg-red-600 aria-selected:text-white aria-selected:hover:bg-red-700",
+          @class
+        ])
+      }
+      aria-selected={if(@selected, do: "true", else: "false")}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
+  attr :selected, :boolean, required: true
+  attr :class, :string, default: nil
+  attr :rest, :global, include: ~w(disabled form name value)
+  slot :inner_block, required: true
+
+  def toggle_button_blue_red(assigns) do
+    ~H"""
+    <button
+      class={
+        ClassHelper.tw([
+          "border rounded-full px-1 my-1",
+          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
+          "aria-selected:bg-red-600 aria-selected:text-white aria-selected:hover:bg-red-700",
+          @class
+        ])
+      }
+      aria-selected={if(@selected, do: "true", else: "false")}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
+  attr :selected, :boolean, required: true
   attr :href, :string, required: true
   attr :nav_type, :atom, values: [:patch, :navigate, :href], default: :patch
   attr :rest, :global
@@ -276,6 +324,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
 
   def toggle_link(assigns) do
     assigns = assign(assigns, :nav, Map.put(%{}, assigns.nav_type, assigns.href))
+
     ~H"""
     <.link
       class={[

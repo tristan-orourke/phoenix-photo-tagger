@@ -45,6 +45,16 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
+  defp list_photos_query() do
+    from(p in Photo,
+      as: :photo,
+      preload: [:folder],
+      order_by: [desc: p.inserted_at],
+      order_by: [asc: p.name],
+      select: p
+    )
+  end
+
   @doc """
   Returns the list of photos.
 
@@ -56,29 +66,22 @@ defmodule PhotoTagger.Gallery do
   """
   def list_photos(options \\ []) do
     Repo.all(
-      from(p in Photo,
-        preload: [:folder],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
-      )
+      list_photos_query()
       |> only_public_photos_unless_forced(options)
     )
   end
 
   def list_photos_preload_tags(options \\ []) do
     Repo.all(
-      from(p in Photo,
+      from(p in list_photos_query(),
         left_join: t in assoc(p, :tags),
-        preload: [tags: t],
-        preload: [:folder],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name],
-        select: p
+        preload: [tags: t]
       )
       |> only_public_photos_unless_forced(options)
     )
   end
 
+  # TODO: Finish refactoring to use list_photos_query
   def list_photos_by_folder(folder_name, options \\ []) do
     Repo.all(
       from(p in Photo,
@@ -167,8 +170,77 @@ defmodule PhotoTagger.Gallery do
     )
   end
 
-  def list_photos_by_folder_and_tags(folder_name, tag_names, options \\ []) do
-    query = photos_by_tags_query(tag_names)
+  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}) do
+    query = list_photos_query()
+
+    query =
+      case include_tags do
+        [] ->
+          query
+
+        # This is a special case where we look for untagged photos.
+        # TODO: maybe give untagged photos their own function?
+        nil ->
+          from(p in query,
+            where: not exists(from(pt in PhotoTag, where: pt.photo_id == parent_as(:photo).id))
+          )
+
+        _ ->
+          from(p in query,
+            inner_join:
+              sub in subquery(
+                from(p in Photo,
+                  inner_join: pt in PhotoTag,
+                  on: pt.photo_id == p.id,
+                  inner_join: t in Tag,
+                  on: pt.tag_id == t.id,
+                  where: t.name in ^include_tags,
+                  group_by: p.id,
+                  select: %{photo_id: p.id, tag_count: count(pt.tag_id)}
+                )
+              ),
+            on: sub.photo_id == p.id,
+            where: sub.tag_count == ^length(include_tags)
+          )
+      end
+
+    query =
+      case exclude_tags do
+        [] ->
+          query
+
+        _ ->
+          from(p in query,
+            where:
+              p.id not in subquery(
+                from(pt in PhotoTag,
+                  left_join: t in Tag,
+                  on: pt.tag_id == t.id,
+                  where: t.name in ^exclude_tags,
+                  select: pt.photo_id
+                )
+              )
+          )
+      end
+
+    query
+  end
+
+  def list_photos_by_tags(%{include: include_tags, exclude: exclude_tags}, options \\ []) do
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags})
+
+    Repo.all(
+      query
+      |> only_public_photos_unless_forced(options)
+    )
+  end
+
+  def list_photos_by_folder_and_tags(
+        folder_name,
+        %{include: include_tags, exclude: exclude_tags},
+        options \\ []
+      ) do
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags})
 
     Repo.all(
       from(p in query,
