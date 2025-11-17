@@ -9,9 +9,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
 
   def render(assigns) do
     ~H"""
-    <div class="fixed inset-0 overflow-y-auto w-screen h-screen flex items-center justify-center bg-zinc-800">
+    <div class="fixed inset-0 overflow-hidden w-screen h-screen flex items-center justify-center bg-zinc-800">
       <img
-        class="object-contain w-full max-w-full lg:max-h-full"
+        class="object-contain w-full h-full max-w-full max-h-full"
         alt={@photo.name}
         src={ImageUploader.url({@photo.image, @photo}, :original)}
       />
