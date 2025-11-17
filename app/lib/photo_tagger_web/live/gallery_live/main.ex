@@ -188,11 +188,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     exclude_tags = Map.get(params, "exclude_tags", [])
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
-    pg = Map.get(params, "pg", "1") |> Util.safe_integer_parse(1)
+
+    prev_pg = Map.get(socket.assigns, :pg, 1)
+
+    pg =
+      Map.get(params, "pg", Integer.to_string(prev_pg))
+      |> Util.safe_integer_parse(prev_pg)
+
+    prev_pg_size = Map.get(socket.assigns, :pg_size, @default_pg_size)
 
     pg_size =
-      Map.get(params, "pg_size", Integer.to_string(@default_pg_size))
-      |> Util.safe_integer_parse(@default_pg_size)
+      Map.get(params, "pg_size", Integer.to_string(prev_pg_size))
+      |> Util.safe_integer_parse(prev_pg_size)
 
     socket = assign(socket, %{pg: pg, pg_size: pg_size})
 
