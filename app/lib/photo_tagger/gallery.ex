@@ -10,7 +10,6 @@ defmodule PhotoTagger.Gallery do
   alias PhotoTagger.Gallery.PhotoTag
   alias PhotoTagger.Gallery.Folder
   alias PhotoTagger.Uploaders.ImageUploader
-  require Logger
 
   defp only_public_photos(query) do
     case Ecto.Query.has_named_binding?(query, :folder) do

@@ -213,8 +213,6 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         selected_photo_ids: selected_photo_ids
       })
 
-    Logger.debug("Expanded state: #{inspect(expanded_state.exclude_tags)}")
-
     # Reset scroll position of a section if the relevent params change
     socket =
       if(expanded_state.selected_photos != Map.get(socket.assigns, :selected_photos),
