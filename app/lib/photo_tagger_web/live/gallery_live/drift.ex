@@ -18,29 +18,28 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       <div class="absolute top-4 left-4 text-sm">
         <ul>
           <li :for={tag <- @tags} class={case {tag in @photo_tags, tag in @prev_photo_tags} do
-              {true, true} -> "h-6 shared-tag"
-              {true, false} -> "h-6 new-tag"
-              {false, true} -> "h-6 old-tag"
-              {false, false} -> "h-6"
+              {true, true} -> "shared-tag"
+              {true, false} -> "new-tag"
+              {false, true} -> "old-tag"
+              {false, false} -> "h-0"
             end}
             id={"tag-#{tag}"}
             data-hide={
-              #JS.add_class("opacity-0", to: "#tag-#{tag} > p")
-            JS.transition({"transition-all transform ease-out duration-1000",
+              JS.transition({"transition-all transform ease-in duration-[1000ms]",
                 "h-6 opacity-100",
                 "h-0 opacity-0"},
               to: "#tag-#{tag}",
               time: 1000
             )}
             data-show={JS.transition(
-                {"transition-all transform ease-out duration-1000",
+                {"transition-all transform ease-in duration-[1000ms]",
                 "h-0 opacity-0",
                 "h-6 opacity-100"},
               to: "#tag-#{tag}",
               time: 1000
             )}
           >
-            <% 
+            <%
               is_shared = tag in @photo_tags and tag in @prev_photo_tags
               is_focus = tag == @focus_tag
               bg_class = cond do
