@@ -15,3 +15,23 @@ window.addEventListener("phx:hide", (event) => {
         }
     })
 });
+
+window.addEventListener("phx:highlight_shared", (event) => {
+    document.querySelectorAll(event.detail.selector).forEach(el => {
+        const tagElement = el.querySelector("p")
+        if (tagElement) {
+            // Add a brief scale and glow animation
+            tagElement.style.transform = "scale(1.15)"
+            tagElement.style.transition = "transform 0.3s ease-out, box-shadow 0.3s ease-out"
+            tagElement.style.boxShadow = "0 0 20px rgba(34, 197, 94, 0.6)"
+            
+            // Reset scale and glow after animation
+            setTimeout(() => {
+                tagElement.style.transform = "scale(1)"
+                setTimeout(() => {
+                    tagElement.style.boxShadow = ""
+                }, 300)
+            }, 500)
+        }
+    })
+});
