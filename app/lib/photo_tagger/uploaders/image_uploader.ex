@@ -5,7 +5,7 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   require Logger
 
-  @versions [:original, :small, :thumb, :web_lg, :web_md]
+  @versions [:original, :thumb, :web_md, :web_lg]
   @extensions ~w(.jpg .jpeg .gif .png)
 
   def valid_extensions, do: @extensions
@@ -19,10 +19,6 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
       true -> :ok
       false -> {:error, "invalid file type"}
     end
-  end
-
-  def transform(:small, _) do
-    {:convert, "-strip -define jpeg:extent=100KB -format jpg", :jpg}
   end
 
   def transform(:thumb, _) do

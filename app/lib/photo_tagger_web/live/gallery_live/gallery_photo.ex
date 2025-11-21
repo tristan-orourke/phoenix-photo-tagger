@@ -62,7 +62,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
      assign(
        socket,
        :photo_image_url,
-       ImageUploader.url({assigns.photo_image, %{folder: assigns.photo_folder}}, :small)
+       ImageUploader.url({assigns.photo_image, %{folder: assigns.photo_folder}}, :thumb)
      )
      |> assign(Map.drop(assigns, [:photo_image, :photo_folder]))}
   end
