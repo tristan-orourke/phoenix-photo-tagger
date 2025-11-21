@@ -44,12 +44,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
               is_focus = tag == @focus_tag
               bg_class = cond do
                 is_shared -> "bg-green-50"
-                # is_focus -> "bg-cyan-100"
+                is_focus -> "bg-cyan-100"
                 true -> "bg-white"
               end
               ring_class = cond do
                 is_focus -> "ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800"
-                # is_shared -> "ring-2 ring-green-400 ring-offset-1 ring-offset-zinc-800"
+                is_shared -> "ring-1 ring-green-400 ring-offset-1 ring-offset-zinc-800"
                 true -> ""
               end
             %>
