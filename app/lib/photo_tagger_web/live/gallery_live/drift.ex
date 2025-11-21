@@ -25,14 +25,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
             end}
             id={"tag-#{tag}"}
             data-hide={
-              JS.transition({"transition-all transform ease-in duration-[1000ms]",
+              JS.transition({"transition-all transform ease-in duration-1000",
                 "h-6 opacity-100",
                 "h-0 opacity-0"},
               to: "#tag-#{tag}",
               time: 1000
             )}
             data-show={JS.transition(
-                {"transition-all transform ease-in duration-[1000ms]",
+                {"transition-all transform ease-in duration-1000",
                 "h-0 opacity-0",
                 "h-6 opacity-100"},
               to: "#tag-#{tag}",
@@ -44,16 +44,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
               is_focus = tag == @focus_tag
               bg_class = cond do
                 is_shared -> "bg-green-50"
-                is_focus -> "bg-cyan-100"
-                true -> ""
+                # is_focus -> "bg-cyan-100"
+                true -> "bg-white"
               end
               ring_class = cond do
                 is_focus -> "ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800"
-                is_shared -> "ring-2 ring-green-400 ring-offset-1 ring-offset-zinc-800"
+                # is_shared -> "ring-2 ring-green-400 ring-offset-1 ring-offset-zinc-800"
                 true -> ""
               end
             %>
-            <p class={"bg-white rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
+            <p class={"rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
               data-attention{is_focus}
               data-shared={is_shared}
               id={"tag-p-#{tag}"}
