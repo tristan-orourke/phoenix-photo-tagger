@@ -7,5 +7,6 @@ RUN apt-get update && \
     imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /bin
 
+COPY --chmod=777 make_thumb_and_web_images.sh /bin/make_thumb_and_web_images.sh
