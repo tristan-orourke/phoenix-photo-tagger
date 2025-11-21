@@ -3,8 +3,9 @@ export default {
     // Initialize timer start time and interval
     this.resetTimer()
     this.updateCountdown()
-    // Update more frequently for smoother animation (every 50ms)
-    this.interval = setInterval(() => this.updateCountdown(), 50)
+    // Use requestAnimationFrame for battery-efficient smooth animation
+    this.animationFrameId = null
+    this.startAnimation()
   },
 
   updated() {
@@ -15,14 +16,48 @@ export default {
     // If the server start time or interval changed, reset our client timer
     if (newServerStartTime !== this.serverStartTime || newIntervalMs !== this.intervalMs) {
       this.resetTimer()
+      // Restart animation if it was stopped
+      if (!this.animationFrameId) {
+        this.startAnimation()
+      }
     }
     
     this.updateCountdown()
   },
 
   destroyed() {
-    if (this.interval) {
-      clearInterval(this.interval)
+    this.stopAnimation()
+  },
+
+  startAnimation() {
+    // Stop any existing animation
+    this.stopAnimation()
+    
+    // Create animation loop using requestAnimationFrame
+    const animate = () => {
+      this.updateCountdown()
+      
+      // Continue animation if timer hasn't expired
+      const now = Date.now()
+      const elapsed = now - this.clientStartTime
+      
+      if (elapsed < this.intervalMs) {
+        // Schedule next frame
+        this.animationFrameId = requestAnimationFrame(animate)
+      } else {
+        // Timer expired, stop animation
+        this.animationFrameId = null
+      }
+    }
+    
+    // Start the animation loop
+    this.animationFrameId = requestAnimationFrame(animate)
+  },
+
+  stopAnimation() {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId)
+      this.animationFrameId = null
     }
   },
 

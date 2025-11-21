@@ -54,7 +54,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
               end
             %>
             <p class={"rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
-              data-attention{is_focus}
+              data-attention={is_focus}
               data-shared={is_shared}
               id={"tag-p-#{tag}"}
             >
