@@ -1,7 +1,7 @@
 defmodule PhotoTaggerWeb.GalleryLive.Util do
   require Logger
 
-  def build_url(folder, selected_photo_ids, tags, is_admin, tail \\ nil) do
+  def build_url(folder, selected_photo_ids, tags, exclude_tags, is_admin, tail \\ nil) do
     {photo_id, selected_photo_ids} =
       case selected_photo_ids do
         [photo_id] -> {photo_id, []}
@@ -32,6 +32,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Util do
     query =
       %{}
       |> Map.put(:query_tags, tags)
+      |> Map.put(:exclude_tags, exclude_tags)
       |> Map.put(:selected_photos, selected_photo_ids)
       |> Plug.Conn.Query.encode()
 

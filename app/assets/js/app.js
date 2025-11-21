@@ -24,6 +24,7 @@ import topbar from "../vendor/topbar"
 import "./scrollEvents.js"
 import "./uploadPhotoMetadata.js"
 import "./transitionEvents.js"
+import CountdownTimer from "./countdownTimer.js"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
@@ -36,6 +37,9 @@ let liveSocket = new LiveSocket("/live", Socket, {
         ctrl_key_pressed: e.ctrlKey,
       }
     }
+  },
+  hooks: {
+    CountdownTimer: CountdownTimer
   }
 })
 

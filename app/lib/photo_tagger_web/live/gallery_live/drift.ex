@@ -9,48 +9,98 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
 
   def render(assigns) do
     ~H"""
-    <div class="fixed inset-0 overflow-y-auto w-screen h-screen flex items-center justify-center bg-zinc-800">
+    <div class="fixed inset-0 overflow-hidden w-screen h-screen flex items-center justify-center bg-zinc-800">
       <img
-        class="object-contain w-full max-w-full lg:max-h-full"
+        class="object-contain w-full h-full max-w-full max-h-full"
         alt={@photo.name}
         src={ImageUploader.url({@photo.image, @photo}, :original)}
       />
       <div class="absolute top-4 left-4 text-sm">
         <ul>
           <li :for={tag <- @tags} class={case {tag in @photo_tags, tag in @prev_photo_tags} do
-              {true, true} -> "h-6"
-              {true, false} -> "h-6 new-tag"
-              {false, true} -> "h-6 old-tag"
-              {false, false} -> "h-6"
+              {true, true} -> "shared-tag"
+              {true, false} -> "new-tag"
+              {false, true} -> "old-tag"
+              {false, false} -> "h-0"
             end}
             id={"tag-#{tag}"}
             data-hide={
-              #JS.add_class("opacity-0", to: "#tag-#{tag} > p")
-            JS.transition({"transition-all transform ease-out duration-1000",
+              JS.transition({"transition-all transform ease-in duration-1000",
                 "h-6 opacity-100",
                 "h-0 opacity-0"},
               to: "#tag-#{tag}",
-              time: 1000,
-
+              time: 1000
             )}
             data-show={JS.transition(
-                {"transition-all transform ease-out duration-1000",
+                {"transition-all transform ease-in duration-1000",
                 "h-0 opacity-0",
                 "h-6 opacity-100"},
               to: "#tag-#{tag}",
               time: 1000
             )}
           >
-            <p class="data-[attention]:ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800
-              bg-white data-[attention]:bg-cyan-100 rounded-full px-1 w-max text-sm"
-              data-attention={tag == @focus_tag}
+            <%
+              is_shared = tag in @photo_tags and tag in @prev_photo_tags
+              is_focus = tag == @focus_tag
+              bg_class = cond do
+                is_shared -> "bg-green-50"
+                is_focus -> "bg-cyan-100"
+                true -> "bg-white"
+              end
+              ring_class = cond do
+                is_focus -> "ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800"
+                is_shared -> "ring-1 ring-green-400 ring-offset-1 ring-offset-zinc-800"
+                true -> ""
+              end
+            %>
+            <p class={"rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
+              data-attention={is_focus}
+              data-shared={is_shared}
+              id={"tag-p-#{tag}"}
             >
               #{tag}
             </p>
           </li>
         </ul>
       </div>
-      <div class="absolute top-4 right-4 text-sm">
+      <div class="absolute top-4 right-4 text-sm flex items-center gap-2">
+        <div
+          id="countdown-timer"
+          phx-hook="CountdownTimer"
+          data-interval-ms={@interval_ms}
+          data-timer-start-time={@timer_start_time}
+          class="relative w-12 h-12"
+        >
+          <svg class="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+            <circle
+              cx="18"
+              cy="18"
+              r="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="text-zinc-600 opacity-20"
+            />
+            <g transform="translate(18, 18) scale(1, -1) translate(-18, -18)">
+              <circle
+                id="progress-circle"
+                cx="18"
+                cy="18"
+                r="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-dasharray="100.53"
+                stroke-dashoffset="0"
+                class="text-white transition-all duration-100"
+                stroke-linecap="round"
+              />
+            </g>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="countdown-seconds" class="text-white text-xs font-semibold">0</span>
+          </div>
+        </div>
         <.button
           phx-click="increase_tempo"
         >
@@ -74,7 +124,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   def mount(_params, _session, socket) do
     interval_ms = 5 * 1000
 
-    {:ok, socket |> start_timer(interval_ms) |> assign(:prev_photo_tags, [])}
+    {:ok,
+     socket
+     |> start_timer(interval_ms)
+     |> assign(:prev_photo_tags, [])}
   end
 
   def handle_params(params, _session, socket) do
@@ -87,7 +140,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       if Map.has_key?(params, "tempo") and params["tempo"] != socket.assigns.interval_ms do
         socket |> start_timer(String.to_integer(params["tempo"]))
       else
+        # Ensure timer_start_time is set even if timer doesn't change
         socket
+        |> assign(
+          :timer_start_time,
+          Map.get(socket.assigns, :timer_start_time, System.system_time(:millisecond))
+        )
       end
 
     photo_tags = Enum.map(photo.tags, & &1.name)
@@ -124,7 +182,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
         false -> {:ok, nil}
       end
 
-    assign(socket, :timer_ref, timer_ref) |> assign(:interval_ms, interval_ms)
+    timer_start_time = System.system_time(:millisecond)
+
+    assign(socket, :timer_ref, timer_ref)
+    |> assign(:interval_ms, interval_ms)
+    |> assign(:timer_start_time, timer_start_time)
   end
 
   def handle_info(:switch_photos, socket) do
@@ -132,7 +194,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
   end
 
   def handle_event("switch_photos", _, socket) do
-    start_timer(socket, socket.assigns.interval_ms)
+    socket
+    |> start_timer(socket.assigns.interval_ms)
     |> switch_photos()
   end
 
@@ -161,6 +224,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
         {false, true} -> nil
       end
 
+    # Reset timer start time when photos switch
+    timer_start_time = System.system_time(:millisecond)
+
     # Save the new photo
     {:noreply,
      socket
@@ -169,8 +235,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
      |> assign(:photo_tags, new_photo_tags)
      |> assign(:tags, tags)
      |> assign(:focus_tag, focus_tag)
+     |> assign(:timer_start_time, timer_start_time)
      |> push_event("show", %{selector: ".new-tag"})
-     |> push_event("hide", %{selector: ".old-tag"})}
+     |> push_event("hide", %{selector: ".old-tag"})
+     |> push_event("highlight_shared", %{selector: ".shared-tag"})}
   end
 
   # NOTE: this is an expensive operation, and should be done in a background job

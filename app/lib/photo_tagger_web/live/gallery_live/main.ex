@@ -27,6 +27,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               nav_tags={@nav_tags}
               recommended_tags={@recommended_tags}
               current_tags={@tags}
+              exclude_tags={@exclude_tags}
               is_admin={@is_admin}
             />
               <%!-- all_folders={@all_folders} --%>
@@ -72,7 +73,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <.photo
                 photo={photo}
                 folder={@folder}
-                all_folders={@all_folders} tags={@tags} all_tags={@all_tags} recommended_tags={@recommended_tags} related_tags={@recommended_tags} update_photo_form={@update_photo_form} is_admin={@is_admin} />
+                all_folders={@all_folders} tags={@tags} exclude_tags={@exclude_tags}
+                all_tags={@all_tags} recommended_tags={@recommended_tags} 
+                related_tags={@recommended_tags} 
+                update_photo_form={@update_photo_form} 
+                is_admin={@is_admin} />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
             <% _ -> %>
@@ -180,13 +185,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_params(params, _session, socket) do
     folder = Map.get(params, "folder")
     tags = Map.get(params, "query_tags", [])
+    exclude_tags = Map.get(params, "exclude_tags", [])
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
-    pg = Map.get(params, "pg", "1") |> Util.safe_integer_parse(1)
+
+    prev_pg = Map.get(socket.assigns, :pg, 1)
+
+    pg =
+      Map.get(params, "pg", Integer.to_string(prev_pg))
+      |> Util.safe_integer_parse(prev_pg)
+
+    prev_pg_size = Map.get(socket.assigns, :pg_size, @default_pg_size)
 
     pg_size =
-      Map.get(params, "pg_size", Integer.to_string(@default_pg_size))
-      |> Util.safe_integer_parse(@default_pg_size)
+      Map.get(params, "pg_size", Integer.to_string(prev_pg_size))
+      |> Util.safe_integer_parse(prev_pg_size)
 
     socket = assign(socket, %{pg: pg, pg_size: pg_size})
 
@@ -202,6 +215,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       expand_state(socket, %{
         folder: folder,
         tags: tags,
+        exclude_tags: exclude_tags,
         photo_id: photo_id,
         selected_photo_ids: selected_photo_ids
       })
@@ -235,6 +249,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         %{
           folder: folder,
           tags: tags,
+          exclude_tags: exclude_tags,
           # This id comes from the url path
           photo_id: photo_id,
           # These come from url query params
@@ -243,42 +258,52 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       ) do
     prev_folder = Map.get(socket.assigns, :folder)
     prev_tags = Map.get(socket.assigns, :tags, [])
+    prev_exclude_tags = Map.get(socket.assigns, :exclude_tags, [])
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
     action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
 
     filtered_photos =
-      case {folder, tags, prev_filtered_photos, action} do
+      case {folder, tags, exclude_tags, prev_filtered_photos, action} do
         # The index action means no folder is selected (not event "all folders") and no photos need be displayed
         {_, _, _, :index} ->
           []
 
         # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
-        {^prev_folder, ^prev_tags, prev_filtered_photos, _}
+        {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos, _}
         when is_list(prev_filtered_photos) and prev_filtered_photos != [] ->
           prev_filtered_photos
 
-        {nil, [], _, _} ->
+        {nil, [], [], _, _} ->
           Gallery.list_photos(include_private: is_admin)
 
-        {nil, ["untagged"], _, _} ->
+        {nil, ["untagged"], _, _, _} ->
           Gallery.list_photos_by_all_tags(nil, include_private: is_admin) ++
-            Gallery.list_photos_by_all_tags(["untagged"], include_private: is_admin)
-
-        {nil, tags, _, _} ->
-          Gallery.list_photos_by_all_tags(tags, include_private: is_admin)
-
-        {folder, [], _, _} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin)
-
-        {folder, ["untagged"], _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, nil, include_private: is_admin) ++
-            Gallery.list_photos_by_folder_and_tags(folder, ["untagged"],
+            Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
               include_private: is_admin
             )
 
-        {folder, tags, _, _} ->
-          Gallery.list_photos_by_folder_and_tags(folder, tags, include_private: is_admin)
+        {nil, tags, exclude_tags, _, _} ->
+          Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
+            include_private: is_admin
+          )
+
+        {folder, [], [], _, _} ->
+          Gallery.list_photos_by_folder(folder, include_private: is_admin)
+
+        {folder, ["untagged"], _, _, _} ->
+          # TODO:
+          Gallery.list_photos_by_folder_and_tags(folder, %{include: nil, exclude: []},
+            include_private: is_admin
+          ) ++
+            Gallery.list_photos_by_folder_and_tags(folder, %{include: ["untagged"], exclude: []},
+              include_private: is_admin
+            )
+
+        {folder, tags, exclude_tags, _, _} ->
+          Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
+            include_private: is_admin
+          )
       end
 
     prev_selected_photos = Map.get(socket.assigns, :selected_photos, nil)
@@ -344,6 +369,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     %{
       folder: folder,
       tags: tags,
+      exclude_tags: exclude_tags,
       # Take only the fields we need to display in the gallery. This reduces the frequency of changes to the gallery.
       filtered_photos:
         filtered_photos
@@ -359,6 +385,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:folder, :string, default: nil)
   attr(:selected_photo_ids, :list, default: [])
   attr(:tags, :list, default: [])
+  attr(:exclude_tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
   attr(:is_admin, :boolean, required: true)
   slot(:inner_block)
@@ -376,11 +403,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           assigns.tags ++ [assigns.toggled_tag]
       end
 
+    new_exclude_tags = Enum.filter(assigns.exclude_tags, &(&1 != assigns.toggled_tag))
+
     assigns =
       assign(
         assigns,
         :href,
-        Util.build_url(assigns.folder, assigns.selected_photo_ids, tags_list, assigns.is_admin)
+        Util.build_url(
+          assigns.folder,
+          assigns.selected_photo_ids,
+          tags_list,
+          new_exclude_tags,
+          assigns.is_admin
+        )
       )
 
     assigns = assign(assigns, :selected, assigns.toggled_tag in assigns.tags)
@@ -414,7 +449,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <.icon name="hero-folder" class=" w-4 h-4 lg:w-5 lg:h-5"/>
             <.link
               aria-current={if(length(@breadcrumb_tags) == 0, do: "page", else: "false")}
-              patch={Util.build_url(@folder, [], [], @is_admin)}
+              patch={Util.build_url(@folder, [], [], [], @is_admin)}
             >
               {@folder || "All folders"}
             </.link>
@@ -424,7 +459,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <.icon name="hero-chevron-right" class="hero-chevron-right-mini lg:hero-chevron-right w-4 h-4 lg:w-5 lg:h-5"/>
               <.link
                 aria-current={if(index == length(@breadcrumb_tags) - 1, do: "page", else: "false")}
-                patch={Util.build_url(@folder, [], Enum.reverse(tags), @is_admin)}
+                patch={Util.build_url(@folder, [], Enum.reverse(tags), [], @is_admin)}
               >
                 #{tag}
               </.link>
@@ -617,6 +652,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:photo, :map, required: true)
   attr(:folder, :string, default: nil)
   attr(:tags, :list, default: [])
+  attr(:exclude_tags, :list, default: [])
   attr(:recommended_tags, :list, default: [])
   attr(:all_tags, :list, required: true)
   attr(:related_tags, :list, required: true)
@@ -647,7 +683,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Folder" :if={@is_admin}>
         <.link
           class="data-[active]:font-bold"
-          patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @is_admin)}
+          patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin)}
           data-active={@folder_is_active}
         >
           {@photo.folder.name}
@@ -663,13 +699,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   folder={@folder}
                   selected_photo_ids={[@photo.id]}
                   tags={@tags}
+                  exclude_tags={@exclude_tags}
                   toggled_tag={tag.name}
                   is_admin={@is_admin}
                 >
                   #{tag.name}
                 </.toggle_tag_button>
               <% else %>
-                <.link patch={Util.build_url(@folder, [@photo.id], [tag.name], @is_admin)}>
+                <.link patch={Util.build_url(@folder, [@photo.id], [tag.name], @exclude_tags, @is_admin)}>
                   #{tag.name}
                 </.link>
               <% end %>
@@ -818,7 +855,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Drift">
         <.link
           class="text-blue-600 hover:text-blue-800"
-          patch={Util.build_url(@folder, [@photo.id], @tags, false, "drift")}
+          patch={Util.build_url(@folder, [@photo.id], @tags, @exclude_tags, false, "drift")}
         >
           drift<.icon name="hero-arrow-up-right" class="w-3 h-3 ml-1" />
         </.link>
@@ -986,6 +1023,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.folder,
            new_selection,
            socket.assigns.tags,
+           socket.assigns.exclude_tags,
            socket.assigns.is_admin
          )
      )}
@@ -999,6 +1037,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.folder,
            [photo_id],
            socket.assigns.tags,
+           socket.assigns.exclude_tags,
            socket.assigns.is_admin
          )
      )}
@@ -1032,18 +1071,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     is_admin = socket.assigns.is_admin
 
     filtered_photos =
-      case {socket.assigns.folder, socket.assigns.tags} do
-        {nil, []} ->
+      case {socket.assigns.folder, socket.assigns.tags, socket.assigns.exclude_tags} do
+        {nil, [], []} ->
           Gallery.list_photos(include_private: is_admin)
 
-        {nil, tags} ->
-          Gallery.list_photos_by_all_tags(tags, include_private: is_admin)
+        {nil, tags, exclude_tags} ->
+          Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
+            include_private: is_admin
+          )
 
-        {folder, []} ->
+        {folder, [], []} ->
           Gallery.list_photos_by_folder(folder, include_private: is_admin)
 
-        {folder, tags} ->
-          Gallery.list_photos_by_folder_and_tags(folder, tags, include_private: is_admin)
+        {folder, tags, exclude_tags} ->
+          Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
+            include_private: is_admin
+          )
       end
 
     # |> Repo.preload([:tags, :folder])
@@ -1139,6 +1182,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.folder,
            new_selected_photos,
            socket.assigns.tags,
+           socket.assigns.exclude_tags,
            socket.assigns.is_admin
          )
      )}
@@ -1266,7 +1310,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(
-       to: Util.build_url(socket.assigns.folder, [], socket.assigns.tags, socket.assigns.is_admin)
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           [],
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin
+         )
      )
      |> put_flash(:info, "Photo deleted successfully.")}
   end
@@ -1284,7 +1335,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> refresh_tags()
      |> refresh_filtered_photos()
      |> push_patch(
-       to: Util.build_url(socket.assigns.folder, [], socket.assigns.tags, socket.assigns.is_admin)
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           [],
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin
+         )
      )
      |> put_flash(:info, "Photos deleted successfully.")}
   end
@@ -1304,7 +1362,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         _ -> folder
       end
 
-    {:noreply, push_patch(socket, to: Util.build_url(folder, [], [], socket.assigns.is_admin))}
+    {:noreply,
+     push_patch(socket, to: Util.build_url(folder, [], [], [], socket.assigns.is_admin))}
   end
 
   def handle_event("toggle_tag", %{"tag" => tag}, socket) do
@@ -1321,6 +1380,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.folder,
            socket.assigns.selected_photo_ids,
            new_tags,
+           Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
            socket.assigns.is_admin
          )
      )}
@@ -1334,6 +1394,27 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.folder,
            socket.assigns.selected_photo_ids,
            [tag],
+           Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
+           socket.assigns.is_admin
+         )
+     )}
+  end
+
+  def handle_event("toggle_exclude_tag", %{"tag" => tag}, socket) do
+    new_exclude_tags =
+      case tag in socket.assigns.exclude_tags do
+        true -> Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end)
+        false -> socket.assigns.exclude_tags ++ [tag]
+      end
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           Enum.filter(socket.assigns.tags, fn t -> t != tag end),
+           new_exclude_tags,
            socket.assigns.is_admin
          )
      )}
