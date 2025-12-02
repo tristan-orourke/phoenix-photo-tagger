@@ -5,9 +5,6 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   require Logger
 
-  # NOTE: The :small version was removed from @versions.
-  # Old :small image files will remain on disk for existing photos until the cleanup script is run.
-  # Be sure to run the batch cleanup script to remove orphaned :small files as part of this migration.
   @versions [:original, :thumb, :web_md, :web_lg]
   @extensions ~w(.jpg .jpeg .gif .png)
 
