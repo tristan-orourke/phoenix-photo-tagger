@@ -5,7 +5,7 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
 
   require Logger
 
-  @versions [:original, :small]
+  @versions [:original, :thumb, :web_md, :web_lg]
   @extensions ~w(.jpg .jpeg .gif .png)
 
   def valid_extensions, do: @extensions
@@ -21,8 +21,19 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
     end
   end
 
-  def transform(:small, _) do
-    {:convert, "-strip -define jpeg:extent=100KB -format jpg", :jpg}
+  def transform(:thumb, _) do
+    # Resize image to a maximum of 300x300, cropping to a square aspect ratio.
+    {:convert, "-strip -thumbnail 300x300^ -gravity center -extent 300x300 -format webp", :webp}
+  end
+
+  def transform(:web_md, _) do
+    # Resizes to fit within 600x600, maintaining aspect ratio
+    {:convert, "-strip -resize 600x600 -format webp", :webp}
+  end
+
+  def transform(:web_lg, _) do
+    # Resizes to fit within 1400x1400, maintaining aspect ratio
+    {:convert, "-strip -resize 1400x1400 -format webp", :webp}
   end
 
   # Override the persisted filenames:

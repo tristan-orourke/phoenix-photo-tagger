@@ -7,6 +7,6 @@
 <h2 class="font-semibold mt-10">Tags</h2>
 <.edit_tag_forms photo={@photo} />
 <div class="mt-10">
-  <img src={PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :small)} />
+  <img src={PhotoTagger.Uploaders.ImageUploader.url({@photo.image, @photo}, :web_md)} />
 </div>
 <.back navigate={~p"/admin"}>Back to gallery</.back>

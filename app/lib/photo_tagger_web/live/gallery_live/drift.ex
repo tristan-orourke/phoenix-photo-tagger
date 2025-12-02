@@ -13,7 +13,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       <img
         class="object-contain w-full h-full max-w-full max-h-full"
         alt={@photo.name}
-        src={ImageUploader.url({@photo.image, @photo}, :original)}
+        src={ImageUploader.url({@photo.image, @photo}, :web_lg)}
       />
       <div class="absolute top-4 left-4 text-sm">
         <ul>

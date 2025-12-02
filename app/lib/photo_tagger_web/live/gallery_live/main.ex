@@ -74,9 +74,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 photo={photo}
                 folder={@folder}
                 all_folders={@all_folders} tags={@tags} exclude_tags={@exclude_tags}
-                all_tags={@all_tags} recommended_tags={@recommended_tags} 
-                related_tags={@recommended_tags} 
-                update_photo_form={@update_photo_form} 
+                all_tags={@all_tags} recommended_tags={@recommended_tags}
+                related_tags={@recommended_tags}
+                update_photo_form={@update_photo_form}
                 is_admin={@is_admin} />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
@@ -107,7 +107,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <img
                 class="object-contain max-w-full lg:max-h-full"
                 alt={photo.name}
-                src={ImageUploader.url({photo.image, photo}, :original)}
+                src={ImageUploader.url({photo.image, photo}, :web_lg)}
               />
               <div class="absolute top-4 left-4 text-sm">
                 <ul>
@@ -673,7 +673,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <img
             class="object-contain w-full h-full aspect-square"
             alt={@photo.name}
-            src={ImageUploader.url({@photo.image, @photo}, :small)}
+            src={ImageUploader.url({@photo.image, @photo}, :web_md)}
           />
           <div class="absolute top-0 right-2 lg:p-3 flex-none opacity-30 lg:opacity-20 group-hover:opacity-40 text-zinc-500">
             <.icon name="hero-arrows-pointing-out" class="h-6 w-6 group-hover:h-7 group-hover:w-7" />
@@ -906,7 +906,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 <img
                   class="w-20 h-20 object-cover"
                   alt={photo.name}
-                  src={ImageUploader.url({photo.image, photo}, :small)}
+                  src={ImageUploader.url({photo.image, photo}, :thumb)}
                 />
               </button>
             </li>
