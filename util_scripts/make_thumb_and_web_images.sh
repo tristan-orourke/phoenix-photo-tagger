@@ -29,15 +29,15 @@ for src in "${files[@]}"; do
   any_missing=false
 
   if [ ! -f "$out_lg" ]; then
-    convert "$src" -strip -resize 1400x1400 -format webp "$out_lg"
+    convert "$src" -strip -resize 1400x1400 -format webp "$out_lg" || { echo "Error: convert failed for $src (web_lg)" >&2; exit 1; }
     any_missing=true
   fi
   if [ ! -f "$out_md" ]; then
-    convert "$src" -strip -resize 600x600 -format webp "$out_md"
+    convert "$src" -strip -resize 600x600 -format webp "$out_md" || { echo "Error: convert failed for $src (web_md)" >&2; exit 1; }
     any_missing=true
   fi
   if [ ! -f "$out_thumb" ]; then
-    convert "$src" -strip -thumbnail 300x300^ -gravity center -extent 300x300 -format webp "$out_thumb"
+    convert "$src" -strip -thumbnail 300x300^ -gravity center -extent 300x300 -format webp "$out_thumb" || { echo "Error: convert failed for $src (thumb)" >&2; exit 1; }
     any_missing=true
   fi
   ((count++))
