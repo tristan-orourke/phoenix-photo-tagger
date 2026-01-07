@@ -45,14 +45,44 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  defp list_photos_query() do
+  defp list_photos_query(options \\ []) do
     from(p in Photo,
       as: :photo,
       preload: [:folder],
-      order_by: [desc: p.inserted_at],
-      order_by: [asc: p.name],
       select: p
     )
+    |> apply_sorting(options)
+  end
+
+  defp apply_sorting(query, options) do
+    sort_by = Keyword.get(options, :sort_by, :inserted_at)
+
+    case sort_by do
+      :manual_order ->
+        from(p in query,
+          order_by: [asc_nulls_last: p.manual_order],
+          order_by: [desc: p.inserted_at],
+          order_by: [asc: p.name]
+        )
+
+      :inserted_at ->
+        from(p in query,
+          order_by: [desc: p.inserted_at],
+          order_by: [asc: p.name]
+        )
+
+      :name ->
+        from(p in query,
+          order_by: [asc: p.name],
+          order_by: [desc: p.inserted_at]
+        )
+      
+      _ ->
+        from(p in query,
+          order_by: [desc: p.inserted_at],
+          order_by: [asc: p.name]
+        )
+    end
   end
 
   @doc """
@@ -66,14 +96,14 @@ defmodule PhotoTagger.Gallery do
   """
   def list_photos(options \\ []) do
     Repo.all(
-      list_photos_query()
+      list_photos_query(options)
       |> only_public_photos_unless_forced(options)
     )
   end
 
   def list_photos_preload_tags(options \\ []) do
     Repo.all(
-      from(p in list_photos_query(),
+      from(p in list_photos_query(options),
         left_join: t in assoc(p, :tags),
         preload: [tags: t]
       )
@@ -88,10 +118,9 @@ defmodule PhotoTagger.Gallery do
         inner_join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [folder: f],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
+        preload: [folder: f]
       )
+      |> apply_sorting(options)
       |> only_public_photos_unless_forced(options)
     )
   end
@@ -104,10 +133,9 @@ defmodule PhotoTagger.Gallery do
         as: :folder,
         where: f.name == ^folder_name,
         preload: [tags: t],
-        preload: [folder: f],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
+        preload: [folder: f]
       )
+      |> apply_sorting(options)
       |> only_public_photos_unless_forced(options)
     )
   end
@@ -146,8 +174,6 @@ defmodule PhotoTagger.Gallery do
             ),
           on: sub.photo_id == p.id,
           where: sub.tag_count == ^length(tag_names),
-          order_by: [desc: p.inserted_at],
-          order_by: [asc: p.name],
           select: p
         )
     end
@@ -162,16 +188,15 @@ defmodule PhotoTagger.Gallery do
 
     Repo.all(
       from(p in query,
-        preload: [:folder],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
+        preload: [:folder]
       )
+      |> apply_sorting(options)
       |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}) do
-    query = list_photos_query()
+  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, options \\ []) do
+    query = list_photos_query(options)
 
     query =
       case include_tags do
@@ -227,7 +252,7 @@ defmodule PhotoTagger.Gallery do
   end
 
   def list_photos_by_tags(%{include: include_tags, exclude: exclude_tags}, options \\ []) do
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags})
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, options)
 
     Repo.all(
       query
@@ -240,7 +265,7 @@ defmodule PhotoTagger.Gallery do
         %{include: include_tags, exclude: exclude_tags},
         options \\ []
       ) do
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags})
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, options)
 
     Repo.all(
       from(p in query,
@@ -637,5 +662,21 @@ defmodule PhotoTagger.Gallery do
         where: pt.photo_id in ^related_photos and t.id not in ^original_tag_ids
       )
     )
+  end
+
+  def update_photo_manual_order(photo_id, new_index) do
+    # Simply shift everyone down to make space, then slot the photo in.
+    # This logic assumes manual_order is roughly equivalent to array index.
+    
+    Ecto.Multi.new()
+    |> Ecto.Multi.update_all(:shift_down, 
+         from(p in Photo, where: p.manual_order >= ^new_index), 
+         [inc: [manual_order: 1]]
+       )
+    |> Ecto.Multi.update_all(:set_new_index,
+         from(p in Photo, where: p.id == ^photo_id),
+         [set: [manual_order: new_index]]
+       )
+    |> Repo.transaction()
   end
 end
