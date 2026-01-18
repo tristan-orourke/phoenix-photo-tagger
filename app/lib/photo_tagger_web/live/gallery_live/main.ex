@@ -1096,7 +1096,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> Gallery.get_photos_by_ids(include_private: socket.assigns.is_admin)
       |> Repo.preload([:tags, :folder])
 
-    assign(socket, selected_photos: selected_photos)
+    update_photo_form =
+      case selected_photos do
+        [photo] -> photo
+        _ -> %Photo{}
+      end
+      |> Gallery.update_photo_changeset()
+      |> Component.to_form()
+
+    socket
+    |> assign(selected_photos: selected_photos)
+    |> assign(update_photo_form: update_photo_form)
   end
 
   def refresh_filtered_photos(socket) do
