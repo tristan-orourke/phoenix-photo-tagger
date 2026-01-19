@@ -356,6 +356,49 @@ defmodule PhotoTagger.Gallery do
   end
 
   @doc """
+  Shifts manual_order values of other photos to make room for a photo moving to target_order.
+
+  - If old_order is nil: shifts all photos at target_order and above up by 1
+  - If old_order > target_order (moving earlier): shifts photos in [target, old) up by 1
+  - If old_order < target_order (moving later): shifts photos in (old, target] down by 1
+  """
+  defp reorder_photos_for_insert(folder_id, target_order, old_order \\ nil) do
+    query =
+      cond do
+        # New photo or no old position - shift everything at target and above
+        is_nil(old_order) ->
+          from(p in Photo,
+            where: p.folder_id == ^folder_id and p.manual_order >= ^target_order,
+            update: [inc: [manual_order: 1]]
+          )
+
+        # Moving down (from higher number to lower) - shift photos in [target, old) up by 1
+        old_order > target_order ->
+          from(p in Photo,
+            where:
+              p.folder_id == ^folder_id and p.manual_order >= ^target_order and
+                p.manual_order < ^old_order,
+            update: [inc: [manual_order: 1]]
+          )
+
+        # Moving up (from lower number to higher) - shift photos in (old, target] down by 1
+        old_order < target_order ->
+          from(p in Photo,
+            where:
+              p.folder_id == ^folder_id and p.manual_order > ^old_order and
+                p.manual_order <= ^target_order,
+            update: [inc: [manual_order: -1]]
+          )
+
+        # No change
+        true ->
+          nil
+      end
+
+    if query, do: Repo.update_all(query, []), else: {0, nil}
+  end
+
+  @doc """
   Updates a photo.
 
   ## Examples
@@ -376,10 +419,27 @@ defmodule PhotoTagger.Gallery do
       )
 
     changeset = Photo.changeset_update(photo, attrs)
+    photo = Repo.preload(photo, :folder)
 
-    Repo.preload(photo, :folder)
+    # Detect if manual_order is changing
+    new_order =
+      case Map.get(attrs, "manual_order") || Map.get(attrs, :manual_order) do
+        nil -> nil
+        "" -> nil
+        val when is_binary(val) -> String.to_integer(val)
+        val when is_integer(val) -> val
+      end
+
+    old_order = photo.manual_order
 
     Ecto.Multi.new()
+    |> Ecto.Multi.run(:reorder, fn _repo, _changes ->
+      if new_order && new_order != old_order do
+        reorder_photos_for_insert(photo.folder_id, new_order, old_order)
+      end
+
+      {:ok, :reordered}
+    end)
     |> Ecto.Multi.update(:photo, changeset)
     |> Ecto.Multi.run(:update_file, fn _repo, changes ->
       Enum.map(ImageUploader.versions(), fn version ->
