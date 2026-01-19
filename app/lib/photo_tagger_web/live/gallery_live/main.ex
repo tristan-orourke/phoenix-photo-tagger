@@ -1056,7 +1056,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            new_selection,
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1070,7 +1072,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            [photo_id],
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1225,7 +1229,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            new_selected_photos,
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
