@@ -171,7 +171,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false)
-      |> assign(:sort, :date),
+      |> assign(:sort, :manual),
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -192,9 +192,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
     sort =
-      case Map.get(params, "sort", "date") do
-        "manual" -> :manual
-        _ -> :date
+      case Map.get(params, "sort", "manual") do
+        "date" -> :date
+        _ -> :manual
       end
 
     prev_pg = Map.get(socket.assigns, :pg, 1)
@@ -270,7 +270,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
     action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
-    sort = Map.get(socket.assigns, :sort, :date)
+    sort = Map.get(socket.assigns, :sort, :manual)
     prev_sort = Map.get(socket.assigns, :prev_sort, sort)
 
     filtered_photos =
@@ -452,7 +452,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:multiselect_active, :boolean, required: true)
   attr(:collapse_groups, :boolean, required: true)
   attr(:is_admin, :boolean, required: true)
-  attr(:sort, :atom, default: :date)
+  attr(:sort, :atom, default: :manual)
 
   def gallery_header(assigns) do
     breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
@@ -866,7 +866,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             field={@update_photo_form[:manual_order]}
             name="photo[manual_order]"
             type="number"
-            label="Manual Order"
+            label="Curated"
           />
           <.button class="mt-4">Save</.button>
         </.form>
@@ -1408,7 +1408,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("change_sort", %{"sort" => sort}, socket) do
-    sort_atom = if sort == "manual", do: :manual, else: :date
+    sort_atom = case sort do
+      "date" -> :date
+      _ -> :manual
+    end
 
     {:noreply,
      push_patch(socket,
