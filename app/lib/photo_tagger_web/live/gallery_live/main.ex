@@ -1115,23 +1115,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def refresh_filtered_photos(socket) do
     is_admin = socket.assigns.is_admin
+    sort = socket.assigns.sort
 
     filtered_photos =
       case {socket.assigns.folder, socket.assigns.tags, socket.assigns.exclude_tags} do
         {nil, [], []} ->
-          Gallery.list_photos(include_private: is_admin)
+          Gallery.list_photos(include_private: is_admin, sort: sort)
 
         {nil, tags, exclude_tags} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           )
 
         {folder, [], []} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin)
+          Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
 
         {folder, tags, exclude_tags} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           )
       end
 
@@ -1335,6 +1338,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders(include_private: is_admin))
          |> refresh_selected_photos()
+         |> refresh_filtered_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
