@@ -950,6 +950,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     assigns = assign(assigns, :groups, Enum.uniq(Enum.map(assigns.photos, & &1.group)))
 
+    {public_count, private_count} =
+      Enum.reduce(assigns.photos, {0, 0}, fn photo, {pub, priv} ->
+        if photo.is_public, do: {pub + 1, priv}, else: {pub, priv + 1}
+      end)
+
+    assigns = assign(assigns, :public_count, public_count)
+    assigns = assign(assigns, :private_count, private_count)
+
     ~H"""
     <.list>
       <:item title="Selected photos">
@@ -1046,6 +1054,29 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           />
           <.button type="submit">Ungroup</.button>
         </.form>
+      </:item>
+      <:item title="Visibility">
+        <p class="mb-2">
+          <%= cond do %>
+            <% @private_count == 0 -> %>Visiblity: All public
+            <% @public_count == 0 -> %>Visibility: All private
+            <% true -> %>Mixed visibility: {@public_count} public, {@private_count} private
+          <% end %>
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <.form :if={@private_count > 0} for={Component.to_form(%{"is_public" => "true"})} phx-submit="set_visibility_bulk">
+            <input type="hidden" name="is_public" value="true" />
+            <.button type="submit">
+              Make all public
+            </.button>
+          </.form>
+          <.form :if={@public_count > 0} for={Component.to_form(%{"is_public" => "false"})} phx-submit="set_visibility_bulk">
+            <input type="hidden" name="is_public" value="false" />
+            <.button type="submit">
+              Make all private
+            </.button>
+          </.form>
+        </div>
       </:item>
       <:item title="Delete">
         <.form
@@ -1347,6 +1378,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     Enum.each(selected_photos, fn photo ->
       {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
+    end)
+
+    {:noreply,
+     socket
+     |> refresh_selected_photos()
+     |> refresh_filtered_photos()}
+  end
+
+  @doc """
+  Handles bulk visibility changes for multiple selected photos.
+  """
+  def handle_event("set_visibility_bulk", %{"is_public" => is_public}, socket) do
+    selected_photos = socket.assigns.selected_photos
+    is_public_bool = is_public == "true"
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.update_photo(photo, %{"is_public" => is_public_bool})
     end)
 
     {:noreply,
