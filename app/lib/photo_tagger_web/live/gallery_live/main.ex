@@ -42,6 +42,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             multiselect_active={@multiselect_active}
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}
+            sort={@sort}
           />
           <%= if @live_action == :index do %>
             <p>Select a folder to view photos</p>
@@ -169,7 +170,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:collapse_group_exceptions, %{})
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
-      |> assign(:expand_photo, false),
+      |> assign(:expand_photo, false)
+      |> assign(:sort, :manual),
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -189,6 +191,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     photo_id = Map.get(params, "photo_id")
     selected_photo_ids = Map.get(params, "selected_photos", [])
 
+    sort =
+      case Map.get(params, "sort", "manual") do
+        "date" -> :date
+        _ -> :manual
+      end
+
     prev_pg = Map.get(socket.assigns, :pg, 1)
 
     pg =
@@ -201,7 +209,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       Map.get(params, "pg_size", Integer.to_string(prev_pg_size))
       |> Util.safe_integer_parse(prev_pg_size)
 
-    socket = assign(socket, %{pg: pg, pg_size: pg_size})
+    socket = assign(socket, %{pg: pg, pg_size: pg_size, sort: sort})
 
     # zoom_level =
     #   Map.get(params, "zoom", "0")
@@ -262,6 +270,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
     action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
+    sort = Map.get(socket.assigns, :sort, :manual)
+    prev_sort = Map.get(socket.assigns, :prev_sort, sort)
 
     filtered_photos =
       case {folder, tags, exclude_tags, prev_filtered_photos, action} do
@@ -269,40 +279,45 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {_, _, _, :index} ->
           []
 
-        # If the folder and tags are unchanged, and we have previously cached filtered photos, use them without querying the database
+        # If the folder, tags, and sort are unchanged, and we have previously cached filtered photos, use them without querying the database
         {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos, _}
-        when is_list(prev_filtered_photos) and prev_filtered_photos != [] ->
+        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort ->
           prev_filtered_photos
 
         {nil, [], [], _, _} ->
-          Gallery.list_photos(include_private: is_admin)
+          Gallery.list_photos(include_private: is_admin, sort: sort)
 
         {nil, ["untagged"], _, _, _} ->
-          Gallery.list_photos_by_all_tags(nil, include_private: is_admin) ++
+          Gallery.list_photos_by_all_tags(nil, include_private: is_admin, sort: sort) ++
             Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
-              include_private: is_admin
+              include_private: is_admin,
+              sort: sort
             )
 
         {nil, tags, exclude_tags, _, _} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           )
 
         {folder, [], [], _, _} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin)
+          Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
 
         {folder, ["untagged"], _, _, _} ->
           # TODO:
           Gallery.list_photos_by_folder_and_tags(folder, %{include: nil, exclude: []},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           ) ++
             Gallery.list_photos_by_folder_and_tags(folder, %{include: ["untagged"], exclude: []},
-              include_private: is_admin
+              include_private: is_admin,
+              sort: sort
             )
 
         {folder, tags, exclude_tags, _, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           )
       end
 
@@ -378,7 +393,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       selected_photo_ids: new_selected_photo_ids,
       recommended_tags: recommended_tags,
       nav_tags: nav_tags,
-      update_photo_form: update_photo_form
+      update_photo_form: update_photo_form,
+      prev_sort: sort
     }
   end
 
@@ -436,6 +452,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:multiselect_active, :boolean, required: true)
   attr(:collapse_groups, :boolean, required: true)
   attr(:is_admin, :boolean, required: true)
+  attr(:sort, :atom, default: :manual)
 
   def gallery_header(assigns) do
     breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
@@ -480,6 +497,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div class="flex-none mr-3 lg:ml-3">
           <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
+        </div>
+        <div class="flex-none pr-3">
+          <form phx-change="change_sort" class="flex items-center">
+            <label class="sr-only lg:not-sr-only text-sm mr-2">Sort:</label>
+            <select name="sort" class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8">
+              <option value="date" selected={@sort == :date}>By date</option>
+              <option value="manual" selected={@sort == :manual}>Curated</option>
+            </select>
+          </form>
         </div>
         <div class="flex-none pr-3">
           <.toggle_button
@@ -836,6 +862,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             type="text"
             label="Group"
           />
+          <.input
+            field={@update_photo_form[:manual_order]}
+            name="photo[manual_order]"
+            type="number"
+            label="Curated order"
+          />
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
@@ -1024,7 +1056,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            new_selection,
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1038,7 +1072,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            [photo_id],
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1064,28 +1100,41 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> Gallery.get_photos_by_ids(include_private: socket.assigns.is_admin)
       |> Repo.preload([:tags, :folder])
 
-    assign(socket, selected_photos: selected_photos)
+    update_photo_form =
+      case selected_photos do
+        [photo] -> photo
+        _ -> %Photo{}
+      end
+      |> Gallery.update_photo_changeset()
+      |> Component.to_form()
+
+    socket
+    |> assign(selected_photos: selected_photos)
+    |> assign(update_photo_form: update_photo_form)
   end
 
   def refresh_filtered_photos(socket) do
     is_admin = socket.assigns.is_admin
+    sort = socket.assigns.sort
 
     filtered_photos =
       case {socket.assigns.folder, socket.assigns.tags, socket.assigns.exclude_tags} do
         {nil, [], []} ->
-          Gallery.list_photos(include_private: is_admin)
+          Gallery.list_photos(include_private: is_admin, sort: sort)
 
         {nil, tags, exclude_tags} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           )
 
         {folder, [], []} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin)
+          Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
 
         {folder, tags, exclude_tags} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
-            include_private: is_admin
+            include_private: is_admin,
+            sort: sort
           )
       end
 
@@ -1183,7 +1232,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            new_selected_photos,
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1287,6 +1338,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {:noreply,
          assign(socket, :all_folders, Gallery.list_folders(include_private: is_admin))
          |> refresh_selected_photos()
+         |> refresh_filtered_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
       {:error, failed_op, failed_value, _changeset} ->
@@ -1353,6 +1405,27 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("zoom_out", _params, socket) do
     {:noreply, assign(socket, :zoom_level, clamp(socket.assigns.zoom_level - 1, -9, 9))}
+  end
+
+  def handle_event("change_sort", %{"sort" => sort}, socket) do
+    sort_atom = case sort do
+      "date" -> :date
+      _ -> :manual
+    end
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin,
+           nil,
+           sort_atom
+         )
+     )}
   end
 
   def handle_event("change_folder", %{"folder" => folder}, socket) do

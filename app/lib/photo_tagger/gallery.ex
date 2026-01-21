@@ -45,14 +45,45 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  defp list_photos_query() do
+  @type sort_option :: :date | :manual
+
+  defp apply_sort_order(query, :manual) do
+    from(p in query, order_by: [asc_nulls_last: p.manual_order, asc: p.name])
+  end
+
+  defp apply_sort_order(query, :date) do
+    from(p in query, order_by: [desc: p.inserted_at, asc: p.name])
+  end
+
+  defp apply_sort_order(query, _default) do
+    apply_sort_order(query, :date)
+  end
+
+  @doc """
+  Gets the next available manual_order position for a folder.
+  Returns 1 if no photos exist in the folder, otherwise max + 1.
+  """
+  def get_next_manual_order(folder_id) do
+    max_order =
+      from(p in Photo,
+        where: p.folder_id == ^folder_id,
+        select: max(p.manual_order)
+      )
+      |> Repo.one()
+
+    case max_order do
+      nil -> 1
+      n -> n + 1
+    end
+  end
+
+  defp list_photos_query(sort \\ :date) do
     from(p in Photo,
       as: :photo,
       preload: [:folder],
-      order_by: [desc: p.inserted_at],
-      order_by: [asc: p.name],
       select: p
     )
+    |> apply_sort_order(sort)
   end
 
   @doc """
@@ -65,15 +96,19 @@ defmodule PhotoTagger.Gallery do
 
   """
   def list_photos(options \\ []) do
+    sort = Keyword.get(options, :sort, :date)
+
     Repo.all(
-      list_photos_query()
+      list_photos_query(sort)
       |> only_public_photos_unless_forced(options)
     )
   end
 
   def list_photos_preload_tags(options \\ []) do
+    sort = Keyword.get(options, :sort, :date)
+
     Repo.all(
-      from(p in list_photos_query(),
+      from(p in list_photos_query(sort),
         left_join: t in assoc(p, :tags),
         preload: [tags: t]
       )
@@ -81,22 +116,24 @@ defmodule PhotoTagger.Gallery do
     )
   end
 
-  # TODO: Finish refactoring to use list_photos_query
   def list_photos_by_folder(folder_name, options \\ []) do
+    sort = Keyword.get(options, :sort, :date)
+
     Repo.all(
       from(p in Photo,
         inner_join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [folder: f],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
+        preload: [folder: f]
       )
+      |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
     )
   end
 
   def list_photos_by_folder_preload_tags(folder_name, options \\ []) do
+    sort = Keyword.get(options, :sort, :date)
+
     Repo.all(
       from(p in Photo,
         left_join: t in assoc(p, :tags),
@@ -104,10 +141,9 @@ defmodule PhotoTagger.Gallery do
         as: :folder,
         where: f.name == ^folder_name,
         preload: [tags: t],
-        preload: [folder: f],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
+        preload: [folder: f]
       )
+      |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
     )
   end
@@ -146,8 +182,6 @@ defmodule PhotoTagger.Gallery do
             ),
           on: sub.photo_id == p.id,
           where: sub.tag_count == ^length(tag_names),
-          order_by: [desc: p.inserted_at],
-          order_by: [asc: p.name],
           select: p
         )
     end
@@ -158,20 +192,18 @@ defmodule PhotoTagger.Gallery do
   def list_photos_by_all_tags([], options), do: list_photos(options)
 
   def list_photos_by_all_tags(tag_names, options) do
+    sort = Keyword.get(options, :sort, :date)
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
-      from(p in query,
-        preload: [:folder],
-        order_by: [desc: p.inserted_at],
-        order_by: [asc: p.name]
-      )
+      from(p in query, preload: [:folder])
+      |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}) do
-    query = list_photos_query()
+  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort \\ :date) do
+    query = list_photos_query(sort)
 
     query =
       case include_tags do
@@ -227,7 +259,8 @@ defmodule PhotoTagger.Gallery do
   end
 
   def list_photos_by_tags(%{include: include_tags, exclude: exclude_tags}, options \\ []) do
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags})
+    sort = Keyword.get(options, :sort, :date)
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort)
 
     Repo.all(
       query
@@ -240,7 +273,8 @@ defmodule PhotoTagger.Gallery do
         %{include: include_tags, exclude: exclude_tags},
         options \\ []
       ) do
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags})
+    sort = Keyword.get(options, :sort, :date)
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort)
 
     Repo.all(
       from(p in query,
@@ -296,6 +330,15 @@ defmodule PhotoTagger.Gallery do
   def create_photo(attrs \\ %{}) do
     attrs = Map.put(attrs, "name", attrs["image"].filename)
 
+    # Auto-assign manual_order if not provided
+    attrs =
+      if Map.has_key?(attrs, "folder_id") and not Map.has_key?(attrs, "manual_order") do
+        next_order = get_next_manual_order(attrs["folder_id"])
+        Map.put(attrs, "manual_order", next_order)
+      else
+        attrs
+      end
+
     %Photo{}
     |> Photo.changeset_create(attrs)
     |> Repo.insert()
@@ -310,6 +353,49 @@ defmodule PhotoTagger.Gallery do
       get_folder_path(photo.folder.name),
       ImageUploader.filename(version, {photo.image, photo}) <> ext
     ])
+  end
+
+  @doc """
+  Shifts manual_order values of other photos to make room for a photo moving to target_order.
+
+  - If old_order is nil: shifts all photos at target_order and above up by 1
+  - If old_order > target_order (moving earlier): shifts photos in [target, old) up by 1
+  - If old_order < target_order (moving later): shifts photos in (old, target] down by 1
+  """
+  defp reorder_photos_for_insert(folder_id, target_order, old_order \\ nil) do
+    query =
+      cond do
+        # New photo or no old position - shift everything at target and above
+        is_nil(old_order) ->
+          from(p in Photo,
+            where: p.folder_id == ^folder_id and p.manual_order >= ^target_order,
+            update: [inc: [manual_order: 1]]
+          )
+
+        # Moving down (from higher number to lower) - shift photos in [target, old) up by 1
+        old_order > target_order ->
+          from(p in Photo,
+            where:
+              p.folder_id == ^folder_id and p.manual_order >= ^target_order and
+                p.manual_order < ^old_order,
+            update: [inc: [manual_order: 1]]
+          )
+
+        # Moving up (from lower number to higher) - shift photos in (old, target] down by 1
+        old_order < target_order ->
+          from(p in Photo,
+            where:
+              p.folder_id == ^folder_id and p.manual_order > ^old_order and
+                p.manual_order <= ^target_order,
+            update: [inc: [manual_order: -1]]
+          )
+
+        # No change
+        true ->
+          nil
+      end
+
+    if query, do: Repo.update_all(query, []), else: {0, nil}
   end
 
   @doc """
@@ -333,10 +419,27 @@ defmodule PhotoTagger.Gallery do
       )
 
     changeset = Photo.changeset_update(photo, attrs)
+    photo = Repo.preload(photo, :folder)
 
-    Repo.preload(photo, :folder)
+    # Detect if manual_order is changing
+    new_order =
+      case Map.get(attrs, "manual_order") || Map.get(attrs, :manual_order) do
+        nil -> nil
+        "" -> nil
+        val when is_binary(val) -> String.to_integer(val)
+        val when is_integer(val) -> val
+      end
+
+    old_order = photo.manual_order
 
     Ecto.Multi.new()
+    |> Ecto.Multi.run(:reorder, fn _repo, _changes ->
+      if new_order && new_order != old_order do
+        reorder_photos_for_insert(photo.folder_id, new_order, old_order)
+      else
+        {:ok, :no_reorder}
+      end
+    end)
     |> Ecto.Multi.update(:photo, changeset)
     |> Ecto.Multi.run(:update_file, fn _repo, changes ->
       Enum.map(ImageUploader.versions(), fn version ->
