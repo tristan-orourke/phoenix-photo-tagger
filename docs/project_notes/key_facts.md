@@ -16,10 +16,10 @@ All development happens inside Docker containers. Mix commands must be run insid
 
 ```bash
 # Start container with bash shell
-docker-compose -f docker-compose-dev.yml run --user $(id -u):$(id -g) app bash
+docker compose -f docker-compose-dev.yml run dev_app bash
 
 # Run single command
-docker-compose -f docker-compose-dev.yml run --user $(id -u):$(id -g) app <command>
+docker compose -f docker-compose-dev.yml run dev_app <command>
 ```
 
 **Dev server port**: 4001 (exposed via docker-compose-dev.yml)

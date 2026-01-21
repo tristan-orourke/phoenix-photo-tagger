@@ -12,19 +12,20 @@ Photo Tagger is a Phoenix/Elixir web application for organizing and browsing pho
 
 ```bash
 # Start container and open bash shell
-docker-compose -f docker-compose-dev.yml run --user $(id -u):$(id -g) app bash
+docker compose -f docker-compose-dev.yml run dev_app bash
 
 # Or run a single command
-docker-compose -f docker-compose-dev.yml run --user $(id -u):$(id -g) app <command>
+docker compose -f docker-compose-dev.yml run dev_app <command>
 ```
 
 All commands below run from the `app/` directory inside the container:
 
 ```bash
 # Setup and run
-mix setup              # Install deps, create DB, run migrations, build assets
-mix phx.server         # Start dev server at localhost:4001 (via docker-compose-dev)
-iex -S mix phx.server  # Start with interactive Elixir shell
+mix compile             # Compile elixir code
+mix setup               # Install deps, create DB, run migrations, build assets
+mix phx.server          # Start dev server at localhost:4001 (via docker-compose-dev)
+iex -S mix phx.server   # Start with interactive Elixir shell
 
 # Database
 mix ecto.migrate       # Run pending migrations
