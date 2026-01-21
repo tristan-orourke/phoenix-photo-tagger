@@ -436,9 +436,9 @@ defmodule PhotoTagger.Gallery do
     |> Ecto.Multi.run(:reorder, fn _repo, _changes ->
       if new_order && new_order != old_order do
         reorder_photos_for_insert(photo.folder_id, new_order, old_order)
+      else
+        {:ok, :no_reorder}
       end
-
-      {:ok, :reordered}
     end)
     |> Ecto.Multi.update(:photo, changeset)
     |> Ecto.Multi.run(:update_file, fn _repo, changes ->
