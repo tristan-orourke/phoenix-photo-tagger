@@ -501,7 +501,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <div class="flex-none pr-3">
           <form phx-change="change_sort" class="flex items-center">
             <label class="sr-only lg:not-sr-only text-sm mr-2">Sort:</label>
-            <select name="sort" class="text-sm rounded-lg border-gray-300 py-1 px-2">
+            <select name="sort" class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8">
               <option value="date" selected={@sort == :date}>By date</option>
               <option value="manual" selected={@sort == :manual}>Curated</option>
             </select>
