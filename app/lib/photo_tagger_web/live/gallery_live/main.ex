@@ -503,7 +503,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <label class="sr-only lg:not-sr-only text-sm mr-2">Sort:</label>
             <select name="sort" class="text-sm rounded-lg border-gray-300 py-1 px-2">
               <option value="date" selected={@sort == :date}>By date</option>
-              <option value="manual" selected={@sort == :manual}>Manual order</option>
+              <option value="manual" selected={@sort == :manual}>Curated</option>
             </select>
           </form>
         </div>
@@ -866,7 +866,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             field={@update_photo_form[:manual_order]}
             name="photo[manual_order]"
             type="number"
-            label="Curated"
+            label="Curated order"
           />
           <.button class="mt-4">Save</.button>
         </.form>
