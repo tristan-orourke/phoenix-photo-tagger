@@ -67,9 +67,9 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       cond do
         assigns.is_selected -> ""
         assigns.show_visibility_outline and assigns.photo_is_public == true ->
-          "outline outline-green-500"
+          "outline outline-green-400"
         assigns.show_visibility_outline and assigns.photo_is_public == false ->
-          "outline outline-red-500"
+          "outline outline-red-200"
         true -> ""
       end
 
