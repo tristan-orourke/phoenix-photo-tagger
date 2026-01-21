@@ -725,13 +725,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </button>
       </:item>
       <:item title="Folder" :if={@is_admin}>
-        <.link
-          class="data-[active]:font-bold"
-          patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin)}
-          data-active={@folder_is_active}
-        >
-          {@photo.folder.name}
-        </.link>
+        <div class="flex items-center gap-2">
+          <.link
+            class="data-[active]:font-bold"
+            patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin)}
+            data-active={@folder_is_active}
+          >
+            {@photo.folder.name}
+          </.link>
+          <p :if={@is_admin} class={"text-sm px-2 py-0.5 rounded-full border #{if @photo.is_public, do: "text-green-600 border-green-600", else: "text-red-600 border-red-600"}"}>
+            {if @photo.is_public, do: "public", else: "private"}
+          </p>
+        </div>
       </:item>
       <:item title="Tags" :if={@is_admin or not Enum.empty?(@photo.tags)}>
         <ul class="flex flex-wrap">
