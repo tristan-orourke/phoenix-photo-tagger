@@ -8,5 +8,5 @@
 5. Run `mix ecto.create` to setup connection to database.
 6. Run `mix local.hex --force` to initialize package manager.
 7. Exit the docker container, and run `sudo chown -R $USER:$USER ./app` to change ownership of the files by scripts run in docker (which runs as root by default). This allows saving the files in vscode.
-8. To run further mix commands in server (like ecto cmds), run `docker-compose run --user $(id -u):$(id -g) app bash`.
+8. To run further mix commands in server (like ecto cmds), run `docker-compose run --user $(id -u):$(id -g) app bash`. If that doesn't work, try without the --user argument.
 

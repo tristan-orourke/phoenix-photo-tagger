@@ -12,19 +12,20 @@ Photo Tagger is a Phoenix/Elixir web application for organizing and browsing pho
 
 ```bash
 # Start container and open bash shell
-docker-compose -f docker-compose-dev.yml run --user $(id -u):$(id -g) app bash
+docker compose -f docker-compose-dev.yml run dev_app bash
 
 # Or run a single command
-docker-compose -f docker-compose-dev.yml run --user $(id -u):$(id -g) app <command>
+docker compose -f docker-compose-dev.yml run dev_app <command>
 ```
 
 All commands below run from the `app/` directory inside the container:
 
 ```bash
 # Setup and run
-mix setup              # Install deps, create DB, run migrations, build assets
-mix phx.server         # Start dev server at localhost:4001 (via docker-compose-dev)
-iex -S mix phx.server  # Start with interactive Elixir shell
+mix compile             # Compile elixir code
+mix setup               # Install deps, create DB, run migrations, build assets
+mix phx.server          # Start dev server at localhost:4001 (via docker-compose-dev)
+iex -S mix phx.server   # Start with interactive Elixir shell
 
 # Database
 mix ecto.migrate       # Run pending migrations
@@ -84,3 +85,37 @@ Waffle uploader at `lib/photo_tagger/uploaders/image_uploader.ex` handles:
 - Multiple image versions (original, web, thumbnail)
 - Storage path based on folder name
 - File naming with photo metadata
+
+## Project Memory System
+
+This project maintains a structured memory system in `docs/project_notes/` to track bugs, decisions, key facts, and work history.
+
+### Memory Files
+
+| File | Purpose |
+|------|---------|
+| `docs/project_notes/bugs.md` | Bug log with root causes and solutions |
+| `docs/project_notes/decisions.md` | Architectural Decision Records (ADRs) |
+| `docs/project_notes/key_facts.md` | Essential project information and configuration |
+| `docs/project_notes/issues.md` | Work log tracking completed and in-progress work |
+
+### Memory-Aware Protocols
+
+**Before making changes:**
+1. Check `bugs.md` for related past issues that might inform your approach
+2. Check `decisions.md` for relevant architectural decisions that should guide implementation
+3. Review `key_facts.md` for project-specific constraints or patterns
+
+**After completing work:**
+1. Log any bugs discovered and fixed in `bugs.md`
+2. Record significant architectural decisions in `decisions.md`
+3. Update `key_facts.md` if new essential project information was learned
+4. Add completed work to `issues.md`
+
+### Memory Entry Guidelines
+
+- Use date prefix `[YYYY-MM-DD]` for all entries
+- Keep entries concise but complete
+- Link to related GitHub issues/PRs when applicable
+- Include file paths affected by changes
+- Document both what was done and why
