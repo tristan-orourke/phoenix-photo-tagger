@@ -43,6 +43,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}
             sort={@sort}
+            show_visibility_outlines={@show_visibility_outlines}
           />
           <%= if @live_action == :index do %>
             <p>Select a folder to view photos</p>
@@ -65,6 +66,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               is_admin={@is_admin}
               pg={@pg}
               pg_size={@pg_size}
+              show_visibility_outlines={@show_visibility_outlines}
             />
           <% end %>
         </div>
@@ -171,6 +173,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false)
+      |> assign(:show_visibility_outlines, false)
       |> assign(:sort, :manual),
       #  |> assign(%{
       #    folder: nil,
@@ -453,6 +456,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:collapse_groups, :boolean, required: true)
   attr(:is_admin, :boolean, required: true)
   attr(:sort, :atom, default: :manual)
+  attr(:show_visibility_outlines, :boolean, default: false)
 
   def gallery_header(assigns) do
     breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
@@ -529,6 +533,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               Multiselect
             </span>
           </.toggle_button>
+          <.toggle_button
+            :if={@is_admin}
+            selected={@show_visibility_outlines}
+            phx-click="toggle_visibility_outlines"
+            class="flex items-center pl-3 pr-3 inline ml-1"
+          >
+            <.icon name="hero-eye" class="hero-eye-mini lg:hero-eye my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <span class="sr-only lg:not-sr-only lg:ml-1">
+              Visibility
+            </span>
+          </.toggle_button>
         </div>
       </div>
     </div>
@@ -586,6 +601,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:is_admin, :boolean, required: true)
   attr(:pg, :integer, default: 1)
   attr(:pg_size, :integer, default: @default_pg_size)
+  attr(:show_visibility_outlines, :boolean, default: false)
 
   def gallery(assigns) do
     groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
@@ -662,6 +678,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             group_right={
               photo.group != nil and index < length(@photos) - 1 and photo.group == Enum.at(@photos, index + 1).group
             }
+            photo_is_public={photo.is_public}
+            show_visibility_outline={@show_visibility_outlines}
           />
         <% end %>
       </ul>
@@ -1170,6 +1188,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
   end
 
+  def handle_event("toggle_visibility_outlines", _params, socket) do
+    {:noreply, assign(socket, :show_visibility_outlines, !socket.assigns.show_visibility_outlines)}
+  end
+
   def handle_event("toggle_collapse_groups", _params, socket) do
     {:noreply,
      assign(socket, :collapse_groups, !socket.assigns.collapse_groups)
@@ -1511,5 +1533,5 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def clamp(x, min, max), do: min(max(x, min), max)
 
   # Keep only the values which are used by the UI
-  def simplify_photo(photo), do: Map.take(photo, [:id, :name, :group, :image, :folder])
+  def simplify_photo(photo), do: Map.take(photo, [:id, :name, :group, :image, :folder, :is_public])
 end
