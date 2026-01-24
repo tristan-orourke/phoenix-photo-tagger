@@ -307,7 +307,7 @@ defmodule PhotoTagger.Gallery do
     if Keyword.get(options, :include_private, false) or photo.is_public do
       photo
     else
-      raise Ecto.NoResultsError
+      raise Ecto.NoResultsError, queryable: Photo
     end
   end
 
@@ -395,7 +395,7 @@ defmodule PhotoTagger.Gallery do
           nil
       end
 
-    if query, do: Repo.update_all(query, []), else: {0, nil}
+    if query, do: {:ok, Repo.update_all(query, [])}, else: {:ok, {0, nil}}
   end
 
   @doc """

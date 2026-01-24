@@ -71,7 +71,7 @@ defmodule PhotoTagger.GalleryAccessControlTest do
 		end
 
 		test "get_photo!/1 raises for private photo without flag", context do
-			assert_raise KeyError, fn ->
+			assert_raise Ecto.NoResultsError, fn ->
 				Gallery.get_photo!(context.private_photo_in_public_folder.id)
 			end
 		end

@@ -18,25 +18,27 @@ Track bugs with root causes and solutions for future reference.
 
 ## Active Bugs
 
-### [2026-01-24] Gallery.get_photo!/1 raises KeyError instead of Ecto.NoResultsError for private photos
+_(None at this time)_
 
-**Symptoms**: When attempting to fetch a private photo without `include_private: true` flag, the function raises `KeyError` instead of the expected `Ecto.NoResultsError`
-**Root Cause**: The function raises a bare `Ecto.NoResultsError` without the required `:queryable` argument. Ecto's exception handling code then tries to access a missing key, causing a `KeyError`
-**Solution**: Not yet fixed - test currently expects `KeyError` to match actual behavior
-**Files Affected**: `lib/photo_tagger/gallery.ex:310`
-**Discovered In**: Phase 1 & Phase 2 testing (test/photo_tagger/gallery_test.exs, test/photo_tagger/gallery_access_control_test.exs)
+---
+
+## Resolved Bugs
 
 ### [2026-01-24] reorder_photos_for_insert/3 returns incompatible value for Ecto.Multi
 
 **Symptoms**: When reordering photos during insertion, `Ecto.Multi` callbacks fail because the function returns `{count, nil}` instead of `{:ok, value}`
 **Root Cause**: The function uses `Repo.update_all/2` which returns `{count, nil}`, but `Ecto.Multi` expects callbacks to return `{:ok, result}` or `{:error, reason}` tuples
-**Solution**: Not yet fixed - test is currently skipped with `@tag :skip`
-**Files Affected**: `lib/photo_tagger/gallery.ex:365-390`
-**Discovered In**: Phase 1 testing (test/photo_tagger/gallery_test.exs:407)
+**Solution**: Wrapped the return value in `:ok` tuple at line 398: changed from `if query, do: Repo.update_all(query, []), else: {0, nil}` to `if query, do: {:ok, Repo.update_all(query, [])}, else: {:ok, {0, nil}}`
+**Files Changed**: `lib/photo_tagger/gallery.ex`, `test/photo_tagger/gallery_test.exs`
+**Discovered In**: Phase 1 testing (test/photo_tagger/gallery_test.exs:652)
 
----
+### [2026-01-24] Gallery.get_photo!/1 raises KeyError instead of Ecto.NoResultsError for private photos
 
-## Resolved Bugs
+**Symptoms**: When attempting to fetch a private photo without `include_private: true` flag, the function raises `KeyError` instead of the expected `Ecto.NoResultsError`
+**Root Cause**: The function raises a bare `Ecto.NoResultsError` without the required `:queryable` argument. Ecto's exception handling code then tries to access a missing key, causing a `KeyError`
+**Solution**: Changed `raise Ecto.NoResultsError` to `raise Ecto.NoResultsError, queryable: Photo` at line 310
+**Files Changed**: `lib/photo_tagger/gallery.ex`, `test/photo_tagger/gallery_test.exs`, `test/photo_tagger/gallery_access_control_test.exs`
+**Discovered In**: Phase 1 & Phase 2 testing (test/photo_tagger/gallery_test.exs, test/photo_tagger/gallery_access_control_test.exs)
 
 ### [2026-01-24] Gallery.update_photo/2 file rename fails with :enoent
 

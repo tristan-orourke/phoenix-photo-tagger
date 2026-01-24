@@ -50,9 +50,7 @@ defmodule PhotoTagger.GalleryTest do
 
 		test "get_photo!/1 raises when photo is private and include_private is false", %{folder: folder} do
 			photo = photo_fixture(%{folder_id: folder.id, is_public: false})
-			# Note: Gallery.get_photo! raises Ecto.NoResultsError but without proper args,
-			# causing a KeyError. This is a bug in the Gallery code, but we test current behavior.
-			assert_raise KeyError, fn -> Gallery.get_photo!(photo.id) end
+			assert_raise Ecto.NoResultsError, fn -> Gallery.get_photo!(photo.id) end
 		end
 
 		test "get_photo!/1 returns private photo with include_private: true", %{folder: folder} do
@@ -647,10 +645,6 @@ defmodule PhotoTagger.GalleryTest do
 			assert updated.manual_order == 3
 		end
 
-		# Note: Changing manual_order to a different value triggers reorder_photos_for_insert,
-		# which has a bug - the Multi callback returns {count, nil} from Repo.update_all
-		# instead of {:ok, value}. This test is skipped until that's fixed.
-		@tag :skip
 		test "update_photo/2 with different manual_order reorders photos", %{folder: folder} do
 			_photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1})
 			_photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2})
