@@ -345,8 +345,8 @@ defmodule PhotoTagger.Gallery do
   end
 
   defp photo_full_path(%Photo{} = photo, version) do
-    # TODO if the image_uploader transform function changes, it might not be .jpg
-    ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".jpg")
+    # Original keeps its extension, transforms use .webp (set in ImageUploader.transform/2)
+    ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".webp")
     photo = Repo.preload(photo, :folder)
 
     Path.join([

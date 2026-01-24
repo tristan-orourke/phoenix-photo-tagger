@@ -34,22 +34,14 @@ Track bugs with root causes and solutions for future reference.
 **Files Affected**: `lib/photo_tagger/gallery.ex:365-390`
 **Discovered In**: Phase 1 testing (test/photo_tagger/gallery_test.exs:407)
 
-### [2026-01-24] Gallery.update_photo/2 file rename fails when transformed versions don't exist
-
-**Symptoms**: When renaming a photo that was created with mocked fixtures (no actual files), the file rename operation fails because Waffle-generated transformed versions (.webp files for thumb, web_md, web_lg) don't exist
-**Root Cause**: The photo rename logic attempts to rename all image versions (original + transformed), but mocked fixtures only simulate the original file in the database without creating the actual transformed files on disk
-**Solution**: Not yet fixed - currently worked around by only testing renames with photos created using `photo_fixture_with_files/1`
-**Files Affected**: `lib/photo_tagger/gallery.ex` (update_photo function), `lib/photo_tagger/uploaders/image_uploader.ex`
-**Discovered In**: Phase 1 testing (test/photo_tagger/gallery_test.exs)
-
 ---
 
 ## Resolved Bugs
 
-### [0000-00-00] Template Entry - Remove When Adding Real Bugs
+### [2026-01-24] Gallery.update_photo/2 file rename fails with :enoent
 
-**Symptoms**: Example of what the bug looked like to users
-**Root Cause**: Example of the underlying cause
-**Solution**: Example of how it was resolved
-**Files Changed**: `lib/example.ex`, `lib/example_web/live/example_live.ex`
-**Related Issues**: #0
+**Symptoms**: When renaming or moving a photo, the operation fails with `:enoent` (file not found) error even when files exist on disk
+**Root Cause**: The `photo_full_path/2` function in Gallery module hardcoded `.jpg` extension for transformed versions (thumb, web_md, web_lg), but Waffle actually creates these as `.webp` files. This caused the rename operation to try to rename non-existent `.jpg` files instead of the actual `.webp` files.
+**Solution**: Changed `photo_full_path/2` in `lib/photo_tagger/gallery.ex:349` from `.jpg` to `.webp` for transformed versions
+**Files Changed**: `lib/photo_tagger/gallery.ex`
+**Discovered In**: Phase 3 testing (test/photo_tagger/gallery_file_operations_test.exs)

@@ -55,3 +55,18 @@ docker compose -f docker-compose-dev.yml run dev_app <command>
 - `Tag` - Case-insensitive names (CITEXT)
 - `Folder` - Contains photos, has `is_public` flag
 - `PhotoTag` - Join table for photo-tag associations
+
+## Testing Gotchas
+
+### [2026-01-24] Manual debugging with `mix run -e` creates stale data
+
+**Problem**: When debugging code using `mix run -e "..."` (without `MIX_ENV=test`), database records are created in the dev database. If the same database is shared with tests, or if `MIX_ENV=test mix run -e` is used, this creates persistent records that pollute test runs since they bypass Ecto sandbox isolation.
+
+**Symptoms**: Tests fail with unexpected data (extra photos, folders, or tags appearing), unique constraint violations on hardcoded names like "test_folder".
+
+**Solution**: After manual debugging that creates database records, reset the test database:
+```bash
+docker compose -f docker-compose-dev.yml run --rm dev_app bash -c 'MIX_ENV=test mix ecto.reset'
+```
+
+**Prevention**: When writing manual test scripts, use unique names (e.g., `"test_#{System.unique_integer([:positive])}"`) instead of hardcoded names like "test_folder".

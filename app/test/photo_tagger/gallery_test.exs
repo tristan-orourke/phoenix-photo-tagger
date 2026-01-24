@@ -636,20 +636,6 @@ defmodule PhotoTagger.GalleryTest do
 			{:ok, temp_dir: temp_dir, folder: folder}
 		end
 
-		test "update_photo/2 fails to rename when transformed image versions don't exist", %{temp_dir: temp_dir, folder: folder} do
-			photo = photo_fixture_with_files(%{temp_dir: temp_dir, folder_id: folder.id, name: "old_name.jpg"})
-
-			# Verify original file exists
-			assert TempFileHelper.image_exists?(photo, :original)
-
-			# Update name - this fails because Waffle creates transformed versions (thumb, web_md, web_lg)
-			# during upload, but our test only creates the original. The rename tries to move all versions.
-			result = Gallery.update_photo(photo, %{"name" => "new_name.jpg"})
-
-			# Returns error because it can't find the .webp transformed versions
-			assert {:error, :update_file, :enoent, _} = result
-		end
-
 		test "update_photo/2 with same manual_order succeeds", %{folder: folder} do
 			# Create photos with sequential manual_order
 			_photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "photo1.jpg"})
