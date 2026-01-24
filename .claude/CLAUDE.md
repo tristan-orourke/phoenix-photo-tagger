@@ -40,6 +40,10 @@ mix test test/path/to/test.exs:42        # Run specific test at line 42
 mix assets.build       # Build Tailwind CSS and esbuild assets
 mix assets.deploy      # Minify assets for production
 ```
+## Style Conventions
+
+Avoid unused variables where possible. But if necessary, unused variables *must* be prefixed with `_`. 
+`_unused_variable = 123;`
 
 ## Architecture
 
