@@ -166,12 +166,7 @@ defmodule PhotoTaggerWeb.PhotoControllerTest do
 	end
 
 	describe "GET /admin/photos/:id/edit" do
-		@tag :skip
 		test "renders edit form", %{conn: conn} do
-			# Note: This test is skipped because the PhotoController.edit/2 action has a bug:
-			# it doesn't preload the :folder association, but the edit_photo_form template
-			# tries to render f[:folder], which causes a Protocol.UndefinedError
-			# when trying to convert the NotLoaded association to HTML-safe content.
 			temp_dir = setup_temp_storage(%{})
 			folder = folder_fixture_with_files(%{temp_dir: temp_dir})
 

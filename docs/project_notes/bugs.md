@@ -18,11 +18,27 @@ Track bugs with root causes and solutions for future reference.
 
 ## Active Bugs
 
-_(None at this time)_
+(None)
 
 ---
 
 ## Resolved Bugs
+
+### [2026-01-30] PhotoController edit view raises Protocol.UndefinedError for folder field
+
+**Symptoms**: When accessing the edit view for a photo (e.g., `/admin/photos/:id/edit`), the application crashes with `Protocol.UndefinedError: protocol Phoenix.HTML.Safe not implemented for type PhotoTagger.Gallery.Folder (a struct)`
+**Root Cause**: The edit form template at `lib/photo_tagger_web/controllers/photo_html/edit_photo_form.html.heex:6` incorrectly used `field={f[:folder]}` which tries to render the entire Folder struct. Since Photo has a `belongs_to :folder` association, the database field is actually `folder_id`, not `folder`. Phoenix.HTML.Safe protocol is not implemented for structs, so rendering fails. Additionally, the controller didn't pass the folders list for the select dropdown
+**Solution**: Changed form field from `f[:folder]` to `f[:folder_id]` with a select dropdown matching the pattern in `new_photo_form.html.heex`. Updated controller to fetch and pass folders list to the view. Updated `edit.html.heex` to pass `folders={@folders}` to the form component
+**Files Changed**: `app/lib/photo_tagger_web/controllers/photo_controller.ex`, `app/lib/photo_tagger_web/controllers/photo_html/edit_photo_form.html.heex`, `app/lib/photo_tagger_web/controllers/photo_html/edit.html.heex`
+**Discovered In**: Manual testing / user-reported bug
+
+### [2026-01-30] PhotoController edit action raises Ecto.NoResultsError for private photos
+
+**Symptoms**: When attempting to access the edit view for a private photo (e.g., `/admin/photos/:id/edit`), the controller raises `Ecto.NoResultsError` and crashes
+**Root Cause**: Line 88 in `lib/photo_tagger_web/controllers/photo_controller.ex` calls `Gallery.get_photo!(id)` without the `include_private: true` option. The `Gallery.get_photo!/1` function filters out private photos by default, causing it to raise an error even for valid photo IDs in private folders
+**Solution**: Changed `Gallery.get_photo!(id)` to `Gallery.get_photo!(id, include_private: true)` since admin controllers should have access to all photos regardless of privacy status
+**Files Changed**: `app/lib/photo_tagger_web/controllers/photo_controller.ex`
+**Discovered In**: Manual testing / code review
 
 ### [2026-01-30] FolderController string interpolation causes Protocol.UndefinedError
 
