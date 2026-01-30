@@ -24,6 +24,14 @@ _(None at this time)_
 
 ## Resolved Bugs
 
+### [2026-01-30] FolderController string interpolation causes Protocol.UndefinedError
+
+**Symptoms**: When creating a folder with a duplicate name, the application crashes with `Protocol.UndefinedError: protocol String.Chars not implemented for type Ecto.Changeset`
+**Root Cause**: Error handlers in FolderController (lines 20-26, 45-51, 64-70, 83-89) attempt to convert `Ecto.Changeset` to string via interpolation (`"Error #{failed_value}"`), but `String.Chars` protocol is not implemented for changesets
+**Solution**: Add pattern matching to handle `Ecto.Changeset` errors separately - extract human-readable error from changeset.errors field instead of directly interpolating the struct
+**Files Changed**: `lib/photo_tagger_web/controllers/folder_controller.ex`, `test/photo_tagger_web/controllers/folder_controller_test.exs`
+**Discovered In**: Phase 5 controller testing (test/photo_tagger_web/controllers/folder_controller_test.exs:49)
+
 ### [2026-01-24] reorder_photos_for_insert/3 returns incompatible value for Ecto.Multi
 
 **Symptoms**: When reordering photos during insertion, `Ecto.Multi` callbacks fail because the function returns `{count, nil}` instead of `{:ok, value}`

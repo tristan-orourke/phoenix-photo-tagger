@@ -8,7 +8,7 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :index, folders: folders)
   end
 
-  def create(conn, %{"name" => name, "is_public" => is_public} = attrs) do
+  def create(conn, %{"name" => _name, "is_public" => _is_public} = attrs) do
     result = Gallery.create_folder(attrs)
 
     case result do
@@ -17,12 +17,22 @@ defmodule PhotoTaggerWeb.FolderController do
         |> put_flash(:info, "Folder created successfully.")
         |> redirect(to: ~p"/admin/edit-folders")
 
-      {:error, failed_op, failed_value, _changes_so_far} ->
+      {:error, _failed_op, %Ecto.Changeset{} = changeset, _changes_so_far} ->
+        # Extract human-readable error from changeset
+        error_msg =
+          case changeset.errors do
+            [{field, {msg, _}} | _] -> "#{field} #{msg}"
+            _ -> "validation failed"
+          end
+
         conn
-        |> put_flash(
-          :error,
-          "Failed to create folder! Error #{failed_value} in step #{failed_op}."
-        )
+        |> put_flash(:error, "Failed to create folder: #{error_msg}")
+        |> redirect(to: ~p"/admin/edit-folders")
+
+      {:error, failed_op, failed_value, _changes_so_far} ->
+        # Handle non-changeset errors (file system errors, etc.)
+        conn
+        |> put_flash(:error, "Failed to create folder: #{inspect(failed_value)} in step #{failed_op}")
         |> redirect(to: ~p"/admin/edit-folders")
     end
   end
@@ -32,7 +42,7 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :edit_folders, folders: folders)
   end
 
-  def update(conn, %{"name" => name, "is_public" => is_public, "folder" => folder} = attrs) do
+  def update(conn, %{"name" => _name, "is_public" => _is_public, "folder" => folder} = attrs) do
     folder = Gallery.get_folder_by_name!(folder)
     result = Gallery.update_folder(folder, Map.take(attrs, ["is_public", "name"]))
 
@@ -42,12 +52,22 @@ defmodule PhotoTaggerWeb.FolderController do
         |> put_flash(:info, "Folder updated successfully.")
         |> redirect(to: ~p"/admin/edit-folders")
 
-      {:error, failed_op, failed_value, _changes_so_far} ->
+      {:error, _failed_op, %Ecto.Changeset{} = changeset, _changes_so_far} ->
+        # Extract human-readable error from changeset
+        error_msg =
+          case changeset.errors do
+            [{field, {msg, _}} | _] -> "#{field} #{msg}"
+            _ -> "validation failed"
+          end
+
         conn
-        |> put_flash(
-          :error,
-          "Failed to update folder! Error #{failed_value} in step #{failed_op}."
-        )
+        |> put_flash(:error, "Failed to update folder: #{error_msg}")
+        |> redirect(to: ~p"/admin/edit-folders")
+
+      {:error, failed_op, failed_value, _changes_so_far} ->
+        # Handle non-changeset errors (file system errors, etc.)
+        conn
+        |> put_flash(:error, "Failed to update folder: #{inspect(failed_value)} in step #{failed_op}")
         |> redirect(to: ~p"/admin/edit-folders")
     end
   end
@@ -61,12 +81,22 @@ defmodule PhotoTaggerWeb.FolderController do
         |> put_flash(:info, "Folder renamed successfully.")
         |> redirect(to: ~p"/admin/edit-folders")
 
-      {:error, failed_op, failed_value, _changes_so_far} ->
+      {:error, _failed_op, %Ecto.Changeset{} = changeset, _changes_so_far} ->
+        # Extract human-readable error from changeset
+        error_msg =
+          case changeset.errors do
+            [{field, {msg, _}} | _] -> "#{field} #{msg}"
+            _ -> "validation failed"
+          end
+
         conn
-        |> put_flash(
-          :error,
-          "Failed to rename folder! Error #{failed_value} in step #{failed_op}."
-        )
+        |> put_flash(:error, "Failed to rename folder: #{error_msg}")
+        |> redirect(to: ~p"/admin/edit-folders")
+
+      {:error, failed_op, failed_value, _changes_so_far} ->
+        # Handle non-changeset errors (file system errors, etc.)
+        conn
+        |> put_flash(:error, "Failed to rename folder: #{inspect(failed_value)} in step #{failed_op}")
         |> redirect(to: ~p"/admin/edit-folders")
     end
   end
@@ -80,12 +110,22 @@ defmodule PhotoTaggerWeb.FolderController do
         |> put_flash(:info, "Folder deleted successfully.")
         |> redirect(to: ~p"/admin/edit-folders")
 
-      {:error, failed_op, failed_value, _changes_so_far} ->
+      {:error, _failed_op, %Ecto.Changeset{} = changeset, _changes_so_far} ->
+        # Extract human-readable error from changeset
+        error_msg =
+          case changeset.errors do
+            [{field, {msg, _}} | _] -> "#{field} #{msg}"
+            _ -> "validation failed"
+          end
+
         conn
-        |> put_flash(
-          :error,
-          "Failed to delete folder! Error #{failed_value} in step #{failed_op}."
-        )
+        |> put_flash(:error, "Failed to delete folder: #{error_msg}")
+        |> redirect(to: ~p"/admin/edit-folders")
+
+      {:error, failed_op, failed_value, _changes_so_far} ->
+        # Handle non-changeset errors (file system errors, etc.)
+        conn
+        |> put_flash(:error, "Failed to delete folder: #{inspect(failed_value)} in step #{failed_op}")
         |> redirect(to: ~p"/admin/edit-folders")
     end
   end
