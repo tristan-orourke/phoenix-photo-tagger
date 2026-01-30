@@ -1,9 +1,12 @@
 defmodule PhotoTaggerWeb.PhotoControllerTest do
 	@moduledoc """
 	Tests for the PhotoController handling photo creation and editing.
+
+	NOTE: async: false is required because tests using setup_temp_storage modify
+	global Application state (waffle :storage_dir_prefix), causing race conditions.
 	"""
 
-	use PhotoTaggerWeb.ConnCase, async: true
+	use PhotoTaggerWeb.ConnCase, async: false
 
 	alias PhotoTagger.Gallery
 

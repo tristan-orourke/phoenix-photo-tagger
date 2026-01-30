@@ -2,9 +2,13 @@ defmodule PhotoTagger.GalleryFileOperationsTest do
 	@moduledoc """
 	Tests for filesystem operations in the Gallery context.
 	All tests use real temp directories and files.
+
+	NOTE: async: false is required because these tests modify global Application
+	state (waffle :storage_dir_prefix). Running async causes race conditions where
+	tests overwrite each other's storage directories, leading to file-not-found errors.
 	"""
 
-	use PhotoTagger.DataCase, async: true
+	use PhotoTagger.DataCase, async: false
 
 	alias PhotoTagger.Gallery
 	alias PhotoTagger.Uploaders.ImageUploader

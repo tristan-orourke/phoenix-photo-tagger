@@ -58,6 +58,23 @@ docker compose -f docker-compose-dev.yml run dev_app <command>
 
 ## Testing Gotchas
 
+### [2026-01-30] Tests using TempFileHelper must not run async
+
+**Problem**: `TempFileHelper.setup_temp_storage/1` sets a global Application environment variable (`:waffle, :storage_dir_prefix`) that controls where Waffle stores uploaded files. When tests run with `async: true`, concurrent tests overwrite each other's storage directory settings, causing files to be created in the wrong location.
+
+**Symptoms**: Intermittent test failures with "file not found" errors (`:enoent`), or assertions failing because file paths have different temp directory IDs than expected.
+
+**Solution**: Any test file that uses `setup_temp_storage` must use `async: false`:
+```elixir
+use PhotoTagger.DataCase, async: false  # or PhotoTaggerWeb.ConnCase
+```
+
+**Affected test files**:
+- `test/photo_tagger/gallery_file_operations_test.exs`
+- `test/photo_tagger_web/controllers/photo_controller_test.exs`
+- `test/photo_tagger_web/controllers/folder_controller_test.exs`
+- `test/photo_tagger/gallery_test.exs` (already defaults to async: false)
+
 ### [2026-01-24] Manual debugging with `mix run -e` creates stale data
 
 **Problem**: When debugging code using `mix run -e "..."` (without `MIX_ENV=test`), database records are created in the dev database. If the same database is shared with tests, or if `MIX_ENV=test mix run -e` is used, this creates persistent records that pollute test runs since they bypass Ecto sandbox isolation.
