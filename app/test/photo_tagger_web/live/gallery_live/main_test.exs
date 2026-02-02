@@ -81,6 +81,14 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		Regex.scan(~r/<img[^>]*class="w-20 h-20 object-cover"/, html) |> length()
 	end
 
+	defp extract_removable_tags(html) do
+		# Extract tag names from the multi-select panel's "Remove tags" section
+		# Tags appear as hidden input values in forms with phx-submit="remove_tag_bulk"
+		Regex.scan(~r/<input[^>]*class="hidden"[^>]*name="tag"[^>]*value="([^"]+)"[^>]*>/, html)
+		|> Enum.map(fn [_, tag] -> tag end)
+		|> Enum.uniq()
+	end
+
 	# ============================================================================
 	# Group 1: Mounting and Initial State (5 tests)
 	# ============================================================================
@@ -386,6 +394,10 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 	end
 
 	describe "handle_params - scroll events" do
+		# SKIPPED: Phoenix LiveView 1.0 doesn't provide assert_push_event/3 for testing
+		# push_event calls (available in 1.1+). The scroll_to_top logic is tested indirectly
+		# via state changes in handle_params tests. Scroll behavior verified via manual testing.
+		# To enable: Upgrade to Phoenix LiveView 1.1+ and use assert_push_event(socket, "scroll_to_top", %{selector: ...})
     @tag :skip
 		test "triggers scroll_to_top events when relevant params change", %{conn: conn} do
 			folder1 = folder_fixture(%{name: "folder1"})
@@ -921,9 +933,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			assert "remove-me" not in tag_names2
 
 			# Tag should not appear in the multi-select panel's removable tags section
-			# The remove tags section has forms with phx-submit="remove_tag_bulk" and hidden inputs with the tag value
-			# After removal, the tag should not be in this section (though it may still exist in the global tags list)
-			refute html =~ ~r/phx-submit="remove_tag_bulk"[^>]*>.*?value="remove-me"/s
+			removable_tags = extract_removable_tags(html)
+			refute "remove-me" in removable_tags
 		end
 	end
 
