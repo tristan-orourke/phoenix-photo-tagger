@@ -58,6 +58,32 @@ docker compose -f docker-compose-dev.yml run dev_app <command>
 
 ## Testing Gotchas
 
+### [2026-01-30] Phoenix LiveView testing best practices
+
+**Phoenix LiveView 1.0+ does not support `view.assigns` access in tests**. The `Phoenix.LiveViewTest.View` struct only has these fields: `id`, `module`, `pid`, `proxy`, `endpoint` - no `assigns` field exists.
+
+**Correct approach**: Test rendered HTML output instead of internal assigns.
+
+**Pattern examples**:
+```elixir
+# Instead of: assert view.assigns.interval_ms == 5000
+# Use: assert render(view) =~ ~r/data-interval-ms="5000"/
+
+# Instead of: assert view.assigns.photo.id == photo.id
+# Use: assert render(view) =~ photo.name
+# Or: assert render(view) =~ ImageUploader.url({photo.image, photo}, :web_lg)
+```
+
+**Why this is better**:
+- Tests verify what users actually see (behavioral testing)
+- Tests remain stable when internal implementation changes
+- Tests mirror real browser behavior
+
+**Note**: While `:sys.get_state(view.pid)` can access process state, this is:
+- Not documented or recommended by Phoenix
+- Couples tests to implementation details
+- Makes tests fragile and harder to maintain
+
 ### [2026-01-30] Tests using TempFileHelper must not run async
 
 **Problem**: `TempFileHelper.setup_temp_storage/1` sets a global Application environment variable (`:waffle, :storage_dir_prefix`) that controls where Waffle stores uploaded files. When tests run with `async: true`, concurrent tests overwrite each other's storage directory settings, causing files to be created in the wrong location.
@@ -74,6 +100,53 @@ use PhotoTagger.DataCase, async: false  # or PhotoTaggerWeb.ConnCase
 - `test/photo_tagger_web/controllers/photo_controller_test.exs`
 - `test/photo_tagger_web/controllers/folder_controller_test.exs`
 - `test/photo_tagger/gallery_test.exs` (already defaults to async: false)
+
+### [2026-02-01] LiveView event parameters must use string keys and values
+
+**Problem**: When using `render_click/3` or `render_change/3` in tests, parameters must match exactly what the browser sends - string keys and string values.
+
+**Incorrect**:
+```elixir
+render_click(view, "change_page", %{pg: 2})
+render_click(view, "select_photo", %{photo_id: photo.id, ctrl_key_pressed: false})
+```
+
+**Correct**:
+```elixir
+render_click(view, "change_page", %{"pg" => "2"})
+render_click(view, "select_photo", %{"photo_id" => to_string(photo.id), "ctrl_key_pressed" => "false"})
+```
+
+**Why**: LiveView handlers pattern-match on string keys (e.g., `%{"pg" => pg}`), and functions like `Integer.parse/1` expect string arguments. Passing atoms or integers causes `FunctionClauseError`.
+
+### [2026-02-01] LiveComponent events require element targeting
+
+**Problem**: Events with `phx-target={@myself}` are handled by the LiveComponent, not the parent LiveView. Using `render_click(view, "event_name", params)` sends to the parent, which doesn't handle the event.
+
+**Incorrect**:
+```elixir
+render_click(view, "select_index", %{"index" => "T"})
+```
+
+**Correct**:
+```elixir
+view |> element("#index-selectors button", "T") |> render_click()
+```
+
+**Pattern**: When testing LiveComponent events, use element selectors to click the actual DOM element rather than sending events directly.
+
+### [2026-02-01] NavPanel shows letter indices, not tag names by default
+
+**Context**: The NavPanel component organizes tags by first letter. By default, only letter indices (A, B, C...) are shown. Actual tag names only appear after clicking an index to expand it.
+
+**Test implication**: To verify tags exist, either:
+1. Check for the letter index (e.g., `assert html =~ "T"` for tags starting with T)
+2. Click the index first, then check for tag names:
+```elixir
+view |> element("#index-selectors button", "T") |> render_click()
+html = render(view)
+assert html =~ "tag_name"
+```
 
 ### [2026-01-24] Manual debugging with `mix run -e` creates stale data
 

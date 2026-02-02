@@ -45,6 +45,10 @@ mix assets.deploy      # Minify assets for production
 Avoid unused variables where possible. But if necessary, unused variables *must* be prefixed with `_`. 
 `_unused_variable = 123;`
 
+## UI Design
+
+UI is designed to be clear and navigable at various screen sizes, particularly mobile, landscape mobile, and desktop. Tailwind CSS classes use md: and lg: to scale down spacing and some element sizes on smaller screens. Some elements are hidden entirely on smaller screens, such as some labels, to save space for more important UI.
+
 ## Architecture
 
 ### Directory Structure
