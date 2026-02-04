@@ -246,7 +246,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
 
   attr :selected, :boolean, required: true
   attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :rest, :global, include: ~w(disabled form name value id)
   slot :inner_block, required: true
 
   def toggle_button(assigns) do
@@ -257,6 +257,7 @@ defmodule PhotoTaggerWeb.CoreComponents do
           "border rounded-full px-1 my-1",
           "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
           "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700",
+          if(@selected, do: "active", else: ""),
           @class
         ])
       }

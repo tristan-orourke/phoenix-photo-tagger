@@ -127,3 +127,25 @@ This project maintains a structured memory system in `docs/project_notes/` to tr
 - Link to related GitHub issues/PRs when applicable
 - Include file paths affected by changes
 - Document both what was done and why
+
+## Testing
+
+### LiveView Test Patterns
+
+- Event parameters must use string keys and string values: `%{"photo_id" => "123", "ctrl_key_pressed" => "true"}`
+- No access to `view.assigns` in tests - verify behavior through rendered HTML with `has_element?/3` and Floki parsing
+- Use mocked fixtures from `PhotoTagger.GalleryFixtures` - no filesystem operations needed
+- LiveComponent events bubble up to parent LiveView's `handle_event/3`
+
+### Gallery API Signatures
+
+- `Gallery.add_tag_to_photo(photo, tag_name)` - takes photo struct and tag name (string), not tag struct
+- `Gallery.get_photo!/1` exists but `Gallery.get_photo/1` doesn't - use `catch_error(Gallery.get_photo!/1) == :error` for deletion tests
+- Event handler parameter names: `"tag"` (not "tag_id"), `"photo_group"` (not "group_name"), `"folder"` (not "folder_name")
+- `update_photo` event requires nested parameters: `%{"photo_id" => id, "photo" => %{"description" => "..."}}`
+- `form_group_from_selected` takes no parameters - auto-generates timestamp-based group names or reuses existing group from selected photos
+
+### Route Patterns
+
+- Admin routes: `/admin`, `/admin/photos/{id}`, `/admin/folders/{name}` (no `/admin/gallery`)
+- Drift routes require photo context: `/photos/{id}/drift` or `/folders/{folder}/photos/{id}/drift`

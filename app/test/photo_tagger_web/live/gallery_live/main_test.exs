@@ -65,16 +65,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
 		case Floki.find(doc, "#gallery-grid") do
 			[{_tag, attrs, _children}] ->
-				class_attr = Enum.find_value(attrs, fn {key, value} -> if key == "class", do: value end)
-
-				cond do
-					String.contains?(class_attr || "", "grid-cols-2") -> -9
-					String.contains?(class_attr || "", "grid-cols-4") -> -5
-					String.contains?(class_attr || "", "grid-cols-6") -> 0
-					String.contains?(class_attr || "", "grid-cols-8") -> 5
-					String.contains?(class_attr || "", "grid-cols-10") -> 9
-					true -> 0
-				end
+				zoom_attr = Enum.find_value(attrs, fn {key, value} -> if key == "data-zoom-level", do: value end)
+				String.to_integer(zoom_attr || "0")
 
 			_ ->
 				0
