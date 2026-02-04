@@ -1138,30 +1138,30 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_shift_range_select(photo_id, socket) do
     last_selected_id = socket.assigns.last_selected_photo_id
-    
+
     # If there's no last selected photo, treat as normal multi-select
     if last_selected_id == nil do
       handle_multi_photo_select(photo_id, socket)
     else
       # Get all filtered photos from DB
       all_photos = socket.assigns.filtered_photos
-      
+
       # Apply the same filtering logic that the gallery component uses to get visible photos
       grouped_photos = Enum.group_by(all_photos, & &1.group)
-      
+
       visible_photos =
         Enum.filter(all_photos, fn photo ->
           photo.group == nil or
             !Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups) or
             photo == List.first(grouped_photos[photo.group])
         end)
-      
+
       # Find indices of last selected and newly clicked photos in the VISIBLE list
       last_index = Enum.find_index(visible_photos, &(to_string(&1.id) == last_selected_id))
       current_index = Enum.find_index(visible_photos, &(to_string(&1.id) == photo_id))
-      
+
       case {last_index, current_index} do
-        {nil, _} -> 
+        {nil, _} ->
           # Last selected photo not in current view, fall back to multi-select
           handle_multi_photo_select(photo_id, socket)
         {_, nil} ->
@@ -1170,17 +1170,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {start_idx, end_idx} ->
           # Get the range of VISIBLE photos between start and end (inclusive)
           {min_idx, max_idx} = if start_idx <= end_idx, do: {start_idx, end_idx}, else: {end_idx, start_idx}
-          range_visible_photos = Enum.slice(visible_photos, min_idx..(max_idx))
-          
+          range_visible_photos = Enum.slice(visible_photos, min_idx..max_idx)
+
           # For any photo in the range that belongs to a collapsed group,
           # we need to include ALL photos from that group
           photos_to_select = expand_collapsed_groups(range_visible_photos, all_photos, grouped_photos, socket)
-          
+
           # Merge with existing selection
           current_selected_ids = Enum.map(socket.assigns.selected_photos, & &1.id)
           new_photo_ids = Enum.map(photos_to_select, & &1.id)
           merged_selection = (current_selected_ids ++ new_photo_ids) |> Enum.uniq()
-          
+
           {:noreply,
            push_patch(socket,
              to:
@@ -1205,7 +1205,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     Enum.flat_map(range_photos, fn photo ->
       if photo.group != nil do
         is_collapsed = Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups)
-        
+
         if is_collapsed do
           # This group is collapsed, so include all photos from the group
           Map.get(grouped_photos, photo.group, [photo])
