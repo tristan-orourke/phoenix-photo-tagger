@@ -44,6 +44,16 @@ docker compose -f docker-compose-dev.yml run dev_app <command>
 - **Public/private filtering**: Most functions accept `:include_private` option
 - **File operations**: Use `Ecto.Multi` to coordinate DB changes with filesystem
 
+## Photo Selection
+
+- **Click metadata capture**: JavaScript in `app.js` captures `shift_key_pressed` and `ctrl_key_pressed` in LiveView click events
+- **Selection tracking**: `last_selected_photo_id` tracked in socket assigns for shift-click range selection
+- **Multi-select modes**: 
+  - Single click: Select one photo
+  - Ctrl+click or multiselect mode: Toggle individual photos
+  - Shift+click (with ctrl or in multiselect mode): Select range from last selected to clicked photo
+- **Collapsed groups**: When selecting a range that includes a collapsed group's representative photo, all photos in that group are included in the selection
+
 ## Routes
 
 - `/` - Public browsing (folders, photos, drift view)
