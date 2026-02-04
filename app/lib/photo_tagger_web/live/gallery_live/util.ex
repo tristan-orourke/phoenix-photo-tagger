@@ -36,7 +36,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Util do
       |> Map.put(:selected_photos, selected_photo_ids)
       |> then(fn q ->
         case sort do
-          :manual -> Map.put(q, :sort, "manual")
+          # Manual mode is default, so it is not added to url
+          # :manual -> Map.put(q, :sort, "manual")
+          :date -> Map.put(q, :sort, "date")
           _ -> q
         end
       end)
