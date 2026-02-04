@@ -1058,7 +1058,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Visibility">
         <p class="mb-2">
           <%= cond do %>
-            <% @private_count == 0 -> %>Visiblity: All public
+            <% @private_count == 0 -> %>Visibility: All public
             <% @public_count == 0 -> %>Visibility: All private
             <% true -> %>Mixed visibility: {@public_count} public, {@private_count} private
           <% end %>
