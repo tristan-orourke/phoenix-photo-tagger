@@ -19,6 +19,23 @@ defmodule PhotoTaggerWeb.PhotoControllerTest do
       conn = get(conn, ~p"/photos/new")
       assert html_response(conn, 200) =~ "New Photo"
     end
+
+    test "includes both public and private folders in dropdown", %{conn: conn} do
+      # Create a public folder
+      {:ok, %{create_folder_db: public_folder}} =
+        PhotoTagger.Gallery.create_folder(%{"name" => "Public Test Folder", "is_public" => true})
+
+      # Create a private folder
+      {:ok, %{create_folder_db: private_folder}} =
+        PhotoTagger.Gallery.create_folder(%{"name" => "Private Test Folder", "is_public" => false})
+
+      conn = get(conn, ~p"/photos/new")
+      response = html_response(conn, 200)
+
+      # Verify both folders appear in the response
+      assert response =~ public_folder.name
+      assert response =~ private_folder.name
+    end
   end
 
   describe "create photo" do
