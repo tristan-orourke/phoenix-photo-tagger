@@ -199,6 +199,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
     |> switch_photos()
   end
 
+  def handle_event("increase_tempo", _, socket) do
+    new_interval_ms =
+      case socket.assigns.interval_ms do
+        2000 -> 5000
+        5000 -> 10000
+        10000 -> 15000
+        15000 -> 2000
+        _ -> 5000
+      end
+
+    {:noreply, socket |> start_timer(new_interval_ms)}
+  end
+
   def switch_photos(socket) do
     # Get the current photo and folder from the socket
     photo = socket.assigns.photo
@@ -287,18 +300,5 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       end
 
     1 + folder_score * 5 + tag_score * 10 + focus_score * 200
-  end
-
-  def handle_event("increase_tempo", _, socket) do
-    new_interval_ms =
-      case socket.assigns.interval_ms do
-        2000 -> 5000
-        5000 -> 10000
-        10000 -> 15000
-        15000 -> 2000
-        _ -> 5000
-      end
-
-    {:noreply, socket |> start_timer(new_interval_ms)}
   end
 end

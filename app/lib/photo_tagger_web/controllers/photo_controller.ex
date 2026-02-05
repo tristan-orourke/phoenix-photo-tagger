@@ -85,9 +85,10 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def edit(conn, %{"id" => id}) do
-    photo = Gallery.get_photo!(id)
-    photo = Repo.preload(photo, :tags)
+    photo = Gallery.get_photo!(id, include_private: true)
+    photo = Repo.preload(photo, [:tags])
     changeset = Gallery.update_photo_changeset(photo)
-    render(conn, :edit, photo: photo, changeset: changeset)
+    folders = Gallery.list_folders()
+    render(conn, :edit, photo: photo, changeset: changeset, folders: folders)
   end
 end
