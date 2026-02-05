@@ -40,6 +40,14 @@ mix test test/path/to/test.exs:42        # Run specific test at line 42
 mix assets.build       # Build Tailwind CSS and esbuild assets
 mix assets.deploy      # Minify assets for production
 ```
+## Style Conventions
+
+Avoid unused variables where possible. But if necessary, unused variables *must* be prefixed with `_`. 
+`_unused_variable = 123;`
+
+## UI Design
+
+UI is designed to be clear and navigable at various screen sizes, particularly mobile, landscape mobile, and desktop. Tailwind CSS classes use md: and lg: to scale down spacing and some element sizes on smaller screens. Some elements are hidden entirely on smaller screens, such as some labels, to save space for more important UI.
 
 ## Architecture
 
@@ -69,9 +77,9 @@ The Phoenix app lives in `app/`. Key directories:
 ### LiveView Structure
 
 Main gallery interface in `lib/photo_tagger_web/live/gallery_live/`:
-- `main.ex` - Primary gallery LiveView (~1400 lines), handles multiple route actions (`:public`, `:index`, `:folder`, `:photos`)
+- `main.ex` - Primary gallery LiveView (~1500 lines), handles multiple route actions (`:public`, `:index`, `:folder`, `:photos`)
 - `drift.ex` - Photo carousel/drift navigation mode
-- Component modules: `nav_panel.ex`, `gallery_panel.ex`, `gallery_photo.ex`, `gallery_tag_link.ex`
+- Component modules: `nav_panel.ex`, `gallery_panel.ex`, `gallery_photo.ex`, `gallery_tag_link.ex`, `public_gallery.ex`, `util.ex`
 
 ### Routes
 
@@ -119,3 +127,33 @@ This project maintains a structured memory system in `docs/project_notes/` to tr
 - Link to related GitHub issues/PRs when applicable
 - Include file paths affected by changes
 - Document both what was done and why
+
+## Testing
+
+### LiveView Test Patterns
+
+- Event parameters must use string keys and string values: `%{"photo_id" => "123", "ctrl_key_pressed" => "true"}`
+- No access to `view.assigns` in tests - verify behavior through rendered HTML with `has_element?/3` and Floki parsing
+- Use mocked fixtures from `PhotoTagger.GalleryFixtures` - no filesystem operations needed
+- LiveComponent events bubble up to parent LiveView's `handle_event/3`
+
+### Gallery API Signatures
+
+- `Gallery.add_tag_to_photo(photo, tag_name)` - takes photo struct and tag name (string), not tag struct
+- `Gallery.get_photo!/1` exists but `Gallery.get_photo/1` doesn't - use `catch_error(Gallery.get_photo!/1) == :error` for deletion tests
+- Event handler parameter names: `"tag"` (not "tag_id"), `"photo_group"` (not "group_name"), `"folder"` (not "folder_name")
+- `update_photo` event requires nested parameters: `%{"photo_id" => id, "photo" => %{"description" => "..."}}`
+- `form_group_from_selected` takes no parameters - auto-generates timestamp-based group names or reuses existing group from selected photos
+
+### Route Patterns
+
+- Admin routes: `/admin`, `/admin/photos/{id}`, `/admin/folders/{name}` (no `/admin/gallery`)
+- Drift routes require photo context: `/photos/{id}/drift` or `/folders/{folder}/photos/{id}/drift`
+
+## Context Efficiency
+
+To minimize context window usage in long sessions:
+- Use Task tool with `subagent_type=Explore` for codebase searches - returns summaries instead of raw results
+- Avoid re-reading files already in context - recall from memory instead
+- Run specific tests (`mix test path:line`) rather than full test files when debugging
+- Use `offset`/`limit` parameters when reading large files like `main.ex` (~1400 lines)

@@ -2,7 +2,7 @@
   Edit Photo {@photo.id}
   <:subtitle>Use this form to manage photo records in your database.</:subtitle>
 </.header>
-<.edit_photo_form changeset={@changeset} action={~p"/admin/photos/#{@photo}"} />
+<.edit_photo_form changeset={@changeset} action={~p"/admin/photos/#{@photo}"} folders={@folders} />
 
 <h2 class="font-semibold mt-10">Tags</h2>
 <.edit_tag_forms photo={@photo} />

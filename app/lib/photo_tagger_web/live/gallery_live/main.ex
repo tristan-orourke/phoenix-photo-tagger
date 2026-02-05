@@ -45,30 +45,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             sort={@sort}
             show_visibility_outlines={@show_visibility_outlines}
           />
-          <%= if @live_action == :index do %>
-            <p>Select a folder to view photos</p>
-          <% else %>
-            <%!-- <.live_component
-              id="gallery-panel"
-              module={PhotoTaggerWeb.GalleryLive.GalleryPanel}
-              photos={@filtered_photos}
-              selected_photo_ids={@selected_photo_ids}
-              collapse_groups={@collapse_groups}
-              zoom_level={@zoom_level}
-              is_admin={@is_admin}
-            /> --%>
-            <.gallery
-              photos={@filtered_photos}
-              selected_photo_ids={@selected_photo_ids}
-              collapse_groups={@collapse_groups}
-              collapse_group_exceptions={@collapse_group_exceptions}
-              zoom_level={@zoom_level}
-              is_admin={@is_admin}
-              pg={@pg}
-              pg_size={@pg_size}
-              show_visibility_outlines={@show_visibility_outlines}
-            />
-          <% end %>
+          <%!-- <.live_component
+            id="gallery-panel"
+            module={PhotoTaggerWeb.GalleryLive.GalleryPanel}
+            photos={@filtered_photos}
+            selected_photo_ids={@selected_photo_ids}
+            collapse_groups={@collapse_groups}
+            zoom_level={@zoom_level}
+            is_admin={@is_admin}
+          /> --%>
+          <.gallery
+            photos={@filtered_photos}
+            selected_photo_ids={@selected_photo_ids}
+            collapse_groups={@collapse_groups}
+            collapse_group_exceptions={@collapse_group_exceptions}
+            zoom_level={@zoom_level}
+            is_admin={@is_admin}
+            pg={@pg}
+            pg_size={@pg_size}
+            show_visibility_outlines={@show_visibility_outlines}
+          />
         </div>
         <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
           <%= case @selected_photos do %>
@@ -198,13 +194,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     sort =
       case Map.get(params, "sort", "manual") do
         "date" -> :date
+        "manual" -> :manual
         _ -> :manual
       end
 
     prev_pg = Map.get(socket.assigns, :pg, 1)
 
     pg =
-      Map.get(params, "pg", Integer.to_string(prev_pg))
+      (Map.get(params, "pg") || Map.get(params, "page") || Integer.to_string(prev_pg))
       |> Util.safe_integer_parse(prev_pg)
 
     prev_pg_size = Map.get(socket.assigns, :pg_size, @default_pg_size)
@@ -272,42 +269,38 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_tags = Map.get(socket.assigns, :tags, [])
     prev_exclude_tags = Map.get(socket.assigns, :exclude_tags, [])
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
-    action = Map.get(socket.assigns, :live_action, nil)
+    _action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
     sort = Map.get(socket.assigns, :sort, :manual)
     prev_sort = Map.get(socket.assigns, :prev_sort, sort)
 
     filtered_photos =
-      case {folder, tags, exclude_tags, prev_filtered_photos, action} do
-        # The index action means no folder is selected (not event "all folders") and no photos need be displayed
-        {_, _, _, :index} ->
-          []
-
+      case {folder, tags, exclude_tags, prev_filtered_photos} do
         # If the folder, tags, and sort are unchanged, and we have previously cached filtered photos, use them without querying the database
-        {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos, _}
+        {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos}
         when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort ->
           prev_filtered_photos
 
-        {nil, [], [], _, _} ->
+        {nil, [], [], _} ->
           Gallery.list_photos(include_private: is_admin, sort: sort)
 
-        {nil, ["untagged"], _, _, _} ->
+        {nil, ["untagged"], _, _} ->
           Gallery.list_photos_by_all_tags(nil, include_private: is_admin, sort: sort) ++
             Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
               include_private: is_admin,
               sort: sort
             )
 
-        {nil, tags, exclude_tags, _, _} ->
+        {nil, tags, exclude_tags, _} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
             include_private: is_admin,
             sort: sort
           )
 
-        {folder, [], [], _, _} ->
+        {folder, [], [], _} ->
           Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
 
-        {folder, ["untagged"], _, _, _} ->
+        {folder, ["untagged"], _, _} ->
           # TODO:
           Gallery.list_photos_by_folder_and_tags(folder, %{include: nil, exclude: []},
             include_private: is_admin,
@@ -318,7 +311,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               sort: sort
             )
 
-        {folder, tags, exclude_tags, _, _} ->
+        {folder, tags, exclude_tags, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
             include_private: is_admin,
             sort: sort
@@ -470,6 +463,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <li class="align-middle pr-2">
             <.icon name="hero-folder" class=" w-4 h-4 lg:w-5 lg:h-5"/>
             <.link
+              id="breadcrumb-folder"
               aria-current={if(length(@breadcrumb_tags) == 0, do: "page", else: "false")}
               patch={Util.build_url(@folder, [], [], [], @is_admin)}
             >
@@ -477,7 +471,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             </.link>
           </li>
           <%= for {[tag | _] = tags, index} <- Enum.with_index(@breadcrumb_tags) do %>
-            <li class="">
+            <li id="breadcrumb-tags" class="">
               <.icon name="hero-chevron-right" class="hero-chevron-right-mini lg:hero-chevron-right w-4 h-4 lg:w-5 lg:h-5"/>
               <.link
                 aria-current={if(index == length(@breadcrumb_tags) - 1, do: "page", else: "false")}
@@ -506,14 +500,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <div class="flex-none pr-3">
           <form phx-change="change_sort" class="flex items-center">
             <label class="sr-only lg:not-sr-only text-sm mr-2">Sort:</label>
-            <select name="sort" class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8">
-              <option value="date" selected={@sort == :date}>By date</option>
+            <select id="sort-select" name="sort" class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8">
+              <option value="date" selected={@sort == :date}>Date</option>
               <option value="manual" selected={@sort == :manual}>Curated</option>
             </select>
           </form>
         </div>
         <div class="flex-none pr-3">
           <.toggle_button
+            id="collapse-groups-toggle"
             selected={!@collapse_groups}
             phx-click="toggle_collapse_groups"
             class="flex items-center pl-3 pr-3 inline mr-1"
@@ -525,6 +520,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </.toggle_button>
           <.toggle_button
             :if={@is_admin}
+            id="multiselect-toggle"
             selected={@multiselect_active}
             phx-click="toggle_multiselect"
             class="flex items-center pl-3 pr-3 inline"
@@ -575,7 +571,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       >
         Previous
       </.button>
-      <span class="self-center"><span class="hidden lg:inline">Page </span>{@pg} of {@total_pages}</span>
+      <span class="self-center">
+        <span class="hidden lg:inline">Page </span>
+        <input id="page-input" type="hidden" value={@pg} />
+        {@pg} of {@total_pages}
+      </span>
       <.button
         phx-click="change_page"
         phx-value-pg={@pg + 1}
@@ -653,7 +653,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     ~H"""
     <div class="p-2 lg:p-6">
       <.pagination total_items={@total_items} pg={@pg} pg_size={@pg_size} />
-      <ul class={"grid
+      <ul
+        id="gallery-grid"
+        data-zoom-level={@zoom_level}
+        class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
       lg:#{get_grid_size(@zoom_level, 4)}
@@ -703,6 +706,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:related_tags, :list, required: true)
   attr(:update_photo_form, :map, required: true)
   attr(:is_admin, :boolean, required: true)
+  attr(:all_folders, :list, required: true)
 
   def photo(assigns) do
     assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder.name)
@@ -1040,7 +1044,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <li>{if group != nil, do: group, else: "No group"}</li>
           <% end %>
         </ul>
-        <.form phx-submit="form_group_from_selected">
+        <.form for={Component.to_form(%{})} phx-submit="form_group_from_selected">
           <div class="flex flex-wrap gap-2">
             <.button type="submit">Form group</.button>
           </div>
@@ -1113,7 +1117,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           socket.assigns.pg
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1130,7 +1135,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           socket.assigns.pg
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1547,7 +1553,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            [],
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )
      |> put_flash(:info, "Photo deleted successfully.")}
@@ -1572,7 +1580,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            [],
            socket.assigns.tags,
            socket.assigns.exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )
      |> put_flash(:info, "Photos deleted successfully.")}
@@ -1589,6 +1599,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("change_sort", %{"sort" => sort}, socket) do
     sort_atom = case sort do
       "date" -> :date
+      "manual" -> :manual
       _ -> :manual
     end
 
@@ -1615,7 +1626,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     {:noreply,
-     push_patch(socket, to: Util.build_url(folder, [], [], [], socket.assigns.is_admin))}
+     push_patch(socket, to: Util.build_url(folder, [], [], [], socket.assigns.is_admin, nil, socket.assigns.sort))}
   end
 
   def handle_event("toggle_tag", %{"tag" => tag}, socket) do
@@ -1633,7 +1644,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.selected_photo_ids,
            new_tags,
            Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1647,7 +1660,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.selected_photo_ids,
            [tag],
            Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
@@ -1667,7 +1682,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.selected_photo_ids,
            Enum.filter(socket.assigns.tags, fn t -> t != tag end),
            new_exclude_tags,
-           socket.assigns.is_admin
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
          )
      )}
   end
