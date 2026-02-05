@@ -77,9 +77,9 @@ The Phoenix app lives in `app/`. Key directories:
 ### LiveView Structure
 
 Main gallery interface in `lib/photo_tagger_web/live/gallery_live/`:
-- `main.ex` - Primary gallery LiveView (~1400 lines), handles multiple route actions (`:public`, `:index`, `:folder`, `:photos`)
+- `main.ex` - Primary gallery LiveView (~1500 lines), handles multiple route actions (`:public`, `:index`, `:folder`, `:photos`)
 - `drift.ex` - Photo carousel/drift navigation mode
-- Component modules: `nav_panel.ex`, `gallery_panel.ex`, `gallery_photo.ex`, `gallery_tag_link.ex`
+- Component modules: `nav_panel.ex`, `gallery_panel.ex`, `gallery_photo.ex`, `gallery_tag_link.ex`, `public_gallery.ex`, `util.ex`
 
 ### Routes
 
