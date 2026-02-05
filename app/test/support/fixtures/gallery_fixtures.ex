@@ -44,7 +44,8 @@ defmodule PhotoTagger.GalleryFixtures do
 	## Options
 
 	- `:name` - Folder name (default: auto-generated unique name)
-	- `:visibility_type` - Folder visibility: :private, :public, or :unlisted (default: :public)
+	- `:visibility_type` - Folder visibility as ATOM: :private, :public, or :unlisted (default: :public)
+	  Note: Must be an atom for direct Ecto.Changeset operations
 
 	## Example
 
@@ -248,17 +249,19 @@ defmodule PhotoTagger.GalleryFixtures do
 	## Optional Options
 
 	- `:name` - Folder name (default: auto-generated unique name)
-	- `:visibility_type` - Folder visibility: :private, :public, or :unlisted (default: :public)
+	- `:visibility_type` - Folder visibility as STRING: "private", "public", or "unlisted" (default: "public")
+	  Note: Must be a string because it's passed to Gallery.create_folder/1 which expects controller params
 
 	## Example
 
 		folder = folder_fixture_with_files(%{temp_dir: temp_dir})
-		folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "vacation"})
+		folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "vacation", visibility_type: "private"})
 	"""
 	def folder_fixture_with_files(attrs) do
 		_temp_dir = Map.fetch!(attrs, :temp_dir)
 
 		name = Map.get(attrs, :name, unique_folder_name())
+		# Must be string for Gallery.create_folder/1 which expects controller params
 		visibility_type = Map.get(attrs, :visibility_type, "public")
 
 		{:ok, %{create_folder_db: folder}} =
