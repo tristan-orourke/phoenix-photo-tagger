@@ -265,7 +265,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_tags = Map.get(socket.assigns, :tags, [])
     prev_exclude_tags = Map.get(socket.assigns, :exclude_tags, [])
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
-    action = Map.get(socket.assigns, :live_action, nil)
+    _action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
     sort = Map.get(socket.assigns, :sort, :manual)
     prev_sort = Map.get(socket.assigns, :prev_sort, sort)
@@ -687,6 +687,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:related_tags, :list, required: true)
   attr(:update_photo_form, :map, required: true)
   attr(:is_admin, :boolean, required: true)
+  attr(:all_folders, :list, required: true)
 
   def photo(assigns) do
     assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder.name)
@@ -1011,7 +1012,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <li>{if group != nil, do: group, else: "No group"}</li>
           <% end %>
         </ul>
-        <.form phx-submit="form_group_from_selected">
+        <.form for={Component.to_form(%{})} phx-submit="form_group_from_selected">
           <div class="flex flex-wrap gap-2">
             <.button type="submit">Form group</.button>
           </div>

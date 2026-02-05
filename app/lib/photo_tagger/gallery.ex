@@ -29,7 +29,7 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  defp only_public_photos_unless_forced(query, options \\ []) do
+  defp only_public_photos_unless_forced(query, options) do
     if Keyword.get(options, :include_private, false) do
       query
     else
@@ -77,7 +77,7 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  defp list_photos_query(sort \\ :date) do
+  defp list_photos_query(sort) do
     from(p in Photo,
       as: :photo,
       preload: [:folder],
@@ -355,14 +355,12 @@ defmodule PhotoTagger.Gallery do
     ])
   end
 
-  @doc """
-  Shifts manual_order values of other photos to make room for a photo moving to target_order.
-
-  - If old_order is nil: shifts all photos at target_order and above up by 1
-  - If old_order > target_order (moving earlier): shifts photos in [target, old) up by 1
-  - If old_order < target_order (moving later): shifts photos in (old, target] down by 1
-  """
-  defp reorder_photos_for_insert(folder_id, target_order, old_order \\ nil) do
+  # Shifts manual_order values of other photos to make room for a photo moving to target_order.
+  #
+  # - If old_order is nil: shifts all photos at target_order and above up by 1
+  # - If old_order > target_order (moving earlier): shifts photos in [target, old) up by 1
+  # - If old_order < target_order (moving later): shifts photos in (old, target] down by 1
+  defp reorder_photos_for_insert(folder_id, target_order, old_order) do
     query =
       cond do
         # New photo or no old position - shift everything at target and above
