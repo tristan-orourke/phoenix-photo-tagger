@@ -13,6 +13,25 @@ defmodule PhotoTaggerWeb.PhotoControllerTest do
 	import PhotoTagger.GalleryFixtures
 	import PhotoTagger.TempFileHelper
 
+	describe "new photo" do
+		test "includes both public and private folders in dropdown", %{conn: conn} do
+			temp_dir = setup_temp_storage(%{})
+
+			# Create a public folder
+			public_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Public Test Folder", is_public: true})
+
+			# Create a private folder
+			private_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Private Test Folder", is_public: false})
+
+			conn = get(conn, ~p"/admin/photos/new")
+			response = html_response(conn, 200)
+
+			# Verify both folders appear in the response
+			assert response =~ public_folder.name
+			assert response =~ private_folder.name
+		end
+	end
+
 	describe "GET /admin/photos/new" do
 		test "renders form", %{conn: conn} do
 			conn = get(conn, ~p"/admin/photos/new")
