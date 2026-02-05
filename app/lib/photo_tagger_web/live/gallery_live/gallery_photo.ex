@@ -13,6 +13,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
   attr(:group_left, :boolean, default: false)
   attr(:group_right, :boolean, default: false)
   attr(:is_group_topper, :boolean, default: false)
+  attr(:photo_is_public, :boolean, default: nil)
+  attr(:show_visibility_outline, :boolean, default: false)
 
   def render(assigns) do
     ~H"""
@@ -32,11 +34,12 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
         </button>
         <button
           id={"gallery-photo-button-#{@photo_id}"}
-          class="h-full w-full relative block
+          class={"h-full w-full relative block
             square-image
             data-[selected]:outline
-            outline-4 outline-offset-2 outline-blue-400
-            phx-click-loading:outline phx-click-loading:outline-blue-200"
+            outline-4 outline-offset-2 data-[selected]:outline-blue-400
+            phx-click-loading:outline phx-click-loading:outline-blue-200
+            #{@visibility_outline_class}"}
           data-selected={@is_selected}
           phx-click={if(@is_group_collapsed and @photo_group != nil and @is_admin, do: "select_gallery_group", else: "select_gallery_photo")}
           phx-value-photo_id={@photo_id}
@@ -59,12 +62,25 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
   end
 
   def update(assigns, socket) do
+    # Compute visibility outline classes - green for public, red for private
+    # Only show when visibility outlines are enabled and photo is not selected
+    visibility_outline_class =
+      cond do
+        assigns.is_selected -> ""
+        assigns.show_visibility_outline and assigns.photo_is_public == true ->
+          "outline outline-green-400"
+        assigns.show_visibility_outline and assigns.photo_is_public == false ->
+          "outline outline-red-200"
+        true -> ""
+      end
+
     {:ok,
      assign(
        socket,
        :photo_image_url,
        ImageUploader.url({assigns.photo_image, %{folder: assigns.photo_folder}}, :thumb)
      )
+     |> assign(:visibility_outline_class, visibility_outline_class)
      |> assign(Map.drop(assigns, [:photo_image, :photo_folder]))}
   end
 end

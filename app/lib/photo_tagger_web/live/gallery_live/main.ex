@@ -43,6 +43,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}
             sort={@sort}
+            show_visibility_outlines={@show_visibility_outlines}
           />
           <%!-- <.live_component
             id="gallery-panel"
@@ -62,6 +63,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             is_admin={@is_admin}
             pg={@pg}
             pg_size={@pg_size}
+            show_visibility_outlines={@show_visibility_outlines}
           />
         </div>
         <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
@@ -167,6 +169,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:zoom_level, 0)
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false)
+      |> assign(:show_visibility_outlines, false)
       |> assign(:sort, :manual),
       #  |> assign(%{
       #    folder: nil,
@@ -446,6 +449,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:collapse_groups, :boolean, required: true)
   attr(:is_admin, :boolean, required: true)
   attr(:sort, :atom, default: :manual)
+  attr(:show_visibility_outlines, :boolean, default: false)
 
   def gallery_header(assigns) do
     breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
@@ -525,6 +529,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               Multiselect
             </span>
           </.toggle_button>
+          <.toggle_button
+            :if={@is_admin}
+            selected={@show_visibility_outlines}
+            phx-click="toggle_visibility_outlines"
+            class="flex items-center pl-3 pr-3 inline ml-1"
+          >
+            <.icon name="hero-eye" class="hero-eye-mini lg:hero-eye my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <span class="sr-only lg:not-sr-only lg:ml-1">
+              Visibility
+            </span>
+          </.toggle_button>
         </div>
       </div>
     </div>
@@ -586,6 +601,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:is_admin, :boolean, required: true)
   attr(:pg, :integer, default: 1)
   attr(:pg_size, :integer, default: @default_pg_size)
+  attr(:show_visibility_outlines, :boolean, default: false)
 
   def gallery(assigns) do
     groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
@@ -665,6 +681,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             group_right={
               photo.group != nil and index < length(@photos) - 1 and photo.group == Enum.at(@photos, index + 1).group
             }
+            photo_is_public={photo.is_public}
+            show_visibility_outline={@show_visibility_outlines}
           />
         <% end %>
       </ul>
@@ -711,13 +729,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </button>
       </:item>
       <:item title="Folder" :if={@is_admin}>
-        <.link
-          class="data-[active]:font-bold"
-          patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin)}
-          data-active={@folder_is_active}
-        >
-          {@photo.folder.name}
-        </.link>
+        <div class="flex items-center gap-2">
+          <.link
+            class="data-[active]:font-bold"
+            patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin)}
+            data-active={@folder_is_active}
+          >
+            {@photo.folder.name}
+          </.link>
+          <p :if={@is_admin} class={"text-sm px-2 py-0.5 rounded-full border #{if @photo.is_public, do: "text-green-600 border-green-600", else: "text-red-600 border-red-600"}"}>
+            {if @photo.is_public, do: "public", else: "private"}
+          </p>
+        </div>
       </:item>
       <:item title="Tags" :if={@is_admin or not Enum.empty?(@photo.tags)}>
         <ul class="flex flex-wrap">
@@ -931,6 +954,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     assigns = assign(assigns, :groups, Enum.uniq(Enum.map(assigns.photos, & &1.group)))
 
+    {public_count, private_count} =
+      Enum.reduce(assigns.photos, {0, 0}, fn photo, {pub, priv} ->
+        if photo.is_public, do: {pub + 1, priv}, else: {pub, priv + 1}
+      end)
+
+    assigns = assign(assigns, :public_count, public_count)
+    assigns = assign(assigns, :private_count, private_count)
+
     ~H"""
     <.list>
       <:item title="Selected photos">
@@ -1027,6 +1058,29 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           />
           <.button type="submit">Ungroup</.button>
         </.form>
+      </:item>
+      <:item title="Visibility">
+        <p class="mb-2">
+          <%= cond do %>
+            <% @private_count == 0 -> %>Visibility: All public
+            <% @public_count == 0 -> %>Visibility: All private
+            <% true -> %>Mixed visibility: {@public_count} public, {@private_count} private
+          <% end %>
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <.form :if={@private_count > 0} for={Component.to_form(%{"is_public" => "true"})} phx-submit="set_visibility_bulk">
+            <input type="hidden" name="is_public" value="true" />
+            <.button type="submit">
+              Make all public
+            </.button>
+          </.form>
+          <.form :if={@public_count > 0} for={Component.to_form(%{"is_public" => "false"})} phx-submit="set_visibility_bulk">
+            <input type="hidden" name="is_public" value="false" />
+            <.button type="submit">
+              Make all private
+            </.button>
+          </.form>
+        </div>
       </:item>
       <:item title="Delete">
         <.form
@@ -1174,6 +1228,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("toggle_multiselect", _params, socket) do
     {:noreply, assign(socket, :multiselect_active, !socket.assigns.multiselect_active)}
+  end
+
+  def handle_event("toggle_visibility_outlines", _params, socket) do
+    {:noreply, assign(socket, :show_visibility_outlines, !socket.assigns.show_visibility_outlines)}
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
@@ -1326,6 +1384,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     Enum.each(selected_photos, fn photo ->
       {:ok, _} = Gallery.update_photo(photo, %{"group" => group})
+    end)
+
+    {:noreply,
+     socket
+     |> refresh_selected_photos()
+     |> refresh_filtered_photos()}
+  end
+
+  @doc """
+  Handles bulk visibility changes for multiple selected photos.
+  """
+  def handle_event("set_visibility_bulk", %{"is_public" => is_public}, socket) do
+    selected_photos = socket.assigns.selected_photos
+    is_public_bool = is_public == "true"
+
+    Enum.each(selected_photos, fn photo ->
+      {:ok, _} = Gallery.update_photo(photo, %{"is_public" => is_public_bool})
     end)
 
     {:noreply,
@@ -1528,5 +1603,5 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def clamp(x, min, max), do: min(max(x, min), max)
 
   # Keep only the values which are used by the UI
-  def simplify_photo(photo), do: Map.take(photo, [:id, :name, :group, :image, :folder])
+  def simplify_photo(photo), do: Map.take(photo, [:id, :name, :group, :image, :folder, :is_public])
 end
