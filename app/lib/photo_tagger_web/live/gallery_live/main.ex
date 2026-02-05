@@ -61,6 +61,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             collapse_group_exceptions={@collapse_group_exceptions}
             zoom_level={@zoom_level}
             is_admin={@is_admin}
+            sort={@sort}
             pg={@pg}
             pg_size={@pg_size}
             show_visibility_outlines={@show_visibility_outlines}
@@ -655,6 +656,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <ul
         id="gallery-grid"
         data-zoom-level={@zoom_level}
+        phx-hook={if @is_admin and @sort == :manual, do: "SortableHook", else: nil}
+        data-sortable-enabled={@is_admin and @sort == :manual}
         class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
