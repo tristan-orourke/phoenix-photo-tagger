@@ -1343,7 +1343,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         socket
       ) do
     cond do
-      shift_key_pressed and (socket.assigns.multiselect_active or ctrl_key_pressed) ->
+      shift_key_pressed ->
         handle_shift_range_select(photo_id, socket)
       ctrl_key_pressed or socket.assigns.multiselect_active ->
         handle_multi_photo_select(photo_id, socket)

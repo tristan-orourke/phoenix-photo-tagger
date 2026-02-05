@@ -45,17 +45,16 @@ This document describes how to manually test the shift-click multiselect functio
    - Click photo #3 (without shift)
    - Expected: Both #1 and #3 are selected
 
-2. **Shift-click in multiselect mode**
+2. **Shift-click works with or without multiselect mode**
    - With multiselect enabled, click photo #1
    - Hold Shift and click photo #4
    - Expected: Photos #1, #2, #3, and #4 are selected
 
-3. **Ctrl+Shift+Click (with multiselect off)**
+3. **Shift-click works without multiselect mode**
    - Turn off multiselect mode
    - Click photo #1 (single selection)
-   - Hold Ctrl and click photo #5 (adds #5 to selection)
-   - Hold Ctrl+Shift and click photo #3
-   - Expected: Photos #1, #3, #4, and #5 are selected (range from #3 to #5 added)
+   - Hold Shift and click photo #5
+   - Expected: Photos #1, #2, #3, #4, and #5 are selected (range selection works without multiselect mode)
 
 ### Collapsed Groups Edge Case
 
@@ -104,9 +103,10 @@ If you have pagination enabled:
 | Click | Single photo selected |
 | Shift+Click | Range from last selected to clicked photo selected |
 | Ctrl+Click | Toggle individual photo in/out of selection |
-| Ctrl+Shift+Click | Add range to existing selection |
 | Multiselect + Click | Toggle individual photo |
 | Multiselect + Shift+Click | Range from last selected to clicked photo |
+
+Note: Shift+Click works independently - it does not require Ctrl to be pressed or multiselect mode to be enabled.
 
 ## Common Issues to Watch For
 
