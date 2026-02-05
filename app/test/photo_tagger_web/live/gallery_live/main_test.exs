@@ -461,6 +461,246 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		end
 	end
 
+	describe "shift-click range selection" do
+		test "shift-click selects range of photos forward", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg"})
+			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
+
+			# Start by selecting photo1
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Shift-click photo5 to select range
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo5.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# All photos 1-5 should be selected
+			assert count_selected_photos(html) == 5
+		end
+
+		test "shift-click selects range of photos backward", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg"})
+			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
+
+			# Start by selecting photo5
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo5.id}")
+
+			# Shift-click photo1 to select range backward
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo1.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# All photos 1-5 should be selected
+			assert count_selected_photos(html) == 5
+		end
+
+		test "shift-click works without multiselect mode enabled", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+
+			# Start by selecting photo1 (multiselect mode is OFF by default)
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Shift-click photo3 - should still work without multiselect mode
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# All photos 1-3 should be selected
+			assert count_selected_photos(html) == 3
+		end
+
+		test "shift-click works without ctrl key pressed", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+
+			# Start by selecting photo1
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Shift-click photo3 WITHOUT ctrl - should still work
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# All photos 1-3 should be selected
+			assert count_selected_photos(html) == 3
+		end
+
+		test "shift-click extends selection from last selected photo", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg"})
+			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
+
+			# Start by selecting photo1
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Shift-click photo3 to select range 1-3
+			_html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Now shift-click photo5 to extend selection
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo5.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Should select range 3-5, adding to existing 1-3
+			# Total: photos 1, 2, 3, 4, 5
+			assert count_selected_photos(html) == 5
+		end
+
+		test "shift-click with no last selected photo falls back to multi-select behavior", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+
+			# Start with no selection
+			{:ok, view, _html} = live(conn, ~p"/admin")
+
+			# Enable multiselect mode
+			render_click(view, "toggle_multiselect", %{})
+
+			# Shift-click photo2 without any previous selection
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo2.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Should select just photo2 (fallback behavior)
+			assert count_selected_photos(html) == 1
+		end
+
+		test "shift-click includes all photos in collapsed groups within range", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg", group: "GroupA"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
+			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg", group: "GroupA"})
+			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
+
+			# Start by selecting photo1
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Enable group collapse
+			render_click(view, "toggle_collapse_groups", %{})
+
+			# Shift-click photo5 to select range including collapsed group
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo5.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Should select all 5 photos, including hidden ones in collapsed group
+			assert count_selected_photos(html) == 5
+		end
+
+		test "shift-click works with multiselect mode enabled", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+
+			# Start by selecting photo1
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Enable multiselect mode
+			render_click(view, "toggle_multiselect", %{})
+
+			# Shift-click photo3
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Should select range 1-3
+			assert count_selected_photos(html) == 3
+		end
+
+		test "shift-click preserves sort order", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+
+			# Start with oldest sort
+			{:ok, view, _html} = live(conn, ~p"/admin?sort=oldest&selected_photos[]=#{photo1.id}")
+
+			# Shift-click photo3
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Sort order should be preserved
+			assert extract_sort_value(html) == "oldest"
+		end
+
+		test "shift-click preserves zoom level", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Zoom in twice
+			render_click(view, "zoom_in", %{})
+			render_click(view, "zoom_in", %{})
+
+			# Shift-click photo3
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Zoom level should be preserved
+			assert get_zoom_level_from_grid(html) > 0
+		end
+	end
+
 	describe "select_gallery_group event" do
 		@tag :skip
 		test "selects all photos in a group", %{conn: conn} do
