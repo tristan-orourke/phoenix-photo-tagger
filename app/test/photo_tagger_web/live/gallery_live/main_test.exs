@@ -1224,4 +1224,114 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			assert_patched_to(view, ~p"/admin/photos/#{photo.id}")
 		end
 	end
+
+	# ============================================================================
+	# Test Group: Hide Private Photos Toggle
+	# ============================================================================
+
+	describe "toggle_hide_private_photos event" do
+		test "button is only visible to admin users", %{conn: conn} do
+			folder = folder_fixture()
+			photo = photo_fixture(%{folder_id: folder.id, is_public: true})
+
+			{:ok, _admin_view, admin_html} = live(conn, ~p"/admin")
+			{:ok, _public_view, public_html} = live(conn, ~p"/")
+
+			# Admin should see the button
+			assert admin_html =~ "hide-private-photos-toggle"
+			# Public user should not see the button
+			refute public_html =~ "hide-private-photos-toggle"
+		end
+
+		test "filters out private photos when activated", %{conn: conn} do
+			folder = folder_fixture()
+			public_photo = photo_fixture(%{folder_id: folder.id, filename: "public.jpg", is_public: true})
+			private_photo = photo_fixture(%{folder_id: folder.id, filename: "private.jpg", is_public: false})
+
+			{:ok, view, html_before} = live(conn, ~p"/admin")
+
+			# Before toggle, admin sees both photos
+			assert count_photos_in_html(html_before) == 2
+
+			html_after = render_click(view, "toggle_hide_private_photos", %{})
+
+			# After toggle, admin sees only public photos
+			assert count_photos_in_html(html_after) == 1
+		end
+
+		test "can toggle back to show all photos", %{conn: conn} do
+			folder = folder_fixture()
+			public_photo = photo_fixture(%{folder_id: folder.id, filename: "public.jpg", is_public: true})
+			private_photo = photo_fixture(%{folder_id: folder.id, filename: "private.jpg", is_public: false})
+
+			{:ok, view, html_before} = live(conn, ~p"/admin")
+
+			# Initially sees both photos
+			assert count_photos_in_html(html_before) == 2
+
+			# Toggle on - sees only public photo
+			html_filtered = render_click(view, "toggle_hide_private_photos", %{})
+			assert count_photos_in_html(html_filtered) == 1
+
+			# Toggle off - sees both photos again
+			html_restored = render_click(view, "toggle_hide_private_photos", %{})
+			assert count_photos_in_html(html_restored) == 2
+		end
+
+		test "filters private photos in folder view", %{conn: conn} do
+			folder = folder_fixture(%{name: "TestFolder"})
+			public_photo = photo_fixture(%{folder_id: folder.id, filename: "public.jpg", is_public: true})
+			private_photo = photo_fixture(%{folder_id: folder.id, filename: "private.jpg", is_public: false})
+
+			{:ok, view, html_before} = live(conn, ~p"/admin/folders/#{folder.name}")
+
+			# Before toggle, admin sees both photos in folder
+			assert count_photos_in_html(html_before) == 2
+
+			html_after = render_click(view, "toggle_hide_private_photos", %{})
+
+			# After toggle, admin sees only public photo in folder
+			assert count_photos_in_html(html_after) == 1
+		end
+
+		test "filters private photos with tag filtering", %{conn: conn} do
+			folder = folder_fixture()
+			tag = tag_fixture(%{name: "landscape"})
+			public_photo = photo_fixture(%{folder_id: folder.id, filename: "public.jpg", is_public: true})
+			private_photo = photo_fixture(%{folder_id: folder.id, filename: "private.jpg", is_public: false})
+			
+			Gallery.add_tag_to_photo(public_photo, tag.name)
+			Gallery.add_tag_to_photo(private_photo, tag.name)
+
+			{:ok, view, _html} = live(conn, ~p"/admin")
+			
+			# Add tag filter
+			render_click(view, "toggle_tag", %{"tag" => tag.name})
+			html_before = render(view)
+
+			# Before toggle, admin sees both tagged photos
+			assert count_photos_in_html(html_before) == 2
+
+			html_after = render_click(view, "toggle_hide_private_photos", %{})
+
+			# After toggle, admin sees only public tagged photo
+			assert count_photos_in_html(html_after) == 1
+		end
+
+		test "preserves selected photos when toggling filter", %{conn: conn} do
+			folder = folder_fixture()
+			public_photo = photo_fixture(%{folder_id: folder.id, filename: "public.jpg", is_public: true})
+			private_photo = photo_fixture(%{folder_id: folder.id, filename: "private.jpg", is_public: false})
+
+			{:ok, view, _html} = live(conn, ~p"/admin?selected_photos[]=#{public_photo.id}")
+
+			html_before = render(view)
+			assert count_selected_photos(html_before) == 1
+
+			html_after = render_click(view, "toggle_hide_private_photos", %{})
+
+			# Selected public photo should still be selected after toggling
+			assert count_selected_photos(html_after) == 1
+		end
+	end
 end
