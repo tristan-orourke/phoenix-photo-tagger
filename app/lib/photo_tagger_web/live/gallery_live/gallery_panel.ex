@@ -7,6 +7,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
+  attr(:sort, :atom, default: :date)
 
   def render(assigns) do
     ~H"""
@@ -19,8 +20,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
         xl:#{@xl_grid_size}
         2xl:#{@_2xl_grid_size}"}
         id="gallery-grid"
-        phx-hook={if @is_admin, do: "SortableHook", else: nil}
-        data-sortable-enabled={@is_admin}
+        phx-hook={if @is_admin and @sort == :manual, do: "SortableHook", else: nil}
+        data-sortable-enabled={@is_admin and @sort == :manual}
       >
         <%= for photo <- @photos do %>
           <.live_component
