@@ -21,8 +21,9 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
     <li class={"relative py-1 lg:py-1.5 lg:my-0.5
       #{if(@group_left, do: "pl-1 lg:pl-2", else: "pl-1.5 lg:ml-0.5")}
       #{if(@group_right, do: "pr-1 lg:pr-2", else: "pr-1.5 lg:mr-0.5")}
-      #{if(@photo_group != nil and !@is_group_collapsed, do: "bg-blue-200", else: "")}"}
-
+      #{if(@photo_group != nil and !@is_group_collapsed, do: "bg-blue-200", else: "")}
+      #{if @is_selected, do: "selected", else: ""}"}
+      data-gallery-photo-id={@photo_id}
     >
       <div class="aspect-square w-full h-full">
         <button :if={@is_group_topper} class="z-50 absolute w-8 h-8 right-0 top-0"
