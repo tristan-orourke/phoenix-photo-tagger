@@ -273,6 +273,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     _action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
     hide_private_photos = Map.get(socket.assigns, :hide_private_photos, false)
+    prev_hide_private_photos = Map.get(socket.assigns, :prev_hide_private_photos, false)
     sort = Map.get(socket.assigns, :sort, :manual)
     prev_sort = Map.get(socket.assigns, :prev_sort, sort)
 
@@ -281,9 +282,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     filtered_photos =
       case {folder, tags, exclude_tags, prev_filtered_photos} do
-        # If the folder, tags, and sort are unchanged, and we have previously cached filtered photos, use them without querying the database
+        # If the folder, tags, sort, and hide_private_photos are unchanged, and we have previously cached filtered photos, use them without querying the database
         {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos}
-        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort ->
+        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort and hide_private_photos == prev_hide_private_photos ->
           prev_filtered_photos
 
         {nil, [], [], _} ->
@@ -396,7 +397,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       recommended_tags: recommended_tags,
       nav_tags: nav_tags,
       update_photo_form: update_photo_form,
-      prev_sort: sort
+      prev_sort: sort,
+      prev_hide_private_photos: hide_private_photos
     }
   end
 
