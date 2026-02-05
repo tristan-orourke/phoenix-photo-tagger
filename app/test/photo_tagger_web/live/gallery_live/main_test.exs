@@ -98,6 +98,23 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		end
 	end
 
+	defp extract_sort_direction_from_button(html) do
+		doc = Floki.parse_document!(html)
+
+		case Floki.find(doc, "#sort-direction-toggle .hero-arrow-up, #sort-direction-toggle .hero-arrow-down") do
+			[{_tag, attrs, _children}] ->
+				class = Enum.find_value(attrs, fn {key, value} -> if key == "class", do: value end)
+				cond do
+					String.contains?(class, "hero-arrow-up") -> :asc
+					String.contains?(class, "hero-arrow-down") -> :desc
+					true -> nil
+				end
+
+			_ ->
+				nil
+		end
+	end
+
 	defp folder_in_breadcrumb?(view, folder_name) do
 		has_element?(view, "#breadcrumb-folder", folder_name)
 	end
@@ -1019,6 +1036,61 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html = render_click(view, "change_sort", %{"sort" => "oldest"})
 
 			assert count_selected_photos(html) == 2
+		end
+	end
+
+	# ============================================================================
+	# Test Group 8b: Sort Direction Toggle
+	# ============================================================================
+
+	describe "toggle_sort_direction event" do
+		test "toggles sort direction from descending to ascending", %{conn: conn} do
+			folder = folder_fixture()
+			photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+
+			{:ok, view, html} = live(conn, ~p"/admin?sort=date")
+
+			# Default should be descending
+			assert extract_sort_direction_from_button(html) == :desc
+
+			html = render_click(view, "toggle_sort_direction", %{})
+
+			# Should now be ascending
+			assert extract_sort_direction_from_button(html) == :asc
+		end
+
+		test "toggles sort direction from ascending to descending", %{conn: conn} do
+			folder = folder_fixture()
+			photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+
+			{:ok, view, html} = live(conn, ~p"/admin?sort=date&sort_direction=asc")
+
+			# Should start as ascending
+			assert extract_sort_direction_from_button(html) == :asc
+
+			html = render_click(view, "toggle_sort_direction", %{})
+
+			# Should now be descending
+			assert extract_sort_direction_from_button(html) == :desc
+		end
+
+		test "preserves sort type when toggling direction", %{conn: conn} do
+			folder = folder_fixture()
+			photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+
+			{:ok, view, _html} = live(conn, ~p"/admin?sort=date")
+
+			html = render_click(view, "toggle_sort_direction", %{})
+
+			# Sort should still be "date"
+			assert extract_sort_value(html) == "date"
+		end
+
+		test "renders sort direction toggle button", %{conn: conn} do
+			{:ok, view, _html} = live(conn, ~p"/admin")
+			assert has_element?(view, "#sort-direction-toggle")
 		end
 	end
 
