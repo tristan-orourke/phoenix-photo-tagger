@@ -1562,7 +1562,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.is_admin,
            nil,
            socket.assigns.sort,
-           nil,
+           socket.assigns.pg,
            new_direction
          )
      )}

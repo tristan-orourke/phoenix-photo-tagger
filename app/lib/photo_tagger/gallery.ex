@@ -50,16 +50,18 @@ defmodule PhotoTagger.Gallery do
 
   defp apply_sort_order(query, :manual, direction) do
     order_direction = if direction == :asc, do: :asc_nulls_last, else: :desc_nulls_last
-    from(p in query, order_by: [{^order_direction, p.manual_order}, asc: p.name])
+    name_direction = if direction == :asc, do: :asc, else: :desc
+    from(p in query, order_by: [{^order_direction, p.manual_order}, {^name_direction, p.name}])
   end
 
   defp apply_sort_order(query, :date, direction) do
     order_direction = if direction == :asc, do: :asc, else: :desc
-    from(p in query, order_by: [{^order_direction, p.inserted_at}, asc: p.name])
+    name_direction = if direction == :asc, do: :asc, else: :desc
+    from(p in query, order_by: [{^order_direction, p.inserted_at}, {^name_direction, p.name}])
   end
 
   defp apply_sort_order(query, _default, direction) do
-    apply_sort_order(query, :date, direction)
+    apply_sort_order(query, :manual, direction)
   end
 
   @doc """
