@@ -22,26 +22,33 @@ const SortableHook = {
       
       // Handle the drop event
       onEnd: function(evt) {
+        // Don't do anything if nothing actually moved
+        if (evt.oldIndex === evt.newIndex) {
+          return;
+        }
+        
         // Get the photo ID from the dragged element
         const photoId = evt.item.dataset.galleryPhotoId;
         
-        // Get the photo ID of the target position (where it was dropped)
-        let targetPhotoId = null;
+        // Determine target: the photo whose position we're taking
+        // After SortableJS moves the DOM:
+        // - If we moved down/right, the target photo is now our previous sibling
+        // - If we moved up/left, the target photo is now our next sibling
+        let targetPhotoId;
         
-        if (evt.newIndex < evt.oldIndex) {
-          // Dropped earlier in list - get the ID of the photo now after this one
-          const nextItem = evt.item.nextElementSibling;
-          targetPhotoId = nextItem ? nextItem.dataset.galleryPhotoId : null;
-        } else {
-          // Dropped later in list - get the ID of the photo now before this one
+        if (evt.oldIndex < evt.newIndex) {
+          // Moved down/right: we're taking the position of our previous sibling
           const prevItem = evt.item.previousElementSibling;
-          targetPhotoId = prevItem ? prevItem.dataset.galleryPhotoId : null;
-        }
-        
-        // If no target (dropped at beginning or end), use special values
-        if (!targetPhotoId) {
-          if (evt.newIndex === 0) {
+          if (prevItem) {
+            targetPhotoId = prevItem.dataset.galleryPhotoId;
+          } else {
             targetPhotoId = "first";
+          }
+        } else {
+          // Moved up/left: we're taking the position of our next sibling
+          const nextItem = evt.item.nextElementSibling;
+          if (nextItem) {
+            targetPhotoId = nextItem.dataset.galleryPhotoId;
           } else {
             targetPhotoId = "last";
           }
