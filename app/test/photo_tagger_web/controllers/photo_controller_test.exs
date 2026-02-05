@@ -15,13 +15,13 @@ defmodule PhotoTaggerWeb.PhotoControllerTest do
 
 	describe "new photo" do
 		test "includes both public and private folders in dropdown", %{conn: conn} do
+			temp_dir = setup_temp_storage(%{})
+
 			# Create a public folder
-			{:ok, %{create_folder_db: public_folder}} =
-				PhotoTagger.Gallery.create_folder(%{"name" => "Public Test Folder", "is_public" => true})
+			public_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Public Test Folder", is_public: true})
 
 			# Create a private folder
-			{:ok, %{create_folder_db: private_folder}} =
-				PhotoTagger.Gallery.create_folder(%{"name" => "Private Test Folder", "is_public" => false})
+			private_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Private Test Folder", is_public: false})
 
 			conn = get(conn, ~p"/admin/photos/new")
 			response = html_response(conn, 200)
