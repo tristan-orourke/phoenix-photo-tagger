@@ -149,3 +149,11 @@ This project maintains a structured memory system in `docs/project_notes/` to tr
 
 - Admin routes: `/admin`, `/admin/photos/{id}`, `/admin/folders/{name}` (no `/admin/gallery`)
 - Drift routes require photo context: `/photos/{id}/drift` or `/folders/{folder}/photos/{id}/drift`
+
+## Context Efficiency
+
+To minimize context window usage in long sessions:
+- Use Task tool with `subagent_type=Explore` for codebase searches - returns summaries instead of raw results
+- Avoid re-reading files already in context - recall from memory instead
+- Run specific tests (`mix test path:line`) rather than full test files when debugging
+- Use `offset`/`limit` parameters when reading large files like `main.ex` (~1400 lines)
