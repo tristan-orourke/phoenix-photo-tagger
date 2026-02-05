@@ -44,18 +44,18 @@ defmodule PhotoTagger.GalleryFixtures do
 	## Options
 
 	- `:name` - Folder name (default: auto-generated unique name)
-	- `:is_public` - Whether folder is public (default: true)
+	- `:visibility_type` - Folder visibility: :private, :public, or :unlisted (default: :public)
 
 	## Example
 
 		folder = folder_fixture()
-		folder = folder_fixture(%{name: "vacation", is_public: false})
+		folder = folder_fixture(%{name: "vacation", visibility_type: :private})
 	"""
 	def folder_fixture(attrs \\ %{}) do
 		attrs =
 			Enum.into(attrs, %{
 				name: unique_folder_name(),
-				is_public: true
+				visibility_type: :public
 			})
 
 		{:ok, folder} =
@@ -248,7 +248,7 @@ defmodule PhotoTagger.GalleryFixtures do
 	## Optional Options
 
 	- `:name` - Folder name (default: auto-generated unique name)
-	- `:is_public` - Whether folder is public (default: true)
+	- `:visibility_type` - Folder visibility: :private, :public, or :unlisted (default: :public)
 
 	## Example
 
@@ -259,10 +259,10 @@ defmodule PhotoTagger.GalleryFixtures do
 		_temp_dir = Map.fetch!(attrs, :temp_dir)
 
 		name = Map.get(attrs, :name, unique_folder_name())
-		is_public = Map.get(attrs, :is_public, true)
+		visibility_type = Map.get(attrs, :visibility_type, "public")
 
 		{:ok, %{create_folder_db: folder}} =
-			Gallery.create_folder(%{"name" => name, "is_public" => is_public})
+			Gallery.create_folder(%{"name" => name, "visibility_type" => visibility_type})
 
 		folder
 	end

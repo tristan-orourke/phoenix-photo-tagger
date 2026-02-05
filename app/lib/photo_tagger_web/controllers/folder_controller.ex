@@ -8,7 +8,7 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :index, folders: folders)
   end
 
-  def create(conn, %{"name" => _name, "is_public" => _is_public} = attrs) do
+  def create(conn, %{"name" => _name, "visibility_type" => _visibility_type} = attrs) do
     result = Gallery.create_folder(attrs)
 
     case result do
@@ -42,9 +42,9 @@ defmodule PhotoTaggerWeb.FolderController do
     render(conn, :edit_folders, folders: folders)
   end
 
-  def update(conn, %{"name" => _name, "is_public" => _is_public, "folder" => folder} = attrs) do
+  def update(conn, %{"name" => _name, "visibility_type" => _visibility_type, "folder" => folder} = attrs) do
     folder = Gallery.get_folder_by_name!(folder)
-    result = Gallery.update_folder(folder, Map.take(attrs, ["is_public", "name"]))
+    result = Gallery.update_folder(folder, Map.take(attrs, ["visibility_type", "name"]))
 
     case result do
       {:ok, _} ->

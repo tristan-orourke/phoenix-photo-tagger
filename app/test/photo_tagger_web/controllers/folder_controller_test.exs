@@ -35,7 +35,7 @@ defmodule PhotoTaggerWeb.FolderControllerTest do
 
 			folder_params = %{
 				"name" => folder_name,
-				"is_public" => "true"
+				"visibility_type" => "public"
 			}
 
 			conn = post(conn, ~p"/admin/folders", folder_params)
@@ -46,7 +46,7 @@ defmodule PhotoTaggerWeb.FolderControllerTest do
 			# Verify folder was created in database
 			folder = Gallery.get_folder_by_name!(folder_name)
 			assert folder.name == folder_name
-			assert folder.is_public == true
+			assert folder.visibility_type == :public
 		end
 
 		test "with duplicate name shows error", %{conn: conn} do
@@ -56,7 +56,7 @@ defmodule PhotoTaggerWeb.FolderControllerTest do
 			# Try to create another folder with same name - should show proper error
 			folder_params = %{
 				"name" => folder.name,
-				"is_public" => "true"
+				"visibility_type" => "public"
 			}
 
 			conn = post(conn, ~p"/admin/folders", folder_params)
@@ -69,12 +69,12 @@ defmodule PhotoTaggerWeb.FolderControllerTest do
 
 	describe "PUT /admin/folders/:folder" do
 		test "updates folder", %{conn: conn} do
-			folder = folder_fixture(%{name: "update_test", is_public: true})
+			folder = folder_fixture(%{name: "update_test", visibility_type: :public})
 
 			update_params = %{
 				"folder" => folder.name,
 				"name" => folder.name,
-				"is_public" => "false"
+				"visibility_type" => "private"
 			}
 
 			conn = put(conn, ~p"/admin/folders/#{folder.name}", update_params)
@@ -84,7 +84,7 @@ defmodule PhotoTaggerWeb.FolderControllerTest do
 
 			# Verify folder was updated
 			updated_folder = Gallery.get_folder_by_name!(folder.name)
-			assert updated_folder.is_public == false
+			assert updated_folder.visibility_type == :private
 		end
 
 		test "with name change renames directory", %{conn: conn} do
@@ -96,7 +96,7 @@ defmodule PhotoTaggerWeb.FolderControllerTest do
 			update_params = %{
 				"folder" => folder.name,
 				"name" => new_name,
-				"is_public" => "true"
+				"visibility_type" => "public"
 			}
 
 			conn = put(conn, ~p"/admin/folders/#{folder.name}", update_params)
