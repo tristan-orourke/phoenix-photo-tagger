@@ -1562,7 +1562,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.is_admin,
            nil,
            socket.assigns.sort,
-           socket.assigns.pg,
+           nil,  # Reset pagination when sort order changes
            new_direction
          )
      )}
