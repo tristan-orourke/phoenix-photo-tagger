@@ -25,6 +25,7 @@ import "./scrollEvents.js"
 import "./uploadPhotoMetadata.js"
 import "./transitionEvents.js"
 import CountdownTimer from "./countdownTimer.js"
+import SortableHook from "./sortable.js"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
@@ -39,7 +40,8 @@ let liveSocket = new LiveSocket("/live", Socket, {
     }
   },
   hooks: {
-    CountdownTimer: CountdownTimer
+    CountdownTimer: CountdownTimer,
+    SortableHook: SortableHook
   }
 })
 

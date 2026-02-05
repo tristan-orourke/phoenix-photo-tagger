@@ -11,12 +11,17 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
   def render(assigns) do
     ~H"""
     <div class="p-2 lg:p-6 will-change-auto hover:will-change-scroll">
-      <ul class={"grid gap-2 lg:gap-4
-      #{@grid_size}
-      md:#{@md_grid_size}
-      lg:#{@lg_grid_size}
-      xl:#{@xl_grid_size}
-      2xl:#{@_2xl_grid_size}"}>
+      <ul 
+        class={"grid gap-2 lg:gap-4
+        #{@grid_size}
+        md:#{@md_grid_size}
+        lg:#{@lg_grid_size}
+        xl:#{@xl_grid_size}
+        2xl:#{@_2xl_grid_size}"}
+        id="gallery-grid"
+        phx-hook={if @is_admin, do: "SortableHook", else: nil}
+        data-sortable-enabled={@is_admin}
+      >
         <%= for photo <- @photos do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}

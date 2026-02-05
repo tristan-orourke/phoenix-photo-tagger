@@ -1514,6 +1514,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
+  def handle_event("reorder_photo", %{"photo_id" => photo_id, "target_photo_id" => target_photo_id}, socket) do
+    case Gallery.reorder_photo_to_position(photo_id, target_photo_id) do
+      {:ok, _photo} ->
+        # Reload photos to reflect new order
+        photos = load_photos(socket.assigns)
+        {:noreply, assign(socket, :photos, photos)}
+      
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to reorder photo")}
+    end
+  end
+
   def handle_event("change_folder", %{"folder" => folder}, socket) do
     folder =
       case folder do
