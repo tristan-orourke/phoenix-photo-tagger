@@ -61,8 +61,8 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
 		end
 
 		test "respects public/private access control", %{conn: conn} do
-			public_folder = folder_fixture(%{name: "Public", is_public: true})
-			private_folder = folder_fixture(%{name: "Private", is_public: false})
+			public_folder = folder_fixture(%{name: "Public", visibility_type: :public})
+			private_folder = folder_fixture(%{name: "Private", visibility_type: :private})
 			public_photo = photo_fixture(%{folder_id: public_folder.id, filename: "public.jpg"})
 			private_photo = photo_fixture(%{folder_id: private_folder.id, filename: "private.jpg"})
 
