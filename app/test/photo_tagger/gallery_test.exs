@@ -264,6 +264,32 @@ defmodule PhotoTagger.GalleryTest do
 			assert photo_names == ["first.jpg", "second.jpg", "third.jpg"]
 		end
 
+		test "list_photos/1 with sort: :manual and sort_direction: :asc orders by manual_order asc", %{
+			folder: folder
+		} do
+			_photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+			_photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+			_photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+
+			photos = Gallery.list_photos(sort: :manual, sort_direction: :asc, include_private: true)
+			photo_names = Enum.map(photos, & &1.name)
+
+			assert photo_names == ["first.jpg", "second.jpg", "third.jpg"]
+		end
+
+		test "list_photos/1 with sort: :manual and sort_direction: :desc orders by manual_order desc", %{
+			folder: folder
+		} do
+			_photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+			_photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+			_photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+
+			photos = Gallery.list_photos(sort: :manual, sort_direction: :desc, include_private: true)
+			photo_names = Enum.map(photos, & &1.name)
+
+			assert photo_names == ["third.jpg", "second.jpg", "first.jpg"]
+		end
+
 		test "list_photos/1 with sort_direction: :asc orders photos ascending by date", %{folder: folder} do
 			# Create photos with different timestamps by manually setting inserted_at
 			import Ecto.Query
