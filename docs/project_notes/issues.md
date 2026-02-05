@@ -19,6 +19,24 @@ Track completed work and GitHub issues.
 
 ## Completed Work
 
+### [2026-02-05] Add admin-only button to hide all private photos
+
+**Summary**: Added a toggle button to the gallery header visible only to admins, which filters out all private photos when activated. The filtering is immediate and can be toggled on/off without page reload.
+
+**Key Changes**:
+- Added `hide_private_photos` state tracking in socket assigns
+- Added toggle button in gallery header with eye-slash icon (admin-only)
+- Implemented `toggle_hide_private_photos` event handler
+- Updated photo filtering logic in `expand_state/2` to respect hide_private_photos flag
+- Improved cache invalidation to track hide_private_photos state changes
+- Added comprehensive test coverage for the new functionality
+
+**Files Modified**: 
+- `app/lib/photo_tagger_web/live/gallery_live/main.ex`
+- `app/test/photo_tagger_web/live/gallery_live/main_test.exs`
+
+**Related**: Issue "Add admin-only button to gallery header to hide all private photos"
+
 ### [2026-02-04] Fix private folder visibility in upload dropdown
 
 **Summary**: Fixed issue where private folders were not appearing in the photo upload page's folder dropdown, preventing uploads to private folders.

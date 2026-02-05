@@ -44,6 +44,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             is_admin={@is_admin}
             sort={@sort}
             show_visibility_outlines={@show_visibility_outlines}
+            hide_private_photos={@hide_private_photos}
           />
           <%!-- <.live_component
             id="gallery-panel"
@@ -170,6 +171,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false)
       |> assign(:show_visibility_outlines, false)
+      |> assign(:hide_private_photos, false)
       |> assign(:sort, :manual),
       #  |> assign(%{
       #    folder: nil,
@@ -270,49 +272,54 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     prev_filtered_photos = Map.get(socket.assigns, :filtered_photos, nil)
     _action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
+    hide_private_photos = Map.get(socket.assigns, :hide_private_photos, false)
+    prev_hide_private_photos = Map.get(socket.assigns, :prev_hide_private_photos, false)
     sort = Map.get(socket.assigns, :sort, :manual)
     prev_sort = Map.get(socket.assigns, :prev_sort, sort)
 
+    # When hide_private_photos is active, we show only public photos even for admins
+    include_private = is_admin and not hide_private_photos
+
     filtered_photos =
       case {folder, tags, exclude_tags, prev_filtered_photos} do
-        # If the folder, tags, and sort are unchanged, and we have previously cached filtered photos, use them without querying the database
+        # If the folder, tags, sort, and hide_private_photos are unchanged, and we have previously cached filtered photos, use them without querying the database
         {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos}
-        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort ->
+        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort and hide_private_photos == prev_hide_private_photos ->
           prev_filtered_photos
 
         {nil, [], [], _} ->
-          Gallery.list_photos(include_private: is_admin, sort: sort)
+          Gallery.list_photos(include_private: include_private, sort: sort)
 
         {nil, ["untagged"], _, _} ->
-          Gallery.list_photos_by_all_tags(nil, include_private: is_admin, sort: sort) ++
+          Gallery.list_photos_by_all_tags(nil, include_private: include_private, sort: sort) ++
             Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
-              include_private: is_admin,
+              include_private: include_private,
               sort: sort
             )
 
         {nil, tags, exclude_tags, _} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
-            include_private: is_admin,
+            include_private: include_private,
             sort: sort
           )
 
         {folder, [], [], _} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
+          Gallery.list_photos_by_folder(folder, include_private: include_private, sort: sort)
 
         {folder, ["untagged"], _, _} ->
           # TODO:
           Gallery.list_photos_by_folder_and_tags(folder, %{include: nil, exclude: []},
-            include_private: is_admin,
+            include_private: include_private,
             sort: sort
           ) ++
             Gallery.list_photos_by_folder_and_tags(folder, %{include: ["untagged"], exclude: []},
-              include_private: is_admin,
+              include_private: include_private,
               sort: sort
             )
 
         {folder, tags, exclude_tags, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
-            include_private: is_admin,
+            include_private: include_private,
             sort: sort
           )
       end
@@ -390,7 +397,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       recommended_tags: recommended_tags,
       nav_tags: nav_tags,
       update_photo_form: update_photo_form,
-      prev_sort: sort
+      prev_sort: sort,
+      prev_hide_private_photos: hide_private_photos
     }
   end
 
@@ -538,6 +546,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <.icon name="hero-eye" class="hero-eye-mini lg:hero-eye my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
             <span class="sr-only lg:not-sr-only lg:ml-1">
               Visibility
+            </span>
+          </.toggle_button>
+          <.toggle_button
+            :if={@is_admin}
+            id="hide-private-photos-toggle"
+            selected={@hide_private_photos}
+            phx-click="toggle_hide_private_photos"
+            class="flex items-center pl-3 pr-3 inline ml-1"
+          >
+            <.icon name="hero-eye-slash" class="hero-eye-slash-mini lg:hero-eye-slash my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <span class="sr-only lg:not-sr-only lg:ml-1">
+              Hide Private
             </span>
           </.toggle_button>
         </div>
@@ -1232,6 +1252,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def handle_event("toggle_visibility_outlines", _params, socket) do
     {:noreply, assign(socket, :show_visibility_outlines, !socket.assigns.show_visibility_outlines)}
+  end
+
+  def handle_event("toggle_hide_private_photos", _params, socket) do
+    # When toggling the filter, we need to trigger a refresh of the photo list
+    # by clearing the cached filtered_photos so expand_state will requery
+    socket =
+      socket
+      |> assign(:hide_private_photos, !socket.assigns.hide_private_photos)
+      |> assign(:filtered_photos, nil)
+
+    # Re-expand the state with the new filter setting
+    expanded_state = expand_state(socket, %{
+      folder: socket.assigns.folder,
+      tags: socket.assigns.tags,
+      exclude_tags: socket.assigns.exclude_tags,
+      photo_id: nil,
+      selected_photo_ids: socket.assigns.selected_photo_ids
+    })
+
+    {:noreply, assign(socket, expanded_state)}
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
