@@ -129,6 +129,17 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		Floki.find(doc, "#collapse-groups-toggle.active") != []
 	end
 
+	defp extract_photo_ids_from_gallery(html) do
+		html
+		|> Floki.parse_document!()
+		|> Floki.find("[data-gallery-photo-id]")
+		|> Enum.map(fn element ->
+			{_tag, attrs, _children} = element
+			Enum.find_value(attrs, fn {key, value} -> if key == "data-gallery-photo-id", do: value end)
+		end)
+		|> Enum.map(&String.to_integer/1)
+	end
+
 	defp count_visible_groups(html) do
 		html
 		|> Floki.parse_document!()
@@ -1091,6 +1102,114 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		test "renders sort direction toggle button", %{conn: conn} do
 			{:ok, view, _html} = live(conn, ~p"/admin")
 			assert has_element?(view, "#sort-direction-toggle")
+		end
+
+		test "date sort ascending shows photos oldest to newest", %{conn: conn} do
+			import Ecto.Query
+			alias PhotoTagger.Repo
+			alias PhotoTagger.Gallery.Photo
+
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, name: "oldest.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, name: "middle.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, name: "newest.jpg"})
+
+			# Set different inserted_at timestamps
+			Repo.update_all(
+				from(p in Photo, where: p.id == ^photo1.id),
+				set: [inserted_at: ~N[2024-01-01 10:00:00]]
+			)
+
+			Repo.update_all(
+				from(p in Photo, where: p.id == ^photo2.id),
+				set: [inserted_at: ~N[2024-01-02 10:00:00]]
+			)
+
+			Repo.update_all(
+				from(p in Photo, where: p.id == ^photo3.id),
+				set: [inserted_at: ~N[2024-01-03 10:00:00]]
+			)
+
+			{:ok, _view, html} = live(conn, ~p"/admin?sort=date&sort_direction=asc")
+
+			photo_ids = extract_photo_ids_from_gallery(html)
+			assert photo_ids == [photo1.id, photo2.id, photo3.id]
+		end
+
+		test "date sort descending shows photos newest to oldest", %{conn: conn} do
+			import Ecto.Query
+			alias PhotoTagger.Repo
+			alias PhotoTagger.Gallery.Photo
+
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, name: "oldest.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, name: "middle.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, name: "newest.jpg"})
+
+			# Set different inserted_at timestamps
+			Repo.update_all(
+				from(p in Photo, where: p.id == ^photo1.id),
+				set: [inserted_at: ~N[2024-01-01 10:00:00]]
+			)
+
+			Repo.update_all(
+				from(p in Photo, where: p.id == ^photo2.id),
+				set: [inserted_at: ~N[2024-01-02 10:00:00]]
+			)
+
+			Repo.update_all(
+				from(p in Photo, where: p.id == ^photo3.id),
+				set: [inserted_at: ~N[2024-01-03 10:00:00]]
+			)
+
+			{:ok, _view, html} = live(conn, ~p"/admin?sort=date&sort_direction=desc")
+
+			photo_ids = extract_photo_ids_from_gallery(html)
+			assert photo_ids == [photo3.id, photo2.id, photo1.id]
+		end
+
+		test "manual sort ascending shows photos in curated order", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+
+			{:ok, _view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=asc")
+
+			photo_ids = extract_photo_ids_from_gallery(html)
+			assert photo_ids == [photo1.id, photo2.id, photo3.id]
+		end
+
+		test "manual sort descending shows photos in reverse curated order", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+
+			{:ok, _view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=desc")
+
+			photo_ids = extract_photo_ids_from_gallery(html)
+			assert photo_ids == [photo3.id, photo2.id, photo1.id]
+		end
+
+		test "toggling direction reorders photos immediately", %{conn: conn} do
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+
+			{:ok, view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=asc")
+
+			# Initial order should be ascending
+			photo_ids = extract_photo_ids_from_gallery(html)
+			assert photo_ids == [photo1.id, photo2.id, photo3.id]
+
+			# Toggle direction
+			html = render_click(view, "toggle_sort_direction", %{})
+
+			# Order should now be descending
+			photo_ids = extract_photo_ids_from_gallery(html)
+			assert photo_ids == [photo3.id, photo2.id, photo1.id]
 		end
 	end
 
