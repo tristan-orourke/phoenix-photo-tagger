@@ -1257,10 +1257,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def handle_event("toggle_hide_private_photos", _params, socket) do
     # When toggling the filter, we need to trigger a refresh of the photo list
     # by clearing the cached filtered_photos so expand_state will requery
-    socket = socket
-    |> assign(:hide_private_photos, !socket.assigns.hide_private_photos)
-    |> assign(:filtered_photos, nil)
-    
+    socket =
+      socket
+      |> assign(:hide_private_photos, !socket.assigns.hide_private_photos)
+      |> assign(:filtered_photos, nil)
+
     # Re-expand the state with the new filter setting
     expanded_state = expand_state(socket, %{
       folder: socket.assigns.folder,
@@ -1269,7 +1270,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       photo_id: nil,
       selected_photo_ids: socket.assigns.selected_photo_ids
     })
-    
+
     {:noreply, assign(socket, expanded_state)}
   end
 
