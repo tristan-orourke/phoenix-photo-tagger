@@ -118,11 +118,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   <.form for={Component.to_form(%{"tag" => "", "photo_id" => photo.id})} phx-submit="add_tag">
                     <input class="hidden" type="text" name="photo_id" value={photo.id} />
                       <%!-- TODO: convert this simple inline form to a component --%>
-                      <%!-- <.label for="add_any_tag">Add tag</.label> --%>
+                      <%!-- <.label for="add_any_tag_modal">Add tag</.label> --%>
                     <input
                       type="text"
                       name="tag"
-                      id="add_any_tag"
+                      id="add_any_tag_modal"
                       Placeholder="Add tag"
                       list="tag-list"
                       class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 block mb-2 text-sm md:text-base"
@@ -170,7 +170,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:is_admin, is_admin)
       |> assign(:expand_photo, false)
       |> assign(:show_visibility_outlines, false)
-      |> assign(:sort, :manual),
+      |> assign(:sort, :manual)
+      |> assign(:last_selected_photo_id, nil),
       #  |> assign(%{
       #    folder: nil,
       #    tags: [],
@@ -210,6 +211,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> Util.safe_integer_parse(prev_pg_size)
 
     socket = assign(socket, %{pg: pg, pg_size: pg_size, sort: sort})
+
+    # Set last_selected_photo_id when navigating to a photo URL, so shift-click range selection works
+    socket =
+      if photo_id != nil do
+        assign(socket, :last_selected_photo_id, photo_id)
+      else
+        socket
+      end
 
     # zoom_level =
     #   Map.get(params, "zoom", "0")
@@ -1006,11 +1015,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.form for={Component.to_form(%{"tag" => ""})} phx-submit="add_tag_bulk">
             <div class="flex flex-wrap gap-2">
               <%!-- TODO: convert this simple inline form to a component --%>
-              <%!-- <.label for="add_any_tag">Add tag</.label> --%>
+              <%!-- <.label for="add_any_tag_multi">Add tag</.label> --%>
               <input
                 type="text"
                 name="tag"
-                id="add_any_tag"
+                id="add_any_tag_multi"
                 Placeholder="Add tag"
                 class="w-full max-w-40 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
               />
@@ -1119,7 +1128,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.sort,
            socket.assigns.pg
          )
-     )}
+     )
+     |> assign(:last_selected_photo_id, photo_id)}
   end
 
   def handle_single_photo_select(photo_id, socket) do
@@ -1136,7 +1146,126 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.sort,
            socket.assigns.pg
          )
-     )}
+     )
+     |> assign(:last_selected_photo_id, photo_id)}
+  end
+
+  def handle_photo_group_select(photo_id, photo_group, ctrl_key_pressed, socket) do
+    group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
+
+    group_already_selected =
+      Enum.all?(group_photos, &member_by_id?(socket.assigns.selected_photos, &1))
+
+    # If not in multiselect mode, select all photos in the group
+    # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
+    # If in multiselect mode, and some or no photos in the group are already selected, add all of them to the selection
+    new_selected_photos =
+      case {ctrl_key_pressed, socket.assigns.multiselect_active, group_already_selected} do
+        {false, false, _} -> group_photos
+        {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
+        {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
+      end
+      |> Enum.map(& &1.id)
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           new_selected_photos,
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
+         )
+     )
+     |> assign(:last_selected_photo_id, photo_id)}
+  end
+
+  def handle_shift_range_select(photo_id, socket) do
+    last_selected_id = socket.assigns.last_selected_photo_id
+
+    # If there's no last selected photo, treat as normal multi-select
+    if last_selected_id == nil do
+      handle_multi_photo_select(photo_id, socket)
+    else
+      # Get all filtered photos from DB
+      all_photos = socket.assigns.filtered_photos
+
+      # Apply the same filtering logic that the gallery component uses to get visible photos
+      grouped_photos = Enum.group_by(all_photos, & &1.group)
+
+      visible_photos =
+        Enum.filter(all_photos, fn photo ->
+          photo.group == nil or
+            !Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups) or
+            photo == List.first(grouped_photos[photo.group])
+        end)
+
+      # Find indices of last selected and newly clicked photos in the VISIBLE list
+      last_index = Enum.find_index(visible_photos, &(to_string(&1.id) == last_selected_id))
+      current_index = Enum.find_index(visible_photos, &(to_string(&1.id) == photo_id))
+
+      case {last_index, current_index} do
+        {nil, _} ->
+          # Last selected photo not in current view, fall back to multi-select
+          handle_multi_photo_select(photo_id, socket)
+        {_, nil} ->
+          # Current photo not found, shouldn't happen but fall back
+          handle_multi_photo_select(photo_id, socket)
+        {start_idx, end_idx} ->
+          # Get the range of VISIBLE photos between start and end (inclusive)
+          {min_idx, max_idx} = if start_idx <= end_idx, do: {start_idx, end_idx}, else: {end_idx, start_idx}
+          range_visible_photos = Enum.slice(visible_photos, min_idx..max_idx)
+
+          # For any photo in the range that belongs to a collapsed group,
+          # we need to include ALL photos from that group
+          photos_to_select = expand_collapsed_groups(range_visible_photos, grouped_photos, socket)
+
+          # Merge with existing selection
+          current_selected_ids = Enum.map(socket.assigns.selected_photos, & &1.id)
+          new_photo_ids = Enum.map(photos_to_select, & &1.id)
+          merged_selection = (current_selected_ids ++ new_photo_ids) |> Enum.uniq()
+
+          {:noreply,
+           push_patch(socket,
+             to:
+               Util.build_url(
+                 socket.assigns.folder,
+                 merged_selection,
+                 socket.assigns.tags,
+                 socket.assigns.exclude_tags,
+                 socket.assigns.is_admin,
+                 nil,
+                 socket.assigns.sort
+               )
+           )
+           |> assign(:last_selected_photo_id, photo_id)}
+      end
+    end
+  end
+
+  # Expand collapsed groups: for each photo in the range that belongs to a collapsed group,
+  # include all photos from that group
+  defp expand_collapsed_groups(range_photos, grouped_photos, socket) do
+    Enum.flat_map(range_photos, fn photo ->
+      if photo.group != nil do
+        is_collapsed = Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups)
+
+        if is_collapsed do
+          # This group is collapsed, so include all photos from the group
+          Map.get(grouped_photos, photo.group, [photo])
+        else
+          # Group is not collapsed, just include this photo
+          [photo]
+        end
+      else
+        # Not in a group, just include this photo
+        [photo]
+      end
+    end)
+    |> Enum.uniq_by(& &1.id)
   end
 
   def refresh_tags(socket) do
@@ -1254,53 +1383,35 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
-  # Holding ctrl while clicking a photo will select multiple
+  # For when photo represents a collapsed group
+  # This version, with photo_group, must be listed first or the group event will fall through incorrectly
   def handle_event(
         "select_gallery_photo",
-        %{"ctrl_key_pressed" => ctrl_key_pressed, "photo_id" => photo_id},
+    %{"photo_group" => photo_group, "photo_id" => photo_id, "ctrl_key_pressed" => ctrl_key_pressed, "shift_key_pressed" => shift_key_pressed},
         socket
       ) do
-    case {ctrl_key_pressed, socket.assigns.multiselect_active} do
-      {false, false} -> handle_single_photo_select(photo_id, socket)
-      _ -> handle_multi_photo_select(photo_id, socket)
+    # Handle shift-click by delegating to range select handler
+    if shift_key_pressed do
+      handle_shift_range_select(photo_id, socket)
+    else
+      handle_photo_group_select(photo_id, photo_group, ctrl_key_pressed, socket)
     end
   end
 
+  # Holding ctrl while clicking a photo will select multiple
   def handle_event(
-        "select_gallery_group",
-        %{"photo_group" => photo_group, "ctrl_key_pressed" => ctrl_key_pressed},
+        "select_gallery_photo",
+    %{"ctrl_key_pressed" => ctrl_key_pressed, "shift_key_pressed" => shift_key_pressed, "photo_id" => photo_id},
         socket
       ) do
-    # TODO implement, then group field in multiselect mode form, then add collapsed to url
-    group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
-
-    group_already_selected =
-      Enum.all?(group_photos, &member_by_id?(socket.assigns.selected_photos, &1))
-
-    # If not in multiselect mode, select all photos in the group
-    # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
-    # If in multiselect mode, and some or no photos in the group are already selected, add all of them to the selection
-    new_selected_photos =
-      case {ctrl_key_pressed, socket.assigns.multiselect_active, group_already_selected} do
-        {false, false, _} -> group_photos
-        {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
-        {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
-      end
-      |> Enum.map(& &1.id)
-
-    {:noreply,
-     push_patch(socket,
-       to:
-         Util.build_url(
-           socket.assigns.folder,
-           new_selected_photos,
-           socket.assigns.tags,
-           socket.assigns.exclude_tags,
-           socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort
-         )
-     )}
+    cond do
+      shift_key_pressed ->
+        handle_shift_range_select(photo_id, socket)
+      ctrl_key_pressed or socket.assigns.multiselect_active ->
+        handle_multi_photo_select(photo_id, socket)
+      true ->
+        handle_single_photo_select(photo_id, socket)
+    end
   end
 
   def handle_event("add_tag", %{"photo_id" => photo_id, "tag" => tag}, socket) do

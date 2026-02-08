@@ -130,6 +130,8 @@ This project maintains a structured memory system in `docs/project_notes/` to tr
 
 ## Testing
 
+Always run tests in a subagent to avoid polluting context, unless the details of how a test fails are important to solving it.
+
 ### LiveView Test Patterns
 
 - Event parameters must use string keys and string values: `%{"photo_id" => "123", "ctrl_key_pressed" => "true"}`

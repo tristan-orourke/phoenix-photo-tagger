@@ -41,7 +41,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
             phx-click-loading:outline phx-click-loading:outline-blue-200
             #{@visibility_outline_class}"}
           data-selected={@is_selected}
-          phx-click={if(@is_group_collapsed and @photo_group != nil and @is_admin, do: "select_gallery_group", else: "select_gallery_photo")}
+          phx-click="select_gallery_photo"
           phx-value-photo_id={@photo_id}
           phx-value-photo_group={@photo_group}
         >
