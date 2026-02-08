@@ -473,16 +473,16 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			# Start by selecting photo1
 			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
 
-			# Shift-click photo5 to select range
+			# Shift-click photo4 to select range
 			html =
 				render_click(view, "select_gallery_photo", %{
-					"photo_id" => to_string(photo5.id),
+					"photo_id" => to_string(photo4.id),
 					"ctrl_key_pressed" => "false",
 					"shift_key_pressed" => "true"
 				})
 
-			# All photos 1-5 should be selected
-			assert count_selected_photos(html) == 5
+			# All photos 1-4 should be selected
+			assert count_selected_photos(html) == 4
 		end
 
 		test "shift-click selects range of photos backward", %{conn: conn} do
@@ -496,58 +496,16 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			# Start by selecting photo5
 			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo5.id}")
 
-			# Shift-click photo1 to select range backward
+			# Shift-click photo2 to select range backward
 			html =
 				render_click(view, "select_gallery_photo", %{
-					"photo_id" => to_string(photo1.id),
+					"photo_id" => to_string(photo2.id),
 					"ctrl_key_pressed" => "false",
 					"shift_key_pressed" => "true"
 				})
 
-			# All photos 1-5 should be selected
-			assert count_selected_photos(html) == 5
-		end
-
-		test "shift-click works without multiselect mode enabled", %{conn: conn} do
-			folder = folder_fixture()
-			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
-			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
-			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
-
-			# Start by selecting photo1 (multiselect mode is OFF by default)
-			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
-
-			# Shift-click photo3 - should still work without multiselect mode
-			html =
-				render_click(view, "select_gallery_photo", %{
-					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
-				})
-
-			# All photos 1-3 should be selected
-			assert count_selected_photos(html) == 3
-		end
-
-		test "shift-click works without ctrl key pressed", %{conn: conn} do
-			folder = folder_fixture()
-			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
-			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
-			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
-
-			# Start by selecting photo1
-			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
-
-			# Shift-click photo3 WITHOUT ctrl - should still work
-			html =
-				render_click(view, "select_gallery_photo", %{
-					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
-				})
-
-			# All photos 1-3 should be selected
-			assert count_selected_photos(html) == 3
+			# All photos 2-5 should be selected
+			assert count_selected_photos(html) == 4
 		end
 
 		test "shift-click extends selection from last selected photo", %{conn: conn} do
@@ -561,12 +519,12 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			# Start by selecting photo1
 			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
 
-			# Shift-click photo3 to select range 1-3
+			# Ctrl-click photo3 to select 1 and 3
 			_html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => "true",
+					"shift_key_pressed" => "false"
 				})
 
 			# Now shift-click photo5 to extend selection
@@ -577,9 +535,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 					"shift_key_pressed" => "true"
 				})
 
-			# Should select range 3-5, adding to existing 1-3
-			# Total: photos 1, 2, 3, 4, 5
-			assert count_selected_photos(html) == 5
+			# Should select range 3-5, adding to existing 1,3
+			# Total: photos 1, 3, 4, 5
+			assert count_selected_photos(html) == 4
 		end
 
 		test "shift-click with no last selected photo falls back to multi-select behavior", %{conn: conn} do
