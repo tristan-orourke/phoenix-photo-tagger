@@ -1151,37 +1151,37 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_photo_group_select(photo_id, photo_group, ctrl_key_pressed, socket) do
-      group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
+    group_photos = Enum.filter(socket.assigns.filtered_photos, &(&1.group == photo_group))
 
-      group_already_selected =
-        Enum.all?(group_photos, &member_by_id?(socket.assigns.selected_photos, &1))
+    group_already_selected =
+      Enum.all?(group_photos, &member_by_id?(socket.assigns.selected_photos, &1))
 
-      # If not in multiselect mode, select all photos in the group
-      # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
-      # If in multiselect mode, and some or no photos in the group are already selected, add all of them to the selection
-      new_selected_photos =
-        case {ctrl_key_pressed, socket.assigns.multiselect_active, group_already_selected} do
-          {false, false, _} -> group_photos
-          {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
-          {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
-        end
-        |> Enum.map(& &1.id)
+    # If not in multiselect mode, select all photos in the group
+    # If in multiselect mode, and all photos in the group are already selected, remove them from the selection
+    # If in multiselect mode, and some or no photos in the group are already selected, add all of them to the selection
+    new_selected_photos =
+      case {ctrl_key_pressed, socket.assigns.multiselect_active, group_already_selected} do
+        {false, false, _} -> group_photos
+        {_, _, true} -> Enum.filter(socket.assigns.selected_photos, &(&1.group != photo_group))
+        {_, _, false} -> Enum.concat(socket.assigns.selected_photos, group_photos) |> Enum.uniq()
+      end
+      |> Enum.map(& &1.id)
 
-      {:noreply,
-       push_patch(socket,
-         to:
-           Util.build_url(
-             socket.assigns.folder,
-             new_selected_photos,
-             socket.assigns.tags,
-             socket.assigns.exclude_tags,
-             socket.assigns.is_admin,
-             nil,
-             socket.assigns.sort
-           )
-       )
-       |> assign(:last_selected_photo_id, photo_id)}
-    end
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           new_selected_photos,
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort
+         )
+     )
+     |> assign(:last_selected_photo_id, photo_id)}
+  end
 
   def handle_shift_range_select(photo_id, socket) do
     last_selected_id = socket.assigns.last_selected_photo_id
@@ -1221,7 +1221,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
           # For any photo in the range that belongs to a collapsed group,
           # we need to include ALL photos from that group
-          photos_to_select = expand_collapsed_groups(range_visible_photos, all_photos, grouped_photos, socket)
+          photos_to_select = expand_collapsed_groups(range_visible_photos, grouped_photos, socket)
 
           # Merge with existing selection
           current_selected_ids = Enum.map(socket.assigns.selected_photos, & &1.id)
@@ -1248,7 +1248,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   # Expand collapsed groups: for each photo in the range that belongs to a collapsed group,
   # include all photos from that group
-  defp expand_collapsed_groups(range_photos, all_photos, grouped_photos, socket) do
+  defp expand_collapsed_groups(range_photos, grouped_photos, socket) do
     Enum.flat_map(range_photos, fn photo ->
       if photo.group != nil do
         is_collapsed = Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups)
