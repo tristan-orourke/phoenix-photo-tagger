@@ -43,7 +43,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
           data-selected={@is_selected}
           phx-click="select_gallery_photo"
           phx-value-photo_id={@photo_id}
-          phx-value-photo_group={@photo_group}
+          phx-value-photo_group={if @is_group_collapsed, do: @photo_group, else: nil}
         >
           <%!-- use object-cover for cropped squares, and object-contain for shrinked full images --%>
           <img
