@@ -30,9 +30,11 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 	end
 
 	defp count_selected_photos(html) do
+		# Count thumbnails in photo panel - this captures all selected photos
+		# including those hidden in collapsed groups or on other pages
 		html
 		|> Floki.parse_document!()
-		|> Floki.find("[data-gallery-photo-id].selected")
+		|> Floki.find("#photo-section img")
 		|> length()
 	end
 
@@ -302,9 +304,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
 			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
 
-			{:ok, _view, html} = live(conn, ~p"/admin?sort=oldest")
+			{:ok, _view, html} = live(conn, ~p"/admin?sort=date")
 
-			assert extract_sort_value(html) == "oldest"
+			assert extract_sort_value(html) == "date"
 		end
 
 		@tag :skip
@@ -349,7 +351,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo.id),
-					"ctrl_key_pressed" => "false"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => false
 				})
 
 			assert count_selected_photos(html) == 1
@@ -366,7 +369,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo2.id),
-					"ctrl_key_pressed" => "true"
+					"ctrl_key_pressed" => true,
+					"shift_key_pressed" => false
 				})
 
 			assert count_selected_photos(html) == 2
@@ -384,7 +388,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo2.id),
-					"ctrl_key_pressed" => "false"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => false
 				})
 
 			assert count_selected_photos(html) == 2
@@ -401,7 +406,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo1.id),
-					"ctrl_key_pressed" => "true"
+					"ctrl_key_pressed" => true,
+					"shift_key_pressed" => false
 				})
 
 			assert count_selected_photos(html) == 1
@@ -413,15 +419,16 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
 			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
 
-			{:ok, view, _html} = live(conn, ~p"/admin?sort=oldest")
+			{:ok, view, _html} = live(conn, ~p"/admin?sort=date")
 
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo1.id),
-					"ctrl_key_pressed" => "false"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => false
 				})
 
-			assert extract_sort_value(html) == "oldest"
+			assert extract_sort_value(html) == "date"
 		end
 
 		test "REGRESSION: selecting photo preserves zoom level", %{conn: conn} do
@@ -436,7 +443,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo.id),
-					"ctrl_key_pressed" => "false"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => false
 				})
 
 			# After 2 zoom_in events, zoom level should be positive
@@ -454,7 +462,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo_from_page_2.id),
-					"ctrl_key_pressed" => "false"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => false
 				})
 
 			assert extract_page_number(html) == 2
@@ -477,8 +486,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo4.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# All photos 1-4 should be selected
@@ -500,8 +509,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo2.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# All photos 2-5 should be selected
@@ -523,16 +532,16 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			_html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "true",
-					"shift_key_pressed" => "false"
+					"ctrl_key_pressed" => true,
+					"shift_key_pressed" => false
 				})
 
 			# Now shift-click photo5 to extend selection
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo5.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Should select range 3-5, adding to existing 1,3
@@ -555,8 +564,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo2.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Should select just photo2 (fallback behavior)
@@ -578,8 +587,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo5.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Should select all 5 photos, including hidden ones in collapsed group
@@ -605,8 +614,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Should have 5 photos selected (photo1, photo2, and the 3 in the collapsed group)
@@ -628,8 +637,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			# Click on photo1 (collapsed group representative) to select it
 			render_click(view, "select_gallery_photo", %{
 				"photo_id" => to_string(photo1.id),
-				"ctrl_key_pressed" => "false",
-				"shift_key_pressed" => "false"
+				"ctrl_key_pressed" => false,
+				"shift_key_pressed" => false
 			})
 
 			# Now shift-click photo5 to extend selection from the collapsed group
@@ -637,8 +646,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo5.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Should have all 5 photos selected
@@ -661,8 +670,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Should select range 1-3
@@ -675,19 +684,19 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
 			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
 
-			# Start with oldest sort
-			{:ok, view, _html} = live(conn, ~p"/admin?sort=oldest&selected_photos[]=#{photo1.id}")
+			# Start with date sort
+			{:ok, view, _html} = live(conn, ~p"/admin?sort=date&selected_photos[]=#{photo1.id}")
 
 			# Shift-click photo3
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Sort order should be preserved
-			assert extract_sort_value(html) == "oldest"
+			assert extract_sort_value(html) == "date"
 		end
 
 		test "shift-click preserves zoom level", %{conn: conn} do
@@ -706,8 +715,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			html =
 				render_click(view, "select_gallery_photo", %{
 					"photo_id" => to_string(photo3.id),
-					"ctrl_key_pressed" => "false",
-					"shift_key_pressed" => "true"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => true
 				})
 
 			# Zoom level should be preserved
@@ -715,7 +724,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		end
 	end
 
-	describe "select_gallery_group event" do
+	describe "select_gallery_photo with photo_group event" do
 		@tag :skip
 		test "selects all photos in a group", %{conn: conn} do
 			folder = folder_fixture()
@@ -726,9 +735,11 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			{:ok, view, _html} = live(conn, ~p"/admin")
 
 			html =
-				render_click(view, "select_gallery_group", %{
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo1.id),
 					"photo_group" => "GroupA",
-					"ctrl_key_pressed" => "false"
+					"ctrl_key_pressed" => false,
+					"shift_key_pressed" => false
 				})
 
 			assert count_selected_photos(html) == 2
@@ -1257,9 +1268,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
 			{:ok, view, _html} = live(conn, ~p"/admin")
 
-			html = render_click(view, "change_sort", %{"sort" => "oldest"})
+			html = render_click(view, "change_sort", %{"sort" => "date"})
 
-			assert extract_sort_value(html) == "oldest"
+			assert extract_sort_value(html) == "date"
 		end
 
 		test "REGRESSION: change_sort preserves selected photos", %{conn: conn} do
@@ -1270,7 +1281,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			{:ok, view, _html} =
 				live(conn, ~p"/admin?selected_photos[]=#{photo1.id}&selected_photos[]=#{photo2.id}")
 
-			html = render_click(view, "change_sort", %{"sort" => "oldest"})
+			html = render_click(view, "change_sort", %{"sort" => "date"})
 
 			assert count_selected_photos(html) == 2
 		end
@@ -1436,7 +1447,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
 			render_click(view, "select_gallery_photo", %{
 				"photo_id" => to_string(photo1.id),
-				"ctrl_key_pressed" => "false"
+				"ctrl_key_pressed" => false,
+				"shift_key_pressed" => false
 			})
 
 			html = render(view)
@@ -1453,7 +1465,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			# Deselect by clicking with ctrl
 			render_click(view, "select_gallery_photo", %{
 				"photo_id" => to_string(photo1.id),
-				"ctrl_key_pressed" => "true"
+				"ctrl_key_pressed" => true,
+				"shift_key_pressed" => false
 			})
 
 			html = render(view)
@@ -1472,7 +1485,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
 			render_click(view, "select_gallery_photo", %{
 				"photo_id" => to_string(photo.id),
-				"ctrl_key_pressed" => "false"
+				"ctrl_key_pressed" => false,
+				"shift_key_pressed" => false
 			})
 
 			assert_patched_to(view, ~p"/admin/photos/#{photo.id}")
