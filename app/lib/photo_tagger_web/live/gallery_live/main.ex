@@ -61,6 +61,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             collapse_group_exceptions={@collapse_group_exceptions}
             zoom_level={@zoom_level}
             is_admin={@is_admin}
+            sort={@sort}
             pg={@pg}
             pg_size={@pg_size}
             show_visibility_outlines={@show_visibility_outlines}
@@ -664,6 +665,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <ul
         id="gallery-grid"
         data-zoom-level={@zoom_level}
+        phx-hook={if @is_admin and @sort == :manual, do: "SortableHook", else: nil}
+        data-sortable-enabled={@is_admin and @sort == :manual}
         class={"grid
       #{get_grid_size(@zoom_level, 1)}
       md:#{get_grid_size(@zoom_level, 2)}
@@ -1623,6 +1626,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            sort_atom
          )
      )}
+  end
+
+  def handle_event("reorder_photo", %{"photo_id" => photo_id, "target_photo_id" => target_photo_id}, socket) do
+    case Gallery.reorder_photo_to_position(photo_id, target_photo_id) do
+      {:ok, _photo} ->
+        # Reload photos to reflect new order
+        photos = load_photos(socket.assigns)
+        {:noreply, assign(socket, :photos, photos)}
+      
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to reorder photo")}
+    end
   end
 
   def handle_event("change_folder", %{"folder" => folder}, socket) do

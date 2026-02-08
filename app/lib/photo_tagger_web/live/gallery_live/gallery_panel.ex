@@ -7,16 +7,22 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
   attr(:collapse_groups, :boolean, default: false)
   attr(:zoom_level, :integer, default: 0)
   attr(:is_admin, :boolean, required: true)
+  attr(:sort, :atom, default: :date)
 
   def render(assigns) do
     ~H"""
     <div class="p-2 lg:p-6 will-change-auto hover:will-change-scroll">
-      <ul class={"grid gap-2 lg:gap-4
-      #{@grid_size}
-      md:#{@md_grid_size}
-      lg:#{@lg_grid_size}
-      xl:#{@xl_grid_size}
-      2xl:#{@_2xl_grid_size}"}>
+      <ul 
+        class={"grid gap-2 lg:gap-4
+        #{@grid_size}
+        md:#{@md_grid_size}
+        lg:#{@lg_grid_size}
+        xl:#{@xl_grid_size}
+        2xl:#{@_2xl_grid_size}"}
+        id="gallery-grid"
+        phx-hook={if @is_admin and @sort == :manual, do: "SortableHook", else: nil}
+        data-sortable-enabled={@is_admin and @sort == :manual}
+      >
         <%= for photo <- @photos do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}

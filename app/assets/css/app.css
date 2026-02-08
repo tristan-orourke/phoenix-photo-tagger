@@ -33,3 +33,27 @@ h2 {
    width: 100%;
    height: 100%;
 }
+
+/* Sortable.js drag-and-drop styles */
+.sortable-ghost {
+   opacity: 0.4;
+   background: #e0f2fe;
+}
+
+.sortable-chosen {
+   cursor: grabbing !important;
+}
+
+.sortable-drag {
+   opacity: 0.8;
+   transform: rotate(2deg);
+}
+
+/* Make draggable photos have a grab cursor in admin mode */
+[data-sortable-enabled="true"] li {
+   cursor: grab;
+}
+
+[data-sortable-enabled="true"] li:active {
+   cursor: grabbing;
+}

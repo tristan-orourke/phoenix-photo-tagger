@@ -653,5 +653,60 @@ defmodule PhotoTagger.GalleryTest do
 			assert {:ok, %{photo: updated}} = Gallery.update_photo(photo3, %{"manual_order" => 1})
 			assert updated.manual_order == 1
 		end
+
+		test "reorder_photo_to_position/2 moves photo to target photo's position", %{folder: folder} do
+			photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1})
+			photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2})
+			photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
+			photo4 = photo_fixture(%{folder_id: folder.id, manual_order: 4})
+
+			# Move photo1 to photo3's position
+			assert {:ok, updated_photo1} = Gallery.reorder_photo_to_position(photo1.id, photo3.id)
+			assert updated_photo1.manual_order == 3
+
+			# Verify other photos shifted correctly
+			refreshed_photo2 = Gallery.get_photo!(photo2.id, include_private: true)
+			refreshed_photo3 = Gallery.get_photo!(photo3.id, include_private: true)
+			refreshed_photo4 = Gallery.get_photo!(photo4.id, include_private: true)
+
+			assert refreshed_photo2.manual_order == 1
+			assert refreshed_photo3.manual_order == 2
+			assert refreshed_photo4.manual_order == 4
+		end
+
+		test "reorder_photo_to_position/2 with 'first' moves photo to beginning", %{folder: folder} do
+			photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1})
+			photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2})
+			photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
+
+			# Move photo3 to first position
+			assert {:ok, updated_photo3} = Gallery.reorder_photo_to_position(photo3.id, "first")
+			assert updated_photo3.manual_order == 1
+
+			# Verify other photos shifted up
+			refreshed_photo1 = Gallery.get_photo!(photo1.id, include_private: true)
+			refreshed_photo2 = Gallery.get_photo!(photo2.id, include_private: true)
+
+			assert refreshed_photo1.manual_order == 2
+			assert refreshed_photo2.manual_order == 3
+		end
+
+		test "reorder_photo_to_position/2 with 'last' moves photo to end", %{folder: folder} do
+			photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1})
+			photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2})
+			photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
+
+			# Move photo1 to last position
+			assert {:ok, updated_photo1} = Gallery.reorder_photo_to_position(photo1.id, "last")
+			# Last position should be next available (4)
+			assert updated_photo1.manual_order == 4
+
+			# Verify other photos shifted down
+			refreshed_photo2 = Gallery.get_photo!(photo2.id, include_private: true)
+			refreshed_photo3 = Gallery.get_photo!(photo3.id, include_private: true)
+
+			assert refreshed_photo2.manual_order == 1
+			assert refreshed_photo3.manual_order == 2
+		end
 	end
 end

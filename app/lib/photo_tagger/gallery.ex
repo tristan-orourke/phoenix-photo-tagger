@@ -397,6 +397,53 @@ defmodule PhotoTagger.Gallery do
   end
 
   @doc """
+  Reorders a photo by moving it to the position of a target photo.
+  The dragged photo takes the target photo's manual_order, and other photos shift accordingly.
+  
+  ## Parameters
+  - photo_id: ID of the photo being dragged
+  - target_photo_id: ID of the photo at the target position (or "first"/"last")
+  
+  ## Examples
+  
+      iex> reorder_photo_to_position(123, 456)
+      {:ok, %Photo{}}
+  """
+  def reorder_photo_to_position(photo_id, target_photo_id) do
+    photo = Repo.get!(Photo, photo_id) |> Repo.preload(:folder)
+    old_order = photo.manual_order
+    folder_id = photo.folder_id
+    
+    # Determine the target order based on target_photo_id
+    target_order = case target_photo_id do
+      "first" -> 
+        # Move to first position (order = 1, shifts everything else up)
+        1
+        
+      "last" ->
+        # Move to last position (max order in folder)
+        get_next_manual_order(folder_id)
+        
+      _ ->
+        # Get the manual_order of the target photo
+        target_photo = Repo.get!(Photo, target_photo_id)
+        target_photo.manual_order
+    end
+    
+    # Use Ecto.Multi to coordinate the reordering
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:reorder_others, fn _repo, _changes ->
+      reorder_photos_for_insert(folder_id, target_order, old_order)
+    end)
+    |> Ecto.Multi.update(:update_photo, Photo.changeset_update(photo, %{manual_order: target_order}))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{update_photo: photo}} -> {:ok, photo}
+      {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   Updates a photo.
 
   ## Examples
