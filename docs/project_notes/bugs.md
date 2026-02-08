@@ -24,6 +24,20 @@ Track bugs with root causes and solutions for future reference.
 
 ## Resolved Bugs
 
+### [2026-02-04] Private folders not visible in upload dropdown
+
+**Symptoms**: When uploading photos, only public folders appeared in the folder dropdown. Users could not select private folders for upload even if they had access.
+
+**Root Cause**: `PhotoController.new/2` called `Gallery.list_folders()` without the `include_private: true` option. The Gallery context's `only_public_folders_unless_forced/2` helper filters out private folders by default when this option is not provided.
+
+**Solution**: Updated `PhotoController.new/2` to pass `include_private: true` to `Gallery.list_folders()` call, ensuring both public and private folders appear in the dropdown.
+
+**Files Changed**:
+- `app/lib/photo_tagger_web/controllers/photo_controller.ex`
+- `app/test/photo_tagger_web/controllers/photo_controller_test.exs` (added test for verification)
+
+**Related Issues**: Issue "Cannot upload photos to private folders: only public folders appear in upload folder dropdown"
+
 ### [2026-01-30] PhotoController edit view raises Protocol.UndefinedError for folder field
 
 **Symptoms**: When accessing the edit view for a photo (e.g., `/admin/photos/:id/edit`), the application crashes with `Protocol.UndefinedError: protocol Phoenix.HTML.Safe not implemented for type PhotoTagger.Gallery.Folder (a struct)`

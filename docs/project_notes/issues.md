@@ -37,10 +37,26 @@ Track completed work and GitHub issues.
 - For collapsed groups in the range, includes ALL photos from the group (not just visible representative)
 - Works correctly with pagination and filtering
 
-**Files Modified**: 
+**Files Modified**:
 - `app/lib/photo_tagger_web/live/gallery_live/main.ex`
 
 **Related**: GitHub issue for shift-click multiselect
+
+### [2026-02-04] Fix private folder visibility in upload dropdown
+
+**Summary**: Fixed issue where private folders were not appearing in the photo upload page's folder dropdown, preventing uploads to private folders.
+
+**Key Changes**:
+- Updated `PhotoController.new/2` to pass `include_private: true` option to `Gallery.list_folders()`
+- Added test case to verify both public and private folders appear in the upload form
+- Documented bug and solution in bugs.md
+
+**Files Modified**:
+- `app/lib/photo_tagger_web/controllers/photo_controller.ex`
+- `app/test/photo_tagger_web/controllers/photo_controller_test.exs`
+- `docs/project_notes/bugs.md`
+
+**Related**: Issue "Cannot upload photos to private folders: only public folders appear in upload folder dropdown"
 
 ### [0000-00-00] Template Entry - Remove When Adding Real Entries
 
