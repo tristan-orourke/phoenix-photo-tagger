@@ -571,11 +571,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg", group: "GroupA"})
 			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
 
-			# Start by selecting photo1
+			# Start by selecting photo1 (groups are collapsed by default)
 			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
-
-			# Enable group collapse
-			render_click(view, "toggle_collapse_groups", %{})
 
 			# Shift-click photo5 to select range including collapsed group
 			html =
@@ -586,6 +583,65 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 				})
 
 			# Should select all 5 photos, including hidden ones in collapsed group
+			assert count_selected_photos(html) == 5
+		end
+
+		test "shift-click on collapsed group ADDS to existing selection", %{conn: conn} do
+			# BUG: Currently clicking on a collapsed group replaces the selection instead of adding to it
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
+			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg", group: "GroupA"})
+			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg", group: "GroupA"})
+
+			# Start by selecting photo1 (groups are collapsed by default)
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+
+			# Shift-click photo3 (first visible photo in collapsed GroupA)
+			# This should select range photo1 -> photo3, and since photo3 is in a collapsed group,
+			# it should include all photos in GroupA (photo3, photo4, photo5)
+			# Total selection should be: photo1, photo2, photo3, photo4, photo5
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo3.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Should have 5 photos selected (photo1, photo2, and the 3 in the collapsed group)
+			assert count_selected_photos(html) == 5
+		end
+
+		test "shift-click from collapsed group to another photo adds to selection", %{conn: conn} do
+			# Test that starting from a collapsed group and shift-clicking to another photo works correctly
+			folder = folder_fixture()
+			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg", group: "GroupA"})
+			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg", group: "GroupA"})
+			photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
+			photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg"})
+			photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
+
+			# Groups are collapsed by default - select photo1 (the group representative)
+			{:ok, view, _html} = live(conn, ~p"/admin")
+
+			# Click on photo1 (collapsed group representative) to select it
+			render_click(view, "select_gallery_photo", %{
+				"photo_id" => to_string(photo1.id),
+				"ctrl_key_pressed" => "false",
+				"shift_key_pressed" => "false"
+			})
+
+			# Now shift-click photo5 to extend selection from the collapsed group
+			# Should select all photos in the range: photo1, photo2, photo3 (all in collapsed group), photo4, photo5
+			html =
+				render_click(view, "select_gallery_photo", %{
+					"photo_id" => to_string(photo5.id),
+					"ctrl_key_pressed" => "false",
+					"shift_key_pressed" => "true"
+				})
+
+			# Should have all 5 photos selected
 			assert count_selected_photos(html) == 5
 		end
 
