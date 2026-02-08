@@ -48,13 +48,16 @@
 │  Photo Filtering:                                                         │
 │  ┌────────────────────────────────────────────────────────────────┐     │
 │  │ list_photos(include_private: false) [DEFAULT]                  │     │
-│  │ ├─> WHERE folder.visibility_type IN ('public', 'unlisted')     │     │
-│  │ └─> Returns: [Photos from PUBLIC and UNLISTED folders]         │     │
+│  │ ├─> WHERE folder.visibility_type = 'public'                    │     │
+│  │ └─> Returns: [Photos from PUBLIC folders only]                 │     │
 │  │                                                                  │     │
 │  │ list_photos_by_folder(name) [DIRECT ACCESS]                    │     │
 │  │ ├─> WHERE folder.name = name                                   │     │
 │  │ └─> Returns: [Photos from specified folder, works for UNLISTED]│     │
 │  └────────────────────────────────────────────────────────────────┘     │
+│                                                                           │
+│  Note: Photos from UNLISTED folders are only accessible via direct      │
+│        folder access, not in general photo listings.                     │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -126,10 +129,14 @@
 │  │              │             │             │                      │   │
 │  │ PUBLIC       │     ✅      │     ✅      │         ✅           │   │
 │  │              │             │             │                      │   │
-│  │ UNLISTED     │     ❌      │     ✅      │         ✅           │   │
+│  │ UNLISTED     │     ❌      │     ✅      │   ✅ (folder view)   │   │
+│  │              │             │             │   ❌ (general view)  │   │
 │  └──────────────┴─────────────┴─────────────┴──────────────────────┘   │
 │                                                                           │
 │  Admin users have ✅ for all scenarios.                                 │
+│                                                                           │
+│  Note: UNLISTED photos appear ONLY when viewing the folder directly,    │
+│        NOT in general photo listings or search results.                  │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -153,10 +160,10 @@
 │  ROLLBACK (if needed):                                                   │
 │  ┌──────────────────────┐           ┌──────────────────────┐            │
 │  │ Folder X             │           │ Folder X             │            │
-│  │ visibility: unlisted ──────────> │ is_public: true ⚠️  │            │
+│  │ visibility: unlisted ──────────> │ is_public: false ⚠️ │            │
 │  └──────────────────────┘           └──────────────────────┘            │
 │                                                                           │
-│  Note: UNLISTED becomes PUBLIC on rollback (acceptable data loss)        │
+│  Note: UNLISTED becomes PRIVATE on rollback (acceptable data loss)       │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -177,8 +184,9 @@
 │  3. UNLISTED FOLDER: "Wedding Preview"                                   │
 │     ❌ Hidden from folder dropdown                                      │
 │     ✅ Accessible via direct link                                       │
-│     ✅ Photos appear when browsing all photos                           │
-│     → Use for: Share-by-link content                                     │
+│     ❌ Photos do NOT appear when browsing all photos                   │
+│     ✅ Photos appear ONLY when viewing the folder directly             │
+│     → Use for: Share-by-link content that stays contained               │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 ```

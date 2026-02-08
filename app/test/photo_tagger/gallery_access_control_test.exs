@@ -231,13 +231,14 @@ defmodule PhotoTagger.GalleryAccessControlTest do
 			assert hd(photos).id == context.unlisted_photo.id
 		end
 
-		test "list_photos/0 includes photos from unlisted folders", context do
-			# Photos in unlisted folders should be accessible when querying all photos
+		test "list_photos/0 excludes photos from unlisted folders", context do
+			# Photos in unlisted folders should NOT be accessible when querying all photos
+			# They are only accessible when querying by folder name directly
 			photos = Gallery.list_photos()
 			photo_ids = Enum.map(photos, & &1.id)
 
 			assert context.public_photo.id in photo_ids
-			assert context.unlisted_photo.id in photo_ids
+			refute context.unlisted_photo.id in photo_ids
 			refute context.private_photo.id in photo_ids
 		end
 	end

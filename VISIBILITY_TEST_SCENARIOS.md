@@ -21,8 +21,9 @@ This document outlines the expected behavior for the three folder visibility typ
 - **Visible and accessible** to admins in all contexts
 - Photos in unlisted folders are **shown** to non-admins when:
   - Accessing the folder directly by URL/name
-  - Browsing all photos (unlisted folder photos appear in the general gallery)
-  - Searching by tags
+- Photos in unlisted folders are **NOT shown** to non-admins when:
+  - Browsing all photos (unlisted folder photos do NOT appear in the general gallery)
+  - Searching by tags (unless within the unlisted folder context)
 
 ## Test Cases
 
@@ -78,7 +79,7 @@ This document outlines the expected behavior for the three folder visibility typ
 
 **Expected Results:**
 - Photos from PUBLIC folders are shown
-- Photos from UNLISTED folders are shown
+- Photos from UNLISTED folders are NOT shown
 - Photos from PRIVATE folders are NOT shown
 
 ### Test Case 8: Migration from Old is_public Field
@@ -87,6 +88,7 @@ This document outlines the expected behavior for the three folder visibility typ
 **Expected Results:**
 - Migration converts `is_public: true` → `visibility_type: public`
 - Migration converts `is_public: false` → `visibility_type: private`
+- Rollback converts `visibility_type: unlisted` → `is_public: false` (private)
 - No data loss occurs
 - All folders remain functional
 
@@ -127,13 +129,14 @@ The old `is_public` boolean field has been removed.
 - `Gallery.list_folders(include_private: true)` - Returns ALL folders (private, public, unlisted)
 
 ### Photo Filtering Logic  
-- `Gallery.list_photos()` - Returns photos from PUBLIC and UNLISTED folders
-- `Gallery.list_photos_by_folder(name)` - Returns photos from specified folder (works for unlisted)
+- `Gallery.list_photos()` - Returns photos from PUBLIC folders only (excludes UNLISTED)
+- `Gallery.list_photos_by_folder(name)` - Returns photos from specified folder (works for unlisted when accessed by name)
 - Both respect photo-level `is_public` flag as well
 
 ## Notes
 
 - The visibility types are implemented as a PostgreSQL ENUM for database-level validation
-- Unlisted folders are useful for sharing specific galleries without exposing them in public listings
+- Unlisted folders are useful for sharing specific galleries via direct link without exposing them in public listings
+- Photos in unlisted folders are ONLY visible when accessing the folder directly, not in general photo browsing
 - Photos have their own `is_public` flag which is respected independently
 - Both folder AND photo must allow access for a photo to be visible to non-admins

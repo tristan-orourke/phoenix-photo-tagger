@@ -18,10 +18,10 @@ This implementation refactors the folder visibility model from a simple boolean 
 **Down Migration (Rollback):**
 - Adds back `is_public` boolean column
 - Migrates data back:
-  - `visibility_type = 'public'` OR `'unlisted'` → `is_public = true`
-  - `visibility_type = 'private'` → `is_public = false`
+  - `visibility_type = 'public'` → `is_public = true`
+  - `visibility_type = 'private'` OR `'unlisted'` → `is_public = false`
 - Drops `visibility_type` column and ENUM type
-- **Note:** UNLISTED folders become PUBLIC on rollback (acceptable data loss for rollback scenario)
+- **Note:** UNLISTED folders become PRIVATE on rollback (acceptable data loss for rollback scenario)
 
 ### 2. Schema Updates (`lib/photo_tagger/gallery/folder.ex`)
 
@@ -41,8 +41,8 @@ This implementation refactors the folder visibility model from a simple boolean 
 
 #### `only_public_photos/1`
 - **Before:** `where: f.is_public == true`
-- **After:** `where: f.visibility_type in [:public, :unlisted]`
-- **Effect:** Photos from UNLISTED folders are now accessible to non-admins
+- **After:** `where: f.visibility_type == :public`
+- **Effect:** Photos from UNLISTED folders are NOT accessible to non-admins in general listings
 
 #### `create_folder/1`
 - Updated pattern match from `"is_public"` to `"visibility_type"`
@@ -50,8 +50,8 @@ This implementation refactors the folder visibility model from a simple boolean 
 **Behavior Summary:**
 - `list_folders()` - Returns only PUBLIC folders
 - `list_folders(include_private: true)` - Returns ALL folders (admin view)
-- `list_photos()` - Returns photos from PUBLIC and UNLISTED folders
-- `list_photos_by_folder(name)` - Works for UNLISTED folders (direct access)
+- `list_photos()` - Returns photos from PUBLIC folders only (excludes UNLISTED)
+- `list_photos_by_folder(name)` - Works for UNLISTED folders (direct access by folder name)
 
 ### 4. Controller Updates (`lib/photo_tagger_web/controllers/folder_controller.ex`)
 
@@ -97,8 +97,10 @@ LiveView components (`lib/photo_tagger_web/live/gallery_live/`) already use Gall
 | Visibility Type | In Listings (Non-Admin) | In Listings (Admin) | Direct Access (Non-Admin) | Direct Access (Admin) | Photos Visible (Non-Admin) |
 |-----------------|------------------------|---------------------|--------------------------|----------------------|---------------------------|
 | **PRIVATE**     | ❌ No                   | ✅ Yes              | ❌ No                     | ✅ Yes                | ❌ No                      |
-| **PUBLIC**      | ✅ Yes                  | ✅ Yes              | ✅ Yes                    | ✅ Yes                | ✅ Yes                     |
-| **UNLISTED**    | ❌ No                   | ✅ Yes              | ✅ Yes                    | ✅ Yes                | ✅ Yes                     |
+| **PUBLIC**      | ✅ Yes                  | ✅ Yes              | ✅ Yes                    | ✅ Yes                | ✅ Yes (in all listings)   |
+| **UNLISTED**    | ❌ No                   | ✅ Yes              | ✅ Yes                    | ✅ Yes                | ✅ Yes (by folder name only) |
+
+*Note: For UNLISTED folders, photos are only visible when accessing the folder directly by name, not in general photo listings.*
 
 ## Testing Strategy
 
