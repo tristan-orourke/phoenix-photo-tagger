@@ -493,7 +493,7 @@ defmodule PhotoTagger.Gallery do
   @doc """
   Deletes a photo.
 
-  - Original with cross-listings: Delete all cross-listing DB entries first, delete original's files, then delete original's DB entry
+  - Original with cross-listings: Database cascade delete handles removal of cross-listings automatically
   - Cross-listed photo: Call remove_cross_listing/1 (no file deletion)
 
   ## Examples
@@ -510,15 +510,8 @@ defmodule PhotoTagger.Gallery do
       # Cross-listed photo: just remove the DB entry
       remove_cross_listing(photo)
     else
-      # Original photo: check for cross-listings first
-      cross_listings = get_cross_listings(photo)
-
-      # Delete all cross-listings first (database only)
-      Enum.each(cross_listings, fn cl ->
-        Repo.delete(cl)
-      end)
-
-      # Delete the original's files and database entry
+      # Original photo: database cascade delete will handle cross-listings automatically
+      # Just delete the original's files and database entry
       ImageUploader.delete({photo.image, photo})
       Repo.delete(photo)
     end

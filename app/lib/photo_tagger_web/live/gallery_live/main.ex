@@ -347,19 +347,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
         # Otherwise, selections have changed, query them from the database
         {_, _} ->
-          photos = new_selected_photo_ids
+          new_selected_photo_ids
           |> Gallery.get_photos_by_ids(include_private: is_admin)
           |> Repo.preload([:tags, :folder, :cross_listings, original_photo: :folder])
-          
-          # Preload cross_listings with their folders for display
-          Enum.map(photos, fn photo ->
-            if photo.cross_listings do
-              cross_listings = Repo.preload(photo.cross_listings, :folder)
-              %{photo | cross_listings: cross_listings}
-            else
-              photo
-            end
-          end)
+          |> preload_cross_listings_folders()
       end
 
     nav_tags =
@@ -1417,23 +1408,25 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     |> assign(:nav_tags, nav_tags)
   end
 
+  # Helper function to preload cross-listings with their folders
+  defp preload_cross_listings_folders(photos) when is_list(photos) do
+    Enum.map(photos, fn photo ->
+      if photo.cross_listings && length(photo.cross_listings) > 0 do
+        cross_listings = Repo.preload(photo.cross_listings, :folder)
+        %{photo | cross_listings: cross_listings}
+      else
+        photo
+      end
+    end)
+  end
+
   def refresh_selected_photos(socket) do
     selected_photos =
       socket.assigns.selected_photos
       |> Enum.map(& &1.id)
       |> Gallery.get_photos_by_ids(include_private: socket.assigns.is_admin)
       |> Repo.preload([:tags, :folder, :cross_listings, original_photo: :folder])
-
-    # Preload cross_listings with their folders for display
-    selected_photos =
-      Enum.map(selected_photos, fn photo ->
-        if photo.cross_listings do
-          cross_listings = Repo.preload(photo.cross_listings, :folder)
-          %{photo | cross_listings: cross_listings}
-        else
-          photo
-        end
-      end)
+      |> preload_cross_listings_folders()
 
     update_photo_form =
       case selected_photos do
