@@ -50,8 +50,16 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
   def storage_dir(_version, {_file, scope}) do
     folder_name =
       case scope do
-        %{folder: %{name: name}} -> name
-        %{folder_id: folder_id} -> Repo.get(PhotoTagger.Gallery.Folder, folder_id).name
+        # Cross-listed photo: use original photo's folder
+        %{original_photo_id: original_id} when not is_nil(original_id) ->
+          original = Repo.get(PhotoTagger.Gallery.Photo, original_id) |> Repo.preload(:folder)
+          original.folder.name
+
+        %{folder: %{name: name}} ->
+          name
+
+        %{folder_id: folder_id} ->
+          Repo.get(PhotoTagger.Gallery.Folder, folder_id).name
       end
 
     "uploads/images/#{folder_name}"

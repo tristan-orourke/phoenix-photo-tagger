@@ -409,6 +409,34 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
+    # Check if folder is changing
+    new_folder_id =
+      case Map.get(attrs, "folder_id") || Map.get(attrs, :folder_id) do
+        nil -> nil
+        val when is_binary(val) -> String.to_integer(val)
+        val when is_integer(val) -> val
+      end
+
+    # If moving to a different folder, check for cross-listing conflicts
+    if new_folder_id && new_folder_id != photo.folder_id && !is_cross_listing?(photo) do
+      # Check if a cross-listing already exists in the target folder
+      existing =
+        Repo.one(
+          from p in Photo,
+            where: p.original_photo_id == ^photo.id and p.folder_id == ^new_folder_id
+        )
+
+      if existing do
+        {:error, :cross_listing_exists_in_target_folder}
+      else
+        do_update_photo(photo, attrs)
+      end
+    else
+      do_update_photo(photo, attrs)
+    end
+  end
+
+  defp do_update_photo(%Photo{} = photo, attrs) do
     # If the name is being updated, update the image file_name as well
     attrs =
       if(Map.has_key?(attrs, "name"),
@@ -465,6 +493,9 @@ defmodule PhotoTagger.Gallery do
   @doc """
   Deletes a photo.
 
+  - Original with cross-listings: Delete all cross-listing DB entries first, delete original's files, then delete original's DB entry
+  - Cross-listed photo: Call remove_cross_listing/1 (no file deletion)
+
   ## Examples
 
       iex> delete_photo(photo)
@@ -475,8 +506,133 @@ defmodule PhotoTagger.Gallery do
 
   """
   def delete_photo(%Photo{} = photo) do
-    ImageUploader.delete({photo.image, photo})
-    Repo.delete(photo)
+    if is_cross_listing?(photo) do
+      # Cross-listed photo: just remove the DB entry
+      remove_cross_listing(photo)
+    else
+      # Original photo: check for cross-listings first
+      cross_listings = get_cross_listings(photo)
+
+      # Delete all cross-listings first (database only)
+      Enum.each(cross_listings, fn cl ->
+        Repo.delete(cl)
+      end)
+
+      # Delete the original's files and database entry
+      ImageUploader.delete({photo.image, photo})
+      Repo.delete(photo)
+    end
+  end
+
+  @doc """
+  Checks if a photo is a cross-listing (references an original).
+  """
+  def is_cross_listing?(%Photo{original_photo_id: nil}), do: false
+  def is_cross_listing?(%Photo{original_photo_id: _}), do: true
+
+  @doc """
+  Checks if a photo is an original with cross-listings.
+  """
+  def is_original_with_cross_listings?(%Photo{} = photo) do
+    photo = Repo.preload(photo, :cross_listings)
+    is_nil(photo.original_photo_id) and length(photo.cross_listings) > 0
+  end
+
+  @doc """
+  Gets all cross-listings of an original photo.
+  """
+  def get_cross_listings(%Photo{} = photo) do
+    if is_cross_listing?(photo) do
+      []
+    else
+      Repo.all(from p in Photo, where: p.original_photo_id == ^photo.id, preload: [:folder])
+    end
+  end
+
+  @doc """
+  Creates a cross-listing of an original photo in a target folder.
+
+  Returns `{:ok, photo}` on success or `{:error, reason}` on failure.
+
+  ## Examples
+
+      iex> create_cross_listing(original_photo, target_folder_id)
+      {:ok, %Photo{}}
+
+  """
+  def create_cross_listing(%Photo{} = original_photo, target_folder_id) do
+    # Validate original_photo is not itself a cross-listing
+    if is_cross_listing?(original_photo) do
+      {:error, :cannot_cross_list_a_cross_listing}
+    else
+      # Validate target folder differs from original's folder
+      if original_photo.folder_id == target_folder_id do
+        {:error, :cannot_cross_list_to_same_folder}
+      else
+        # Check no existing cross-listing of this photo in target folder
+        existing =
+          Repo.one(
+            from p in Photo,
+              where: p.original_photo_id == ^original_photo.id and p.folder_id == ^target_folder_id
+          )
+
+        if existing do
+          {:error, :cross_listing_already_exists}
+        else
+          # Preload tags to copy them
+          original_photo = Repo.preload(original_photo, :tags)
+          next_order = get_next_manual_order(target_folder_id)
+
+          # Create cross-listing
+          attrs = %{
+            "name" => original_photo.name,
+            "description" => original_photo.description,
+            "notes" => original_photo.notes,
+            "group" => original_photo.group,
+            "is_public" => original_photo.is_public,
+            "image" => original_photo.image,
+            "image_last_modified" => original_photo.image_last_modified,
+            "original_photo_id" => original_photo.id,
+            "folder_id" => target_folder_id,
+            "manual_order" => next_order
+          }
+
+          case %Photo{}
+               |> Photo.changeset_create(attrs)
+               |> Repo.insert() do
+            {:ok, cross_listing} ->
+              # Copy tags from original
+              Enum.each(original_photo.tags, fn tag ->
+                add_tag_to_photo(cross_listing, tag.name)
+              end)
+
+              {:ok, Repo.preload(cross_listing, [:folder, :tags])}
+
+            {:error, changeset} ->
+              {:error, changeset}
+          end
+        end
+      end
+    end
+  end
+
+  @doc """
+  Removes a cross-listed photo entry (database only, no file deletion).
+
+  Returns `{:ok, photo}` on success or `{:error, reason}` on failure.
+
+  ## Examples
+
+      iex> remove_cross_listing(cross_listed_photo)
+      {:ok, %Photo{}}
+
+  """
+  def remove_cross_listing(%Photo{} = photo) do
+    if is_cross_listing?(photo) do
+      Repo.delete(photo)
+    else
+      {:error, :not_a_cross_listing}
+    end
   end
 
   @doc """

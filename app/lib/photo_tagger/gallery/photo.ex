@@ -23,6 +23,8 @@ defmodule PhotoTagger.Gallery.Photo do
       preload_order: [asc: :name]
 
     belongs_to :folder, PhotoTagger.Gallery.Folder
+    belongs_to :original_photo, __MODULE__, foreign_key: :original_photo_id
+    has_many :cross_listings, __MODULE__, foreign_key: :original_photo_id
   end
 
   @doc false
@@ -36,7 +38,8 @@ defmodule PhotoTagger.Gallery.Photo do
       :image_last_modified,
       :group,
       :is_public,
-      :manual_order
+      :manual_order,
+      :original_photo_id
     ])
     |> cast_attachments(attrs, [:image], allow_urls: true)
     |> validate_required([:name, :folder_id, :image, :image_last_modified])
