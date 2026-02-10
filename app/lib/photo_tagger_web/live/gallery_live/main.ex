@@ -347,9 +347,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
         # Otherwise, selections have changed, query them from the database
         {_, _} ->
-          new_selected_photo_ids
+          photos = new_selected_photo_ids
           |> Gallery.get_photos_by_ids(include_private: is_admin)
-          |> Repo.preload([:tags, :folder])
+          |> Repo.preload([:tags, :folder, :cross_listings, original_photo: :folder])
+          
+          # Preload cross_listings with their folders for display
+          Enum.map(photos, fn photo ->
+            if photo.cross_listings do
+              cross_listings = Repo.preload(photo.cross_listings, :folder)
+              %{photo | cross_listings: cross_listings}
+            else
+              photo
+            end
+          end)
       end
 
     nav_tags =
@@ -399,6 +409,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       recommended_tags: recommended_tags,
       nav_tags: nav_tags,
       update_photo_form: update_photo_form,
+      cross_listings: case selected_photos do
+        [photo] -> if is_nil(photo.original_photo_id), do: photo.cross_listings, else: nil
+        _ -> nil
+      end,
       prev_sort: sort
     }
   end
@@ -751,6 +765,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </p>
         </div>
       </:item>
+      <:item title="Cross-listing" :if={@is_admin and @photo.original_photo_id}>
+        <div class="flex items-center gap-2">
+          <p class="text-sm px-2 py-0.5 rounded-full border text-purple-600 border-purple-600">
+            cross-listed
+          </p>
+          <.link
+            class="text-blue-600 hover:text-blue-800"
+            patch={Util.build_url(@photo.original_photo.folder.name, [@photo.original_photo_id], @tags, @exclude_tags, @is_admin)}
+          >
+            from {@photo.original_photo.folder.name}
+          </.link>
+        </div>
+      </:item>
+      <:item title="Cross-listed in" :if={@is_admin and not is_nil(@cross_listings) and length(@cross_listings) > 0}>
+        <ul class="flex flex-wrap gap-2">
+          <%= for cl <- @cross_listings do %>
+            <li>
+              <.link
+                class="text-blue-600 hover:text-blue-800"
+                patch={Util.build_url(cl.folder.name, [cl.id], @tags, @exclude_tags, @is_admin)}
+              >
+                {cl.folder.name}
+              </.link>
+            </li>
+          <% end %>
+        </ul>
+      </:item>
       <:item title="Tags" :if={@is_admin or not Enum.empty?(@photo.tags)}>
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
@@ -907,18 +948,85 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
+      <:item title="Cross-list to folder" :if={@is_admin and is_nil(@photo.original_photo_id)}>
+        <.form for={Component.to_form(%{"photo_id" => @photo.id})} phx-submit="create_cross_listing">
+          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
+          <div class="flex gap-2 items-end">
+            <div class="flex-1">
+              <label class="block text-sm font-semibold leading-6 text-zinc-800 mb-1">
+                Target folder
+              </label>
+              <select
+                name="target_folder_id"
+                class="block w-full rounded-md border-zinc-300 shadow-sm focus:border-zinc-400 focus:ring focus:ring-zinc-200 focus:ring-opacity-50 sm:text-sm"
+                required
+              >
+                <option value="">Select folder...</option>
+                <%= for folder <- @all_folders do %>
+                  <%= if folder.id != @photo.folder_id do %>
+                    <option value={folder.id}>{folder.name}</option>
+                  <% end %>
+                <% end %>
+              </select>
+            </div>
+            <.button type="submit" class="bg-purple-600 hover:bg-purple-700">
+              Cross-list
+            </.button>
+          </div>
+        </.form>
+        <div :if={@cross_listings and length(@cross_listings) > 0} class="mt-2">
+          <p class="text-sm text-zinc-600 mb-1">Currently cross-listed in:</p>
+          <ul class="flex flex-wrap gap-2">
+            <%= for cl <- @cross_listings do %>
+              <li class="text-sm">
+                <.link
+                  class="text-blue-600 hover:text-blue-800"
+                  patch={Util.build_url(cl.folder.name, [cl.id], @tags, @exclude_tags, @is_admin)}
+                >
+                  {cl.folder.name}
+                </.link>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </:item>
       <:item title="Image last modified" :if={@is_admin and @photo.image_last_modified}>
         <p>{@photo.image_last_modified}</p>
       </:item>
       <:item title="Delete" :if={@is_admin}>
-        <.form
-          phx-submit="delete_photo"
-          for={Component.to_form(%{"photo_id" => @photo.id})}
-          onsubmit="return confirm('Are you sure you want to permanently delete this photo?')"
-        >
-          <input class="hidden" type="text" name="photo_id" value={@photo.id} />
-          <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
-        </.form>
+        <%= if @photo.original_photo_id do %>
+          <%!-- Cross-listed photo: show "Remove cross-listing" button --%>
+          <.form
+            phx-submit="remove_cross_listing"
+            for={Component.to_form(%{"photo_id" => @photo.id})}
+            onsubmit="return confirm('Remove this cross-listing? The original photo will remain in its folder.')"
+          >
+            <input class="hidden" type="text" name="photo_id" value={@photo.id} />
+            <.button class="bg-orange-600 hover:bg-orange-700">Remove cross-listing</.button>
+          </.form>
+        <% else %>
+          <%!-- Original photo --%>
+          <%= if @cross_listings and length(@cross_listings) > 0 do %>
+            <%!-- Original with cross-listings: show warning --%>
+            <p class="text-sm text-zinc-600 mb-2">
+              This photo is cross-listed in:
+              <%= for cl <- @cross_listings do %>
+                <span class="font-semibold">{cl.folder.name}</span><%= if cl != List.last(@cross_listings), do: ", " %>
+              <% end %>
+            </p>
+            <p class="text-sm text-red-600 mb-2">
+              Deleting this photo will also remove all cross-listings.
+            </p>
+          <% end %>
+          <.form
+            phx-submit="delete_photo"
+            for={Component.to_form(%{"photo_id" => @photo.id})}
+            onsubmit="return confirm('Are you sure you want to permanently delete this photo?')"
+          >
+            <input class="hidden" type="text" name="photo_id" value={@photo.id} />
+            <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
+          </.form>
+        <% end %>
       </:item>
       <:item title="Drift">
         <.link
@@ -1090,6 +1198,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             </.button>
           </.form>
         </div>
+      </:item>
+      <:item title="Cross-list to folder" :if={@is_admin}>
+        <.form for={Component.to_form(%{})} phx-submit="create_cross_listing_bulk">
+          <div class="flex gap-2 items-end">
+            <div class="flex-1">
+              <label class="block text-sm font-semibold leading-6 text-zinc-800 mb-1">
+                Target folder
+              </label>
+              <select
+                name="target_folder_id"
+                class="block w-full rounded-md border-zinc-300 shadow-sm focus:border-zinc-400 focus:ring focus:ring-zinc-200 focus:ring-opacity-50 sm:text-sm"
+                required
+              >
+                <option value="">Select folder...</option>
+                <%= for folder <- @all_folders do %>
+                  <option value={folder.id}>{folder.name}</option>
+                <% end %>
+              </select>
+            </div>
+            <.button type="submit" class="bg-purple-600 hover:bg-purple-700">
+              Cross-list all
+            </.button>
+          </div>
+          <p class="text-sm text-zinc-600 mt-2">
+            Only original photos will be cross-listed. Cross-listings will be skipped.
+          </p>
+        </.form>
       </:item>
       <:item title="Delete">
         <.form
@@ -1287,7 +1422,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       socket.assigns.selected_photos
       |> Enum.map(& &1.id)
       |> Gallery.get_photos_by_ids(include_private: socket.assigns.is_admin)
-      |> Repo.preload([:tags, :folder])
+      |> Repo.preload([:tags, :folder, :cross_listings, original_photo: :folder])
+
+    # Preload cross_listings with their folders for display
+    selected_photos =
+      Enum.map(selected_photos, fn photo ->
+        if photo.cross_listings do
+          cross_listings = Repo.preload(photo.cross_listings, :folder)
+          %{photo | cross_listings: cross_listings}
+        else
+          photo
+        end
+      end)
 
     update_photo_form =
       case selected_photos do
@@ -1300,6 +1446,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     socket
     |> assign(selected_photos: selected_photos)
     |> assign(update_photo_form: update_photo_form)
+    |> assign(cross_listings: case selected_photos do
+      [photo] -> if is_nil(photo.original_photo_id), do: photo.cross_listings, else: nil
+      _ -> nil
+    end)
   end
 
   def refresh_filtered_photos(socket) do
@@ -1593,6 +1743,106 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
          )
      )
      |> put_flash(:info, "Photos deleted successfully.")}
+  end
+
+  def handle_event("create_cross_listing", %{"photo_id" => id, "target_folder_id" => target_folder_id}, socket) do
+    photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
+    target_folder_id = String.to_integer(target_folder_id)
+
+    case Gallery.create_cross_listing(photo, target_folder_id) do
+      {:ok, _cross_listing} ->
+        {:noreply,
+         socket
+         |> refresh_selected_photos()
+         |> put_flash(:info, "Photo cross-listed successfully.")}
+
+      {:error, :cannot_cross_list_a_cross_listing} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot cross-list a cross-listing. Only original photos can be cross-listed.")}
+
+      {:error, :cannot_cross_list_to_same_folder} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot cross-list to the same folder.")}
+
+      {:error, :cross_listing_already_exists} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "This photo is already cross-listed in that folder.")}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to create cross-listing.")}
+    end
+  end
+
+  def handle_event("remove_cross_listing", %{"photo_id" => id}, socket) do
+    photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
+
+    case Gallery.remove_cross_listing(photo) do
+      {:ok, _photo} ->
+        {:noreply,
+         socket
+         |> refresh_filtered_photos()
+         |> push_patch(
+           to:
+             Util.build_url(
+               socket.assigns.folder,
+               [],
+               socket.assigns.tags,
+               socket.assigns.exclude_tags,
+               socket.assigns.is_admin,
+               nil,
+               socket.assigns.sort
+             )
+         )
+         |> put_flash(:info, "Cross-listing removed successfully.")}
+
+      {:error, :not_a_cross_listing} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "This is not a cross-listing.")}
+    end
+  end
+
+  def handle_event("create_cross_listing_bulk", %{"target_folder_id" => target_folder_id}, socket) do
+    selected_photos = socket.assigns.selected_photos
+    target_folder_id = String.to_integer(target_folder_id)
+
+    {success_count, skip_count, error_count} =
+      Enum.reduce(selected_photos, {0, 0, 0}, fn photo, {success, skip, error} ->
+        # Only cross-list original photos (skip cross-listings)
+        if Gallery.is_cross_listing?(photo) do
+          {success, skip + 1, error}
+        else
+          case Gallery.create_cross_listing(photo, target_folder_id) do
+            {:ok, _cross_listing} -> {success + 1, skip, error}
+            {:error, _} -> {success, skip, error + 1}
+          end
+        end
+      end)
+
+    message =
+      cond do
+        success_count > 0 and skip_count == 0 and error_count == 0 ->
+          "#{success_count} photo(s) cross-listed successfully."
+
+        success_count > 0 and (skip_count > 0 or error_count > 0) ->
+          "#{success_count} photo(s) cross-listed. #{skip_count} skipped (already cross-listings). #{error_count} failed."
+
+        skip_count > 0 and error_count == 0 ->
+          "All selected photos are already cross-listings. Nothing to cross-list."
+
+        true ->
+          "Failed to cross-list photos. #{skip_count} skipped, #{error_count} errors."
+      end
+
+    {:noreply,
+     socket
+     |> refresh_filtered_photos()
+     |> put_flash(if(success_count > 0, do: :info, else: :error), message)}
   end
 
   def handle_event("zoom_in", _params, socket) do
