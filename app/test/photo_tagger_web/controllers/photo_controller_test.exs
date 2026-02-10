@@ -18,10 +18,10 @@ defmodule PhotoTaggerWeb.PhotoControllerTest do
 			temp_dir = setup_temp_storage(%{})
 
 			# Create a public folder
-			public_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Public Test Folder", is_public: true})
+			public_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Public Test Folder", visibility_type: "public"})
 
 			# Create a private folder
-			private_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Private Test Folder", is_public: false})
+			private_folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "Private Test Folder", visibility_type: "private"})
 
 			conn = get(conn, ~p"/admin/photos/new")
 			response = html_response(conn, 200)

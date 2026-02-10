@@ -15,7 +15,7 @@ defmodule PhotoTagger.Gallery do
     case Ecto.Query.has_named_binding?(query, :folder) do
       true ->
         from([p, folder: f] in query,
-          where: f.is_public == true,
+          where: f.visibility_type in [:public, :unlisted],
           where: p.is_public == true
         )
 
@@ -23,7 +23,7 @@ defmodule PhotoTagger.Gallery do
         from(p in query,
           left_join: f in assoc(p, :folder),
           as: :folder,
-          where: f.is_public == true,
+          where: f.visibility_type == :public,
           where: p.is_public == true
         )
     end
@@ -41,7 +41,7 @@ defmodule PhotoTagger.Gallery do
     if Keyword.get(options, :include_private, false) do
       query
     else
-      from(f in query, where: f.is_public == true)
+      from(f in query, where: f.visibility_type == :public)
     end
   end
 
@@ -615,7 +615,22 @@ defmodule PhotoTagger.Gallery do
     Repo.get_by!(Folder, name: name)
   end
 
-  def create_folder(%{"name" => name, "is_public" => _is_public} = attrs) do
+  @doc """
+  Creates a new folder with the given attributes.
+
+  ## Parameters
+    - attrs: Map with "name" (required) and "visibility_type" (optional, defaults to "private")
+
+  ## Examples
+      Gallery.create_folder(%{"name" => "vacation", "visibility_type" => "public"})
+      Gallery.create_folder(%{"name" => "private_album"})  # defaults to private
+  """
+  def create_folder(%{"name" => _name} = attrs) do
+    attrs_with_default = Map.put_new(attrs, "visibility_type", "private")
+    do_create_folder(attrs_with_default)
+  end
+
+  defp do_create_folder(%{"name" => name, "visibility_type" => _visibility_type} = attrs) do
     changeset = %Folder{} |> Folder.changeset(attrs)
 
     Ecto.Multi.new()

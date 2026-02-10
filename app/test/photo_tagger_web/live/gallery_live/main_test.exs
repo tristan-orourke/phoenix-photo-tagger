@@ -141,8 +141,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 	describe "mount/3" do
 		@tag :skip
 		test "admin user sees admin layout with all folders and tags", %{conn: conn} do
-			folder1 = folder_fixture(%{name: "Folder1", is_public: true})
-			folder2 = folder_fixture(%{name: "Folder2", is_public: false})
+			folder1 = folder_fixture(%{name: "Folder1", visibility_type: :public})
+			folder2 = folder_fixture(%{name: "Folder2", visibility_type: :private})
 			tag1 = tag_fixture(%{name: "tag1"})
 			tag2 = tag_fixture(%{name: "tag2"})
 
@@ -155,8 +155,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		end
 
 		test "public user sees public layout with only public folders", %{conn: conn} do
-			folder1 = folder_fixture(%{name: "PublicFolder", is_public: true})
-			folder2 = folder_fixture(%{name: "PrivateFolder", is_public: false})
+			folder1 = folder_fixture(%{name: "PublicFolder", visibility_type: :public})
+			folder2 = folder_fixture(%{name: "PrivateFolder", visibility_type: :private})
 
 			{:ok, view, html} = live(conn, ~p"/")
 

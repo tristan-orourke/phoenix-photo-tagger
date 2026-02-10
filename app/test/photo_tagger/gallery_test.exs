@@ -520,9 +520,9 @@ defmodule PhotoTagger.GalleryTest do
 
 	describe "folders (mocked fixtures)" do
 		test "list_folders/0 returns all public folders sorted by name" do
-			_folder_c = folder_fixture(%{name: "c_folder", is_public: true})
-			_folder_a = folder_fixture(%{name: "a_folder", is_public: true})
-			_folder_private = folder_fixture(%{name: "b_private", is_public: false})
+			_folder_c = folder_fixture(%{name: "c_folder", visibility_type: :public})
+			_folder_a = folder_fixture(%{name: "a_folder", visibility_type: :public})
+			_folder_private = folder_fixture(%{name: "b_private", visibility_type: :private})
 
 			folders = Gallery.list_folders()
 			folder_names = Enum.map(folders, & &1.name)
@@ -532,8 +532,8 @@ defmodule PhotoTagger.GalleryTest do
 		end
 
 		test "list_folders/1 with include_private: true returns all folders" do
-			folder_fixture(%{name: "public_folder", is_public: true})
-			folder_fixture(%{name: "private_folder", is_public: false})
+			folder_fixture(%{name: "public_folder", visibility_type: :public})
+			folder_fixture(%{name: "private_folder", visibility_type: :private})
 
 			all_folders = Gallery.list_folders(include_private: true)
 			assert length(all_folders) == 2
@@ -556,19 +556,19 @@ defmodule PhotoTagger.GalleryTest do
 
 		test "create_folder/1 creates folder in database and filesystem", %{temp_dir: _temp_dir} do
 			{:ok, %{create_folder_db: folder}} =
-				Gallery.create_folder(%{"name" => "new_folder", "is_public" => true})
+				Gallery.create_folder(%{"name" => "new_folder", "visibility_type" => "public"})
 
 			assert folder.name == "new_folder"
 			assert TempFileHelper.folder_exists?(folder)
 		end
 
 		test "update_folder/2 updates folder attributes", %{temp_dir: temp_dir} do
-			folder = folder_fixture_with_files(%{temp_dir: temp_dir, is_public: false})
+			folder = folder_fixture_with_files(%{temp_dir: temp_dir, visibility_type: "private"})
 
 			assert {:ok, %{update_folder_db: updated}} =
-				Gallery.update_folder(folder, %{"name" => folder.name, "is_public" => true})
+				Gallery.update_folder(folder, %{"name" => folder.name, "visibility_type" => "public"})
 
-			assert updated.is_public == true
+			assert updated.visibility_type == :public
 		end
 
 		test "update_folder/2 renames directory when name changes", %{temp_dir: temp_dir} do
@@ -579,7 +579,7 @@ defmodule PhotoTagger.GalleryTest do
 			old_path = TempFileHelper.get_folder_path(folder)
 
 			assert {:ok, %{update_folder_db: updated}} =
-				Gallery.update_folder(folder, %{"name" => "new_name", "is_public" => folder.is_public})
+				Gallery.update_folder(folder, %{"name" => "new_name", "visibility_type" => to_string(folder.visibility_type)})
 
 			# Old path should be gone, new path should exist
 			refute File.dir?(old_path)
@@ -596,7 +596,7 @@ defmodule PhotoTagger.GalleryTest do
 
 			# Rename folder
 			assert {:ok, %{update_folder_db: _updated}} =
-				Gallery.update_folder(folder, %{"name" => "renamed_folder", "is_public" => folder.is_public})
+				Gallery.update_folder(folder, %{"name" => "renamed_folder", "visibility_type" => to_string(folder.visibility_type)})
 
 			# Old image path should be gone
 			refute File.exists?(old_image_path)
