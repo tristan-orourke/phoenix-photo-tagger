@@ -15,7 +15,7 @@ defmodule PhotoTagger.Gallery do
     case Ecto.Query.has_named_binding?(query, :folder) do
       true ->
         from([p, folder: f] in query,
-          where: f.visibility_type == :public,
+          where: f.visibility_type in [:public, :unlisted],
           where: p.is_public == true
         )
 
