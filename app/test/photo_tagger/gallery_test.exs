@@ -654,4 +654,189 @@ defmodule PhotoTagger.GalleryTest do
 			assert updated.manual_order == 1
 		end
 	end
+
+	describe "cross-listing (mocked fixtures)" do
+		setup do
+			folder1 = folder_fixture(%{name: "folder1"})
+			folder2 = folder_fixture(%{name: "folder2"})
+			{:ok, folder1: folder1, folder2: folder2}
+		end
+
+		test "is_cross_listing?/1 returns false for original photo", %{folder1: folder1} do
+			photo = photo_fixture(%{folder_id: folder1.id})
+			refute Gallery.is_cross_listing?(photo)
+		end
+
+		test "is_cross_listing?/1 returns true for cross-listed photo", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+			assert Gallery.is_cross_listing?(cross_listing)
+		end
+
+		test "is_original_with_cross_listings?/1 returns false for photo without cross-listings", %{folder1: folder1} do
+			photo = photo_fixture(%{folder_id: folder1.id})
+			refute Gallery.is_original_with_cross_listings?(photo)
+		end
+
+		test "is_original_with_cross_listings?/1 returns true for photo with cross-listings", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, _cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+			assert Gallery.is_original_with_cross_listings?(original)
+		end
+
+		test "create_cross_listing/2 creates a cross-listing with copied metadata", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{
+				folder_id: folder1.id,
+				description: "Original description",
+				notes: "Original notes",
+				group: "test_group",
+				is_public: true
+			})
+
+			# Add a tag to original
+			Gallery.add_tag_to_photo(original, "test_tag")
+
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			# Verify cross-listing has copied metadata
+			assert cross_listing.folder_id == folder2.id
+			assert cross_listing.original_photo_id == original.id
+			assert cross_listing.name == original.name
+			assert cross_listing.description == "Original description"
+			assert cross_listing.notes == "Original notes"
+			assert cross_listing.group == "test_group"
+			assert cross_listing.is_public == true
+
+			# Verify tags were copied
+			assert length(cross_listing.tags) == 1
+			assert hd(cross_listing.tags).name == "test_tag"
+
+			# Verify manual_order was assigned
+			assert cross_listing.manual_order == 1
+		end
+
+		test "create_cross_listing/2 returns error when cross-listing a cross-listing", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			folder3 = folder_fixture(%{name: "folder3"})
+			assert {:error, :cannot_cross_list_a_cross_listing} = Gallery.create_cross_listing(cross_listing, folder3.id)
+		end
+
+		test "create_cross_listing/2 returns error when cross-listing to same folder", %{folder1: folder1} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			assert {:error, :cannot_cross_list_to_same_folder} = Gallery.create_cross_listing(original, folder1.id)
+		end
+
+		test "create_cross_listing/2 returns error when cross-listing already exists", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, _cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			# Try to create duplicate cross-listing
+			assert {:error, :cross_listing_already_exists} = Gallery.create_cross_listing(original, folder2.id)
+		end
+
+		test "get_cross_listings/1 returns all cross-listings for an original", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			folder3 = folder_fixture(%{name: "folder3"})
+
+			{:ok, cl1} = Gallery.create_cross_listing(original, folder2.id)
+			{:ok, cl2} = Gallery.create_cross_listing(original, folder3.id)
+
+			cross_listings = Gallery.get_cross_listings(original)
+			assert length(cross_listings) == 2
+
+			cl_ids = Enum.map(cross_listings, & &1.id)
+			assert cl1.id in cl_ids
+			assert cl2.id in cl_ids
+		end
+
+		test "get_cross_listings/1 returns empty list for cross-listing", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			assert Gallery.get_cross_listings(cross_listing) == []
+		end
+
+		test "remove_cross_listing/1 removes a cross-listing", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			assert {:ok, _deleted} = Gallery.remove_cross_listing(cross_listing)
+
+			# Cross-listing should be gone
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cross_listing.id, include_private: true)
+			end
+
+			# Original should still exist
+			assert Gallery.get_photo!(original.id, include_private: true)
+		end
+
+		test "remove_cross_listing/1 returns error for original photo", %{folder1: folder1} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			assert {:error, :not_a_cross_listing} = Gallery.remove_cross_listing(original)
+		end
+
+		test "delete_photo/1 on cross-listing removes it without deleting files", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			assert {:ok, _deleted} = Gallery.delete_photo(cross_listing)
+
+			# Cross-listing should be gone
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cross_listing.id, include_private: true)
+			end
+
+			# Original should still exist
+			assert Gallery.get_photo!(original.id, include_private: true)
+		end
+
+		test "delete_photo/1 on original cascades to delete cross-listings", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			folder3 = folder_fixture(%{name: "folder3"})
+
+			{:ok, cl1} = Gallery.create_cross_listing(original, folder2.id)
+			{:ok, cl2} = Gallery.create_cross_listing(original, folder3.id)
+
+			assert {:ok, _deleted} = Gallery.delete_photo(original)
+
+			# Original and all cross-listings should be gone
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(original.id, include_private: true)
+			end
+
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cl1.id, include_private: true)
+			end
+
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cl2.id, include_private: true)
+			end
+		end
+
+		test "update_photo/2 returns error when moving original to folder with cross-listing", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, _cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			# Try to move original to folder2
+			assert {:error, :cross_listing_exists_in_target_folder} = Gallery.update_photo(original, %{"folder_id" => folder2.id})
+		end
+
+		test "list_photos_by_folder/2 includes cross-listings", %{folder1: folder1, folder2: folder2} do
+			original = photo_fixture(%{folder_id: folder1.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder2.id)
+
+			# folder1 should have original
+			folder1_photos = Gallery.list_photos_by_folder(folder1.name, include_private: true)
+			assert length(folder1_photos) == 1
+			assert hd(folder1_photos).id == original.id
+
+			# folder2 should have cross-listing
+			folder2_photos = Gallery.list_photos_by_folder(folder2.name, include_private: true)
+			assert length(folder2_photos) == 1
+			assert hd(folder2_photos).id == cross_listing.id
+		end
+	end
 end
