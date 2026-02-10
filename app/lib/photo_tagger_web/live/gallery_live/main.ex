@@ -1683,6 +1683,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
          |> refresh_filtered_photos()
          |> put_flash(:info, "Photo updated successfully.")}
 
+      {:error, :cross_listing_exists_in_target_folder} ->
+        {:noreply,
+         socket
+         |> refresh_selected_photos()
+         |> put_flash(
+           :error,
+           "Cannot move photo to this folder. A cross-listing of this photo already exists there."
+         )}
+
       {:error, failed_op, failed_value, _changeset} ->
         {:noreply,
          socket
