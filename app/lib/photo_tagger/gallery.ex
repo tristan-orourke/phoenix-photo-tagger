@@ -615,7 +615,22 @@ defmodule PhotoTagger.Gallery do
     Repo.get_by!(Folder, name: name)
   end
 
-  def create_folder(%{"name" => name, "visibility_type" => _visibility_type} = attrs) do
+  @doc """
+  Creates a new folder with the given attributes.
+
+  ## Parameters
+    - attrs: Map with "name" (required) and "visibility_type" (optional, defaults to "private")
+
+  ## Examples
+      Gallery.create_folder(%{"name" => "vacation", "visibility_type" => "public"})
+      Gallery.create_folder(%{"name" => "private_album"})  # defaults to private
+  """
+  def create_folder(%{"name" => _name} = attrs) do
+    attrs_with_default = Map.put_new(attrs, "visibility_type", "private")
+    do_create_folder(attrs_with_default)
+  end
+
+  defp do_create_folder(%{"name" => name, "visibility_type" => _visibility_type} = attrs) do
     changeset = %Folder{} |> Folder.changeset(attrs)
 
     Ecto.Multi.new()
