@@ -18,7 +18,32 @@ Track bugs with root causes and solutions for future reference.
 
 ## Active Bugs
 
-(None)
+### [2026-02-10] Tag breadcrumbs don't preserve exclude_tags when clicked
+
+**Symptoms**: When using tag breadcrumbs in the gallery header to navigate back to a previous filter state, excluded tags are not preserved. Additionally, when toggling/removing a tag filter using the tag toggle buttons, the breadcrumb links don't update to reflect the current exclude_tags state.
+
+For example:
+1. User filters by tags ["landscape", "sunset"] and excludes tag "portrait" 
+2. User clicks the "landscape" breadcrumb to return to just the "landscape" filter
+3. The excluded tag "portrait" is lost, showing all landscape photos including those with "portrait" tag
+
+Similarly, when removing a tag filter via toggle:
+1. User has tags ["landscape", "sunset"] with "portrait" excluded
+2. User clicks to remove "sunset" from the filter
+3. Breadcrumb links rebuild but don't include the exclude_tags parameter
+
+**Root Cause**: The breadcrumb link generation in `gallery_header/1` component (lines 476 and 486 in `main.ex`) calls `Util.build_url()` with hardcoded empty arrays for `exclude_tags`:
+- Line 476 (folder breadcrumb): `Util.build_url(@folder, [], [], [], @is_admin)` 
+- Line 486 (tag breadcrumbs): `Util.build_url(@folder, [], Enum.reverse(tags), [], @is_admin)`
+
+The fourth parameter `[]` resets exclude_tags to empty, discarding any exclusions the user had set. The breadcrumb links also don't preserve other URL parameters like `sort` or `pg` (pagination).
+
+**Solution**: Update breadcrumb link generation to pass current `@exclude_tags`, `@sort`, and potentially `@pg` from assigns to `Util.build_url()` calls, preserving filter state when navigating via breadcrumbs.
+
+**Files Affected**:
+- `app/lib/photo_tagger_web/live/gallery_live/main.ex` (lines 476, 486)
+
+**Related Issues**: Tag filtering, breadcrumb navigation, user experience with exclude filters
 
 ---
 
