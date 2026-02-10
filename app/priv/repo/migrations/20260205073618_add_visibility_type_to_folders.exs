@@ -33,12 +33,12 @@ defmodule PhotoTagger.Repo.Migrations.AddVisibilityTypeToFolders do
       add :is_public, :boolean, default: false, null: false
     end
 
-    # Migrate data back: public/unlisted -> true, private -> false
-    # Note: unlisted will be converted to public on rollback
+    # Migrate data back: public -> true, private/unlisted -> false
+    # Note: unlisted will be converted to private on rollback
     execute """
     UPDATE folders
     SET is_public = CASE
-      WHEN visibility_type IN ('public', 'unlisted') THEN true
+      WHEN visibility_type = 'public' THEN true
       ELSE false
     END
     """
