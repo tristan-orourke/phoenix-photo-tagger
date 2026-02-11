@@ -821,6 +821,161 @@ defmodule PhotoTagger.GalleryTest do
 		end
 	end
 
+	describe "create_cross_listing/2" do
+		test "successfully creates cross-listing with copied metadata" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{
+				folder_id: folder_a.id,
+				name: "original.jpg",
+				description: "Original description",
+				notes: "Original notes",
+				group: "original_group",
+				is_public: false
+			})
+
+			assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Verify copied metadata
+			assert cross_listing.name == original.name
+			assert cross_listing.description == original.description
+			assert cross_listing.notes == original.notes
+			assert cross_listing.group == original.group
+			assert cross_listing.is_public == original.is_public
+		end
+
+		test "copies image and image_last_modified from original" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			image_timestamp = ~U[2025-01-15 10:30:00Z]
+			original = photo_fixture(%{
+				folder_id: folder_a.id,
+				image_last_modified: image_timestamp
+			})
+
+			assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Verify image field is copied
+			assert cross_listing.image != nil
+			assert cross_listing.image.file_name == original.image.file_name
+
+			# Verify image_last_modified is copied
+			assert DateTime.compare(cross_listing.image_last_modified, image_timestamp) == :eq
+		end
+
+		test "copies all tags from original" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			Gallery.add_tag_to_photo(original, "landscape")
+			Gallery.add_tag_to_photo(original, "sunset")
+
+			# Reload with tags
+			original = Gallery.get_photo!(original.id) |> Repo.preload(:tags)
+
+			assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Reload cross-listing with tags
+			cross_listing_with_tags = Gallery.get_photo!(cross_listing.id) |> Repo.preload(:tags)
+
+			# Verify all tags copied
+			assert length(cross_listing_with_tags.tags) == 2
+			tag_names = Enum.map(cross_listing_with_tags.tags, & &1.name) |> Enum.sort()
+			assert tag_names == ["landscape", "sunset"]
+		end
+
+		test "sets original_photo_id to original's id" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			assert cross_listing.original_photo_id == original.id
+		end
+
+		test "sets folder_id to target folder" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			assert cross_listing.folder_id == folder_b.id
+		end
+
+		test "assigns manual_order appending to end of target folder" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			# Create existing photos in folder_b with manual orders 1, 2, 3
+			_existing1 = photo_fixture(%{folder_id: folder_b.id, manual_order: 1})
+			_existing2 = photo_fixture(%{folder_id: folder_b.id, manual_order: 2})
+			_existing3 = photo_fixture(%{folder_id: folder_b.id, manual_order: 3})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Should be appended after highest manual_order (3)
+			assert cross_listing.manual_order == 4
+		end
+
+		test "returns error when photo is already a cross-listing" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+			folder_c = folder_fixture(%{name: "folder_c"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			# Create a cross-listing
+			image = %{file_name: "cross_listing.jpg", updated_at: DateTime.utc_now()}
+			{:ok, cross_listing} = %Photo{}
+				|> Ecto.Changeset.cast(%{
+					name: "cross_listing.jpg",
+					folder_id: folder_b.id,
+					image_last_modified: DateTime.utc_now(),
+					original_photo_id: original.id,
+					manual_order: 1
+				}, [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order])
+				|> Ecto.Changeset.put_change(:image, image)
+				|> Repo.insert()
+
+			# Try to create a cross-listing from a cross-listing
+			assert {:error, changeset} = Gallery.create_cross_listing(cross_listing, folder_c.id)
+			assert "cannot create cross-listing from a cross-listing" in errors_on(changeset).base
+		end
+
+		test "returns error when target folder is same as original's folder" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			# Try to create cross-listing in same folder
+			assert {:error, changeset} = Gallery.create_cross_listing(original, folder_a.id)
+			assert "cannot cross-list to the same folder" in errors_on(changeset).base
+		end
+
+		test "returns error when cross-listing already exists in target folder" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			# Create first cross-listing successfully
+			assert {:ok, _cross_listing1} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Try to create duplicate cross-listing in same folder
+			assert {:error, changeset} = Gallery.create_cross_listing(original, folder_b.id)
+			assert "cross-listing already exists in this folder" in errors_on(changeset).base
+		end
+	end
+
 	describe "cross-listing integration tests" do
 		alias PhotoTagger.TempFileHelper
 

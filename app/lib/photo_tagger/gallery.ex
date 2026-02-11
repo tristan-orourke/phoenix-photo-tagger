@@ -536,6 +536,146 @@ defmodule PhotoTagger.Gallery do
     |> Repo.all()
   end
 
+  @doc """
+  Creates a cross-listing of a photo in another folder.
+
+  A cross-listing is a database-only entry that references the original photo's
+  image files without duplicating them. The cross-listing copies metadata and tags
+  from the original at creation time, but changes to either record do not affect
+  the other after creation.
+
+  ## Parameters
+
+    - photo: The original photo (must not itself be a cross-listing)
+    - target_folder_id: The folder ID to create the cross-listing in
+
+  ## Returns
+
+    - `{:ok, cross_listing}` on success
+    - `{:error, changeset}` if validation fails
+
+  ## Validations
+
+    - Photo cannot already be a cross-listing (must be an original)
+    - Target folder must differ from original's folder
+    - Cross-listing cannot already exist in target folder
+
+  ## Examples
+
+      iex> create_cross_listing(original_photo, other_folder.id)
+      {:ok, %Photo{original_photo_id: 123}}
+
+      iex> create_cross_listing(cross_listing_photo, folder.id)
+      {:error, %Ecto.Changeset{}}
+  """
+  def create_cross_listing(%Photo{} = photo, target_folder_id) do
+    # Preload tags if not loaded
+    photo = if Ecto.assoc_loaded?(photo.tags), do: photo, else: Repo.preload(photo, :tags)
+
+    changeset =
+      %Photo{}
+      |> Ecto.Changeset.cast(%{
+        name: photo.name,
+        folder_id: target_folder_id,
+        description: photo.description,
+        notes: photo.notes,
+        group: photo.group,
+        is_public: photo.is_public,
+        image_last_modified: photo.image_last_modified,
+        original_photo_id: photo.id,
+        manual_order: get_next_manual_order(target_folder_id)
+      }, [
+        :name,
+        :folder_id,
+        :description,
+        :notes,
+        :group,
+        :is_public,
+        :image_last_modified,
+        :original_photo_id,
+        :manual_order
+      ])
+      |> Ecto.Changeset.put_change(:image, photo.image)
+      |> validate_not_a_cross_listing()
+      |> validate_different_folder(photo.folder_id)
+      |> validate_no_duplicate_cross_listing(photo.id, target_folder_id)
+
+    case Repo.insert(changeset) do
+      {:ok, cross_listing} ->
+        # Copy tags from original
+        tag_ids = Enum.map(photo.tags, & &1.id)
+        copy_tags_to_photo(cross_listing, tag_ids)
+        {:ok, Repo.preload(cross_listing, :tags)}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  # Validates that the photo being cross-listed is not itself a cross-listing
+  defp validate_not_a_cross_listing(changeset) do
+    # Check if original_photo_id being set indicates this is creating a cross-listing
+    # If the source photo was already a cross-listing, we'd be trying to create
+    # a cross-listing of a cross-listing (not allowed)
+    original_photo_id = Ecto.Changeset.get_field(changeset, :original_photo_id)
+
+    case original_photo_id do
+      nil ->
+        changeset
+
+      id ->
+        source_photo = Repo.get!(Photo, id)
+
+        if source_photo.original_photo_id != nil do
+          Ecto.Changeset.add_error(
+            changeset,
+            :base,
+            "cannot create cross-listing from a cross-listing"
+          )
+        else
+          changeset
+        end
+    end
+  end
+
+  # Validates that target folder is different from original's folder
+  defp validate_different_folder(changeset, original_folder_id) do
+    target_folder_id = Ecto.Changeset.get_field(changeset, :folder_id)
+
+    if target_folder_id == original_folder_id do
+      Ecto.Changeset.add_error(changeset, :base, "cannot cross-list to the same folder")
+    else
+      changeset
+    end
+  end
+
+  # Validates that no cross-listing of this photo already exists in target folder
+  defp validate_no_duplicate_cross_listing(changeset, original_photo_id, target_folder_id) do
+    existing =
+      from(p in Photo,
+        where: p.original_photo_id == ^original_photo_id,
+        where: p.folder_id == ^target_folder_id
+      )
+      |> Repo.one()
+
+    if existing do
+      Ecto.Changeset.add_error(changeset, :base, "cross-listing already exists in this folder")
+    else
+      changeset
+    end
+  end
+
+  # Copies tags by ID to a photo (used internally for cross-listing)
+  defp copy_tags_to_photo(photo, tag_ids) when is_list(tag_ids) do
+    Enum.each(tag_ids, fn tag_id ->
+      tag = Repo.get!(Tag, tag_id)
+
+      %PhotoTag{}
+      |> PhotoTag.changeset(%{photo_id: photo.id, tag_id: tag.id})
+      |> Repo.insert(on_conflict: :nothing)
+    end)
+  end
+
   # ============================================================================
   # Tag functions
   # ============================================================================
