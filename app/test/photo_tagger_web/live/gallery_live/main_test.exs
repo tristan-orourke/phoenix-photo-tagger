@@ -1492,4 +1492,306 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			assert_patched_to(view, ~p"/admin/photos/#{photo.id}")
 		end
 	end
+
+	describe "cross-listing UI integration tests" do
+		test "cross-listing badge displays with link to original folder", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id, name: "original.jpg"})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# View cross-listing in admin mode
+			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{cross_listing.id}")
+
+			# Should show cross-listing badge
+			assert html =~ "cross-listed from"
+			assert html =~ "folder_a"
+
+			# Badge should link to original photo
+			doc = Floki.parse_document!(html)
+			badge_links = Floki.find(doc, "p:fl-contains('cross-listed from') a")
+			assert length(badge_links) > 0
+		end
+
+		test "cross-listing badge does not display for original photos", %{conn: conn} do
+			folder = folder_fixture()
+			original = photo_fixture(%{folder_id: folder.id})
+
+			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Should NOT show cross-listing badge
+			refute html =~ "cross-listed from"
+		end
+
+		test "cross-listing badge does not display for non-admin users", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a", visibility_type: :public})
+			folder_b = folder_fixture(%{name: "folder_b", visibility_type: :public})
+
+			original = photo_fixture(%{folder_id: folder_a.id, is_public: true})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Update cross-listing to be public
+			{:ok, %{photo: _updated}} = Gallery.update_photo(cross_listing, %{"is_public" => true})
+
+			# View as public user (no /admin in URL)
+			{:ok, _view, html} = live(conn, ~p"/photos/#{cross_listing.id}")
+
+			# Should NOT show cross-listing badge
+			refute html =~ "cross-listed from"
+		end
+
+		test "original photo shows list of cross-listings with folder links", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+			folder_c = folder_fixture(%{name: "folder_c"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, _cross_b} = Gallery.create_cross_listing(original, folder_b.id)
+			{:ok, _cross_c} = Gallery.create_cross_listing(original, folder_c.id)
+
+			# View original in admin mode
+			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Should show cross-listings list
+			assert html =~ "Cross-listed in:"
+			assert html =~ "folder_b"
+			assert html =~ "folder_c"
+		end
+
+		test "original photo without cross-listings does not show cross-listings list", %{conn: conn} do
+			folder = folder_fixture()
+			original = photo_fixture(%{folder_id: folder.id})
+
+			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Should NOT show cross-listings list
+			refute html =~ "Cross-listed in:"
+		end
+
+		test "delete section shows 'Remove cross-listing' button for cross-listings", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			{:ok, view, html} = live(conn, ~p"/admin/photos/#{cross_listing.id}")
+
+			# Should show "Remove cross-listing" button
+			assert html =~ "Remove cross-listing"
+			assert has_element?(view, "button", "Remove cross-listing")
+
+			# Should NOT show regular delete button
+			refute html =~ "Delete photo"
+		end
+
+		test "delete section shows enhanced message for originals with cross-listings", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+			folder_c = folder_fixture(%{name: "folder_c"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, _cross_b} = Gallery.create_cross_listing(original, folder_b.id)
+			{:ok, _cross_c} = Gallery.create_cross_listing(original, folder_c.id)
+
+			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Should show cross-listings in delete section
+			assert html =~ "Also cross-listed in:"
+			assert html =~ "folder_b"
+			assert html =~ "folder_c"
+
+			# Should show enhanced delete button text
+			assert html =~ "Delete photo and all cross-listings"
+		end
+
+		test "create cross-listing via UI creates cross-listing and updates view", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id, name: "original.jpg"})
+
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Submit create cross-listing form
+			html = render_submit(view, "create_cross_listing", %{
+				"photo_id" => to_string(original.id),
+				"folder_id" => to_string(folder_b.id)
+			})
+
+			# Should show success flash
+			assert html =~ "Photo cross-listed to folder_b"
+
+			# Should now show cross-listings list
+			assert html =~ "Cross-listed in:"
+			assert html =~ "folder_b"
+		end
+
+		test "create cross-listing shows error when cross-listing already exists", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, _existing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Try to create duplicate
+			html = render_submit(view, "create_cross_listing", %{
+				"photo_id" => to_string(original.id),
+				"folder_id" => to_string(folder_b.id)
+			})
+
+			# Should show error flash
+			assert html =~ "Failed to create cross-listing"
+		end
+
+		test "remove cross-listing via UI deletes cross-listing and navigates back", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{cross_listing.id}")
+
+			# Submit remove cross-listing form
+			render_submit(view, "remove_cross_listing", %{
+				"photo_id" => to_string(cross_listing.id)
+			})
+
+			# Should navigate back to folder view
+			assert_patched_to(view, ~p"/admin/folders/#{folder_b.name}")
+
+			# Cross-listing should be deleted
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cross_listing.id, include_private: true)
+			end
+
+			# Original should still exist
+			assert %Photo{} = Gallery.get_photo!(original.id, include_private: true)
+		end
+
+		test "folder selector excludes current folder and cross-listed folders", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+			folder_c = folder_fixture(%{name: "folder_c"})
+			folder_d = folder_fixture(%{name: "folder_d"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, _cross_b} = Gallery.create_cross_listing(original, folder_b.id)
+
+			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			doc = Floki.parse_document!(html)
+			folder_options = Floki.find(doc, "select[name='folder_id'] option")
+			option_values = Enum.map(folder_options, fn {_tag, attrs, _children} ->
+				Enum.find_value(attrs, fn {key, value} -> if key == "value" && value != "", do: value end)
+			end) |> Enum.reject(&is_nil/1)
+
+			# Should include folder_c and folder_d
+			assert to_string(folder_c.id) in option_values
+			assert to_string(folder_d.id) in option_values
+
+			# Should NOT include folder_a (current) or folder_b (already cross-listed)
+			refute to_string(folder_a.id) in option_values
+			refute to_string(folder_b.id) in option_values
+		end
+
+		test "bulk cross-listing creates entries for all selected originals", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			photo1 = photo_fixture(%{folder_id: folder_a.id, name: "photo1.jpg"})
+			photo2 = photo_fixture(%{folder_id: folder_a.id, name: "photo2.jpg"})
+			photo3 = photo_fixture(%{folder_id: folder_a.id, name: "photo3.jpg"})
+
+			{:ok, view, _html} = live(conn, ~p"/admin/folders/#{folder_a.name}")
+
+			# Enable multiselect mode
+			render_click(view, "toggle_multiselect", %{})
+
+			# Select all three photos
+			render_click(view, "select_gallery_photo", %{
+				"photo_id" => to_string(photo1.id),
+				"ctrl_key_pressed" => "true",
+				"shift_key_pressed" => "false"
+			})
+			render_click(view, "select_gallery_photo", %{
+				"photo_id" => to_string(photo2.id),
+				"ctrl_key_pressed" => "true",
+				"shift_key_pressed" => "false"
+			})
+			render_click(view, "select_gallery_photo", %{
+				"photo_id" => to_string(photo3.id),
+				"ctrl_key_pressed" => "true",
+				"shift_key_pressed" => "false"
+			})
+
+			# Submit bulk cross-listing
+			html = render_submit(view, "create_cross_listing_bulk", %{
+				"folder_id" => to_string(folder_b.id)
+			})
+
+			# Should show success message
+			assert html =~ "Created 3 cross-listing(s)"
+
+			# Verify cross-listings were created
+			folder_b_photos = Gallery.list_photos_by_folder(folder_b.name, include_private: true)
+			assert length(folder_b_photos) == 3
+		end
+
+		test "bulk cross-listing skips photos that are already cross-listings", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+			folder_c = folder_fixture(%{name: "folder_c"})
+
+			# Create original and cross-listing
+			original = photo_fixture(%{folder_id: folder_a.id, name: "original.jpg"})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			{:ok, view, _html} = live(conn, ~p"/admin/folders/#{folder_b.name}")
+
+			# Enable multiselect and select the cross-listing
+			render_click(view, "toggle_multiselect", %{})
+			render_click(view, "select_gallery_photo", %{
+				"photo_id" => to_string(cross_listing.id),
+				"ctrl_key_pressed" => "true",
+				"shift_key_pressed" => "false"
+			})
+
+			# Try to bulk cross-list to folder_c
+			html = render_submit(view, "create_cross_listing_bulk", %{
+				"folder_id" => to_string(folder_c.id)
+			})
+
+			# Should show that no cross-listings were created
+			assert html =~ "No cross-listings created"
+
+			# Verify no cross-listings in folder_c
+			folder_c_photos = Gallery.list_photos_by_folder(folder_c.name, include_private: true)
+			assert length(folder_c_photos) == 0
+		end
+
+		test "move photo to cross-listed folder shows user-friendly error", %{conn: conn} do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, _cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{original.id}")
+
+			# Try to update folder to folder_b
+			html = render_submit(view, "update_photo", %{
+				"photo_id" => to_string(original.id),
+				"photo" => %{"folder_id" => to_string(folder_b.id)}
+			})
+
+			# Should show error with folder name
+			assert html =~ "Cannot move: this photo is cross-listed in folder_b"
+			assert html =~ "Remove the cross-listing first"
+		end
+	end
 end

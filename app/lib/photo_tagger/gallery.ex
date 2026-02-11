@@ -496,6 +496,50 @@ defmodule PhotoTagger.Gallery do
     Photo.changeset_update(photo, attrs)
   end
 
+  # ============================================================================
+  # Cross-listing functions
+  # ============================================================================
+
+  @doc """
+  Returns true if the photo is a cross-listing (has an original_photo_id).
+
+  ## Examples
+
+      iex> is_cross_listing?(photo)
+      false
+
+      iex> is_cross_listing?(cross_listing)
+      true
+  """
+  def is_cross_listing?(%Photo{} = photo) do
+    photo.original_photo_id != nil
+  end
+
+  @doc """
+  Returns all cross-listings of an original photo.
+
+  Returns an empty list if the photo has no cross-listings or if the photo
+  is itself a cross-listing.
+
+  ## Examples
+
+      iex> get_cross_listings(original_photo)
+      [%Photo{}, %Photo{}]
+
+      iex> get_cross_listings(photo_without_cross_listings)
+      []
+  """
+  def get_cross_listings(%Photo{} = photo) do
+    from(p in Photo,
+      where: p.original_photo_id == ^photo.id
+    )
+    |> Repo.all()
+  end
+
+  # ============================================================================
+  # Tag functions
+  # ============================================================================
+
   def add_tag_to_photo(%Photo{} = photo, name) do
     tag = get_or_create_tag(name)
     attrs = %{photo_id: photo.id, tag_id: tag.id}
