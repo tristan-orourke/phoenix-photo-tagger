@@ -80,7 +80,7 @@ defmodule PhotoTagger.Gallery do
   defp list_photos_query(sort) do
     from(p in Photo,
       as: :photo,
-      preload: [:folder],
+      preload: [:folder, original_photo: :folder],
       select: p
     )
     |> apply_sort_order(sort)
@@ -124,7 +124,7 @@ defmodule PhotoTagger.Gallery do
         inner_join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [folder: f]
+        preload: [folder: f, original_photo: :folder]
       )
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
@@ -140,8 +140,7 @@ defmodule PhotoTagger.Gallery do
         inner_join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [tags: t],
-        preload: [folder: f]
+        preload: [tags: t, folder: f, original_photo: :folder]
       )
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
@@ -196,7 +195,7 @@ defmodule PhotoTagger.Gallery do
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
-      from(p in query, preload: [:folder])
+      from(p in query, preload: [:folder, original_photo: :folder])
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
     )
@@ -281,7 +280,7 @@ defmodule PhotoTagger.Gallery do
         join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [folder: f]
+        preload: [folder: f, original_photo: :folder]
       )
       |> only_public_photos_unless_forced(options)
     )
@@ -347,10 +346,10 @@ defmodule PhotoTagger.Gallery do
   defp photo_full_path(%Photo{} = photo, version) do
     # Original keeps its extension, transforms use .webp (set in ImageUploader.transform/2)
     ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".webp")
-    photo = Repo.preload(photo, :folder)
+    photo = Repo.preload(photo, [:folder, original_photo: :folder])
 
     Path.join([
-      get_folder_path(photo.folder.name),
+      get_folder_path(storage_folder(photo).name),
       ImageUploader.filename(version, {photo.image, photo}) <> ext
     ])
   end
@@ -439,7 +438,7 @@ defmodule PhotoTagger.Gallery do
       )
 
     changeset = Photo.changeset_update(photo, attrs)
-    photo = Repo.preload(photo, :folder)
+    photo = Repo.preload(photo, [:folder, original_photo: :folder])
 
     # Detect if manual_order is changing
     new_order =
@@ -545,6 +544,22 @@ defmodule PhotoTagger.Gallery do
   def is_cross_listing?(%Photo{} = photo) do
     photo.original_photo_id != nil
   end
+
+  @doc """
+  Returns the folder where a photo's image files are stored.
+
+  For original photos, this is the photo's own folder.
+  For cross-listed photos, this is the original photo's folder.
+
+  Requires `:folder` and `original_photo: :folder` to be preloaded.
+  """
+  def storage_folder(%Photo{original_photo_id: nil, folder: folder}), do: folder
+  def storage_folder(%Photo{original_photo: %Photo{folder: folder}}), do: folder
+
+  # Fallback for maps (e.g. from simplified photo structs in components)
+  def storage_folder(%{original_photo_id: nil, folder: folder}), do: folder
+  def storage_folder(%{original_photo: %{folder: folder}}), do: folder
+  def storage_folder(%{folder: folder}), do: folder
 
   @doc """
   Returns all cross-listings of an original photo.

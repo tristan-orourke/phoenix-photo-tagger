@@ -12,6 +12,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 	import PhotoTagger.GalleryFixtures
 
 	alias PhotoTagger.Gallery
+	alias PhotoTagger.Gallery.Photo
 	alias PhotoTagger.Repo
 
 	# ============================================================================
@@ -1458,7 +1459,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 		test "returns false when photo is not in list", %{conn: conn} do
 			folder = folder_fixture()
 			photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
-			photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+			_photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
 
 			{:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
 

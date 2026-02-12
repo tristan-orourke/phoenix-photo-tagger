@@ -46,15 +46,38 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
     "#{basename}.#{version}"
   end
 
-  # Override the storage directory:
-  def storage_dir(_version, {_file, scope}) do
-    folder_name =
-      case scope do
-        %{folder: %{name: name}} -> name
-        %{folder_id: folder_id} -> Repo.get(PhotoTagger.Gallery.Folder, folder_id).name
-      end
+  @doc """
+  Returns the storage directory for a photo's image files.
 
+  For cross-listed photos, resolves to the original photo's folder
+  since cross-listings don't have their own files on disk.
+  """
+  def storage_dir(_version, {_file, scope}) do
+    folder_name = resolve_storage_folder_name(scope)
     "uploads/images/#{folder_name}"
+  end
+
+  # Cross-listed photo with original's folder already preloaded
+  defp resolve_storage_folder_name(%{original_photo: %{folder: %{name: name}}})
+       when is_binary(name),
+       do: name
+
+  # Cross-listed photo without preloaded original - fall back to DB lookup
+  defp resolve_storage_folder_name(%{original_photo_id: original_id})
+       when not is_nil(original_id) do
+    PhotoTagger.Gallery.Photo
+    |> Repo.get!(original_id)
+    |> Repo.preload(:folder)
+    |> Map.get(:folder)
+    |> Map.get(:name)
+  end
+
+  # Regular photo with folder preloaded
+  defp resolve_storage_folder_name(%{folder: %{name: name}}), do: name
+
+  # Regular photo with only folder_id
+  defp resolve_storage_folder_name(%{folder_id: folder_id}) do
+    Repo.get!(PhotoTagger.Gallery.Folder, folder_id).name
   end
 
   # Provide a default URL if there hasn't been a file uploaded
