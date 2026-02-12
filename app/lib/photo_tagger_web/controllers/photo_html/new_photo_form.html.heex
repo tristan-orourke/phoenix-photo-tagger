@@ -10,12 +10,15 @@
   <input class="hidden" type="text" name="photo[file_metadata]" id="new_photo_form_file_metadata" />
   <div class="mt-2">
     <label class="block text-sm font-semibold leading-6 text-zinc-800">Also cross-list to</label>
-    <select name="photo[cross_list_folder_ids][]" multiple class="mt-1 rounded-lg text-sm text-zinc-900 w-full min-h-[80px]">
+    <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
       <%= for folder <- @folders do %>
-        <option value={folder.id}><%= folder.name %></option>
+        <label class="flex items-center gap-1.5 text-sm text-zinc-900">
+          <input type="checkbox" name="photo[cross_list_folder_ids][]" value={folder.id}
+                 class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
+          <%= folder.name %>
+        </label>
       <% end %>
-    </select>
-    <p class="mt-1 text-sm text-zinc-500">Hold Ctrl/Cmd to select multiple folders. Photos will appear in these folders as cross-listings.</p>
+    </div>
   </div>
   <:actions>
     <.button>Save Photo</.button>
