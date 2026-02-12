@@ -201,6 +201,111 @@ defmodule PhotoTaggerWeb.PhotoControllerTest do
 		end
 	end
 
+	describe "upload with cross-listing" do
+		setup do
+			temp_dir = setup_temp_storage(%{})
+			folder = folder_fixture_with_files(%{temp_dir: temp_dir})
+			{:ok, temp_dir: temp_dir, folder: folder}
+		end
+
+		test "creates cross-listings in selected folders", %{conn: conn, folder: folder, temp_dir: temp_dir} do
+			folder_b = folder_fixture_with_files(%{temp_dir: temp_dir, name: "cross_target"})
+
+			image_filename = "cross_test.jpg"
+			{:ok, image_path} = create_test_image(temp_dir, image_filename)
+			upload = create_upload_from_file(image_path, image_filename)
+
+			last_modified = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+			metadata = JSON.encode!([%{"name" => image_filename, "lastModified" => last_modified}])
+
+			photo_params = %{
+				"folder" => folder.name,
+				"folder_id" => folder.id,
+				"images" => [upload],
+				"file_metadata" => metadata,
+				"is_public" => "true",
+				"cross_list_folder_ids" => [to_string(folder_b.id)]
+			}
+
+			conn = post(conn, ~p"/admin/photos", photo: photo_params)
+
+			assert redirected_to(conn) =~ "/admin/folders/#{folder.name}/photos/"
+			assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Photos created successfully"
+
+			# Verify original photo exists
+			photos = Gallery.list_photos_by_folder(folder.name, include_private: true)
+			assert length(photos) == 1
+
+			# Verify cross-listing was created in target folder
+			cross_listed = Gallery.list_photos_by_folder(folder_b.name, include_private: true)
+			assert length(cross_listed) == 1
+			assert Gallery.is_cross_listing?(hd(cross_listed))
+		end
+
+		test "creates cross-listings in multiple folders", %{conn: conn, folder: folder, temp_dir: temp_dir} do
+			folder_b = folder_fixture_with_files(%{temp_dir: temp_dir, name: "target_b"})
+			folder_c = folder_fixture_with_files(%{temp_dir: temp_dir, name: "target_c"})
+
+			image_filename = "multi_cross.jpg"
+			{:ok, image_path} = create_test_image(temp_dir, image_filename)
+			upload = create_upload_from_file(image_path, image_filename)
+
+			last_modified = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+			metadata = JSON.encode!([%{"name" => image_filename, "lastModified" => last_modified}])
+
+			photo_params = %{
+				"folder" => folder.name,
+				"folder_id" => folder.id,
+				"images" => [upload],
+				"file_metadata" => metadata,
+				"is_public" => "true",
+				"cross_list_folder_ids" => [to_string(folder_b.id), to_string(folder_c.id)]
+			}
+
+			conn = post(conn, ~p"/admin/photos", photo: photo_params)
+
+			assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Photos created successfully"
+
+			# Verify cross-listings exist in both target folders
+			assert length(Gallery.list_photos_by_folder(folder_b.name, include_private: true)) == 1
+			assert length(Gallery.list_photos_by_folder(folder_c.name, include_private: true)) == 1
+		end
+
+		test "upload without cross-listing folders still works normally", %{conn: conn, folder: folder, temp_dir: temp_dir} do
+			image_filename = "no_cross.jpg"
+			{:ok, image_path} = create_test_image(temp_dir, image_filename)
+			upload = create_upload_from_file(image_path, image_filename)
+
+			last_modified = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+			metadata = JSON.encode!([%{"name" => image_filename, "lastModified" => last_modified}])
+
+			photo_params = %{
+				"folder" => folder.name,
+				"folder_id" => folder.id,
+				"images" => [upload],
+				"file_metadata" => metadata,
+				"is_public" => "true"
+			}
+
+			conn = post(conn, ~p"/admin/photos", photo: photo_params)
+
+			assert redirected_to(conn) =~ "/admin/folders/#{folder.name}/photos/"
+			assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Photos created successfully"
+
+			photos = Gallery.list_photos_by_folder(folder.name, include_private: true)
+			assert length(photos) == 1
+			refute Gallery.is_cross_listing?(hd(photos))
+		end
+
+		test "upload form shows cross-listing folder multi-select", %{conn: conn, folder: _folder, temp_dir: _temp_dir} do
+			conn = get(conn, ~p"/admin/photos/new")
+			response = html_response(conn, 200)
+
+			assert response =~ "Also cross-list to"
+			assert response =~ "cross_list_folder_ids"
+		end
+	end
+
 	describe "build_url/2" do
 		test "generates correct URLs" do
 			folder = folder_fixture(%{name: "test_folder"})

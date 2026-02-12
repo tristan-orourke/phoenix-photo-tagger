@@ -1587,7 +1587,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 			refute html =~ "Delete photo"
 		end
 
-		test "delete section shows enhanced message for originals with cross-listings", %{conn: conn} do
+		test "Cross-list section shows enhanced message for originals with cross-listings", %{conn: conn} do
 			folder_a = folder_fixture(%{name: "folder_a"})
 			folder_b = folder_fixture(%{name: "folder_b"})
 			folder_c = folder_fixture(%{name: "folder_c"})
@@ -1598,8 +1598,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
 			{:ok, _view, html} = live(conn, ~p"/admin/photos/#{original.id}")
 
-			# Should show cross-listings in delete section
-			assert html =~ "Also cross-listed in:"
+			# Should show cross-listings in the cross-list section
+			assert html =~ "Already cross-listed in:"
 			assert html =~ "folder_b"
 			assert html =~ "folder_c"
 
