@@ -1841,4 +1841,48 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert html =~ "Remove the cross-listing first"
     end
   end
+
+  describe "delete confirmation hook" do
+    test "single photo delete form has ConfirmSubmit hook", %{conn: conn} do
+      folder = folder_fixture()
+      photo = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+
+      {:ok, _view, html} = live(conn, ~p"/admin/photos/#{photo.id}")
+
+      # Verify the delete form has phx-hook="ConfirmSubmit" and data-confirm attributes
+      doc = Floki.parse_document!(html)
+      delete_forms = Floki.find(doc, "form[phx-submit='delete_photo']")
+
+      assert length(delete_forms) == 1
+
+      [{_tag, attrs, _children}] = delete_forms
+      hook_attr = Enum.find_value(attrs, fn {key, value} -> if key == "phx-hook", do: value end)
+      confirm_attr = Enum.find_value(attrs, fn {key, value} -> if key == "data-confirm", do: value end)
+
+      assert hook_attr == "ConfirmSubmit"
+      assert confirm_attr =~ "Are you sure you want to permanently delete this photo?"
+    end
+
+    test "bulk delete form has ConfirmSubmit hook", %{conn: conn} do
+      folder = folder_fixture()
+      photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+
+      {:ok, _view, html} =
+        live(conn, ~p"/admin?selected_photos[]=#{photo1.id}&selected_photos[]=#{photo2.id}")
+
+      # Verify the bulk delete form has phx-hook="ConfirmSubmit" and data-confirm attributes
+      doc = Floki.parse_document!(html)
+      delete_forms = Floki.find(doc, "form[phx-submit='delete_photo_bulk']")
+
+      assert length(delete_forms) == 1
+
+      [{_tag, attrs, _children}] = delete_forms
+      hook_attr = Enum.find_value(attrs, fn {key, value} -> if key == "phx-hook", do: value end)
+      confirm_attr = Enum.find_value(attrs, fn {key, value} -> if key == "data-confirm", do: value end)
+
+      assert hook_attr == "ConfirmSubmit"
+      assert confirm_attr =~ "Are you sure you want to permanently delete these photos?"
+    end
+  end
 end
