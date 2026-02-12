@@ -409,6 +409,28 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
+    new_folder_id = Map.get(attrs, "folder_id") || Map.get(attrs, :folder_id)
+
+    # Check for cross-listing conflict when changing folders
+    if new_folder_id && to_string(new_folder_id) != to_string(photo.folder_id) do
+      conflict =
+        from(p in Photo,
+          where: p.original_photo_id == ^photo.id,
+          where: p.folder_id == ^new_folder_id
+        )
+        |> Repo.one()
+
+      if conflict do
+        {:error, :cross_listing_exists_in_target_folder}
+      else
+        do_update_photo(photo, attrs)
+      end
+    else
+      do_update_photo(photo, attrs)
+    end
+  end
+
+  defp do_update_photo(%Photo{} = photo, attrs) do
     # If the name is being updated, update the image file_name as well
     attrs =
       if(Map.has_key?(attrs, "name"),
@@ -465,6 +487,10 @@ defmodule PhotoTagger.Gallery do
   @doc """
   Deletes a photo.
 
+  For cross-listings, delegates to `remove_cross_listing/1` (no file deletion).
+  For originals, deletes image files and the database record. Cross-listing
+  records are automatically cascade-deleted by the database foreign key constraint.
+
   ## Examples
 
       iex> delete_photo(photo)
@@ -475,8 +501,13 @@ defmodule PhotoTagger.Gallery do
 
   """
   def delete_photo(%Photo{} = photo) do
-    ImageUploader.delete({photo.image, photo})
-    Repo.delete(photo)
+    if is_cross_listing?(photo) do
+      remove_cross_listing(photo)
+    else
+      # DB cascade (on_delete: :delete_all) handles cross-listing records
+      ImageUploader.delete({photo.image, photo})
+      Repo.delete(photo)
+    end
   end
 
   @doc """
@@ -662,6 +693,21 @@ defmodule PhotoTagger.Gallery do
       Ecto.Changeset.add_error(changeset, :base, "cross-listing already exists in this folder")
     else
       changeset
+    end
+  end
+
+  @doc """
+  Removes a cross-listing from the database. Only works on cross-listed photos
+  (those with an original_photo_id). No file deletion occurs since image files
+  belong to the original photo.
+
+  Returns `{:error, :not_a_cross_listing}` if the photo is an original.
+  """
+  def remove_cross_listing(%Photo{} = photo) do
+    if is_cross_listing?(photo) do
+      Repo.delete(photo)
+    else
+      {:error, :not_a_cross_listing}
     end
   end
 

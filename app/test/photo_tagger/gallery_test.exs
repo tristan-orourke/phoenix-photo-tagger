@@ -976,6 +976,104 @@ defmodule PhotoTagger.GalleryTest do
 		end
 	end
 
+	describe "remove_cross_listing/1" do
+		test "successfully removes a cross-listing from database" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Remove cross-listing
+			assert {:ok, _deleted} = Gallery.remove_cross_listing(cross_listing)
+
+			# Verify it's gone from database
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cross_listing.id, include_private: true)
+			end
+
+			# Verify original still exists
+			assert Gallery.get_photo!(original.id, include_private: true).id == original.id
+		end
+
+		test "returns error when called on original photo" do
+			folder = folder_fixture()
+			original = photo_fixture(%{folder_id: folder.id})
+
+			assert {:error, :not_a_cross_listing} = Gallery.remove_cross_listing(original)
+		end
+	end
+
+	describe "delete_photo/1 with cross-listings" do
+		test "deletes cross-listing without deleting files when called on cross-listing" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Delete the cross-listing using delete_photo
+			assert {:ok, _deleted} = Gallery.delete_photo(cross_listing)
+
+			# Verify cross-listing is gone
+			assert_raise Ecto.NoResultsError, fn ->
+				Gallery.get_photo!(cross_listing.id, include_private: true)
+			end
+
+			# Verify original still exists
+			assert Gallery.get_photo!(original.id, include_private: true).id == original.id
+		end
+	end
+
+	describe "update_photo/2 with cross-listings" do
+		test "returns error when moving to folder with cross-listing" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, _cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Try to move original to folder_b where cross-listing exists
+			result = Gallery.update_photo(original, %{"folder_id" => folder_b.id})
+
+			# Should return cross-listing error (before attempting file operations)
+			assert {:error, :cross_listing_exists_in_target_folder} = result
+		end
+
+		test "allows folder change after cross-listing removed" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id})
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Remove cross-listing
+			{:ok, _deleted} = Gallery.remove_cross_listing(cross_listing)
+
+			# Now move validation should pass (file operation will fail due to missing files, but that's expected)
+			result = Gallery.update_photo(original, %{"folder_id" => folder_b.id})
+
+			# Should fail at file operation stage, not cross-listing validation
+			# This proves the cross-listing check passed
+			assert match?({:error, :update_file, _, _}, result)
+		end
+
+		test "non-folder-change updates work normally" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			original = photo_fixture(%{folder_id: folder_a.id, description: "Old description"})
+			{:ok, _cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Update description only (not folder)
+			result = Gallery.update_photo(original, %{"description" => "New description"})
+
+			assert {:ok, %{photo: updated}} = result
+			assert updated.description == "New description"
+			assert updated.folder_id == folder_a.id
+		end
+	end
+
 	describe "cross-listing integration tests" do
 		alias PhotoTagger.TempFileHelper
 
