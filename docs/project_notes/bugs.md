@@ -40,6 +40,21 @@ Track bugs with root causes and solutions for future reference.
 
 **Related Issues**: Issue "uploaded photos should get a manual order number at the end of their folder"
 
+### [2026-02-12] Delete confirmation dialog cancel button still deletes photo
+
+**Symptoms**: When clicking the "Delete" button in the gallery LiveView (for both single photo deletion and bulk photo deletion), a confirmation dialog appears. However, clicking "Cancel" in the dialog still deletes the photo(s) instead of aborting the operation.
+
+**Root Cause**: The delete forms used `onsubmit="return confirm(...)"` attribute with LiveView's `phx-submit` event. Phoenix LiveView overrides the form's normal event listeners and bypasses inline `onsubmit` handlers. When `confirm()` returns `false` (user clicks Cancel), the `return false` is ignored by LiveView's event handling system, and the `phx-submit` event fires anyway, triggering the deletion.
+
+**Solution**: Replaced the `onsubmit` attribute with a LiveView JS hook (`ConfirmSubmit`). The hook properly intercepts the form's submit event before LiveView processes it and calls `preventDefault()` and `stopPropagation()` when the user cancels, which successfully prevents the `phx-submit` event from firing. The confirmation message is passed via a `data-confirm` attribute on the form element.
+
+**Files Changed**:
+- `app/assets/js/confirmSubmit.js` (new file - JS hook implementation)
+- `app/assets/js/app.js` (registered the new hook)
+- `app/lib/photo_tagger_web/live/gallery_live/main.ex` (updated both delete forms)
+
+**Related Issues**: Bug report "clicking cancel on delete confirmation dialog still deletes photo"
+
 ### [2026-02-04] Private folders not visible in upload dropdown
 
 **Symptoms**: When uploading photos, only public folders appeared in the folder dropdown. Users could not select private folders for upload even if they had access.
