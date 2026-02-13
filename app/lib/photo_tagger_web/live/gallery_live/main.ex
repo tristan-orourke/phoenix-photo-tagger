@@ -290,19 +290,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           prev_filtered_photos
 
         {nil, [], [], _} ->
-          Gallery.list_photos(include_private: is_admin, sort: sort)
+          Gallery.list_photos(include_private: is_admin, sort: sort, exclude_cross_listings: true)
 
         {nil, ["untagged"], _, _} ->
-          Gallery.list_photos_by_all_tags(nil, include_private: is_admin, sort: sort) ++
+          Gallery.list_photos_by_all_tags(nil, include_private: is_admin, sort: sort, exclude_cross_listings: true) ++
             Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
               include_private: is_admin,
-              sort: sort
+              sort: sort,
+              exclude_cross_listings: true
             )
 
         {nil, tags, exclude_tags, _} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
             include_private: is_admin,
-            sort: sort
+            sort: sort,
+            exclude_cross_listings: true
           )
 
         {folder, [], [], _} ->

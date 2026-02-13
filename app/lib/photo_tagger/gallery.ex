@@ -45,6 +45,18 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
+  defp only_original_photos(query) do
+    from(p in query, where: is_nil(p.original_photo_id))
+  end
+
+  defp only_original_photos_unless_forced(query, options) do
+    if Keyword.get(options, :exclude_cross_listings, false) do
+      only_original_photos(query)
+    else
+      query
+    end
+  end
+
   @type sort_option :: :date | :manual
 
   defp apply_sort_order(query, :manual) do
@@ -101,6 +113,7 @@ defmodule PhotoTagger.Gallery do
     Repo.all(
       list_photos_query(sort)
       |> only_public_photos_unless_forced(options)
+      |> only_original_photos_unless_forced(options)
     )
   end
 
@@ -198,6 +211,7 @@ defmodule PhotoTagger.Gallery do
       from(p in query, preload: [:folder, original_photo: :folder])
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
+      |> only_original_photos_unless_forced(options)
     )
   end
 
@@ -264,6 +278,7 @@ defmodule PhotoTagger.Gallery do
     Repo.all(
       query
       |> only_public_photos_unless_forced(options)
+      |> only_original_photos_unless_forced(options)
     )
   end
 

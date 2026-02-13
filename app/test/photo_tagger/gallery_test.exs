@@ -1335,5 +1335,83 @@ defmodule PhotoTagger.GalleryTest do
 			assert original_tag_names == ["new_original_tag", "original_tag"]
 			assert cross_listing_tag_names == ["new_cross_listing_tag", "original_tag"]
 		end
+
+		test "list_photos with exclude_cross_listings omits cross-listings", %{folder_a: folder_a, folder_b: folder_b} do
+				# Create original photo in folder_a
+				original = photo_fixture(%{folder_id: folder_a.id, name: "original.jpg"})
+
+				# Create cross-listing in folder_b
+				{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+				# Without exclude_cross_listings, both appear
+				all_photos = Gallery.list_photos(include_private: true)
+				assert length(all_photos) == 2
+				photo_ids = Enum.map(all_photos, & &1.id)
+				assert original.id in photo_ids
+				assert cross_listing.id in photo_ids
+
+				# With exclude_cross_listings, only original appears
+				originals_only = Gallery.list_photos(include_private: true, exclude_cross_listings: true)
+				assert length(originals_only) == 1
+				assert hd(originals_only).id == original.id
+			end
+
+			test "list_photos_by_tags with exclude_cross_listings omits cross-listings", %{folder_a: folder_a, folder_b: folder_b} do
+				# Create original photo with tag
+				original = photo_fixture(%{folder_id: folder_a.id, name: "tagged.jpg"})
+				Gallery.add_tag_to_photo(original, "test_tag")
+
+				# Create cross-listing in folder_b (copies tags)
+				{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+				# Without exclude_cross_listings, both appear
+				all_tagged = Gallery.list_photos_by_tags(%{include: ["test_tag"], exclude: []}, include_private: true)
+				assert length(all_tagged) == 2
+				photo_ids = Enum.map(all_tagged, & &1.id)
+				assert original.id in photo_ids
+				assert cross_listing.id in photo_ids
+
+				# With exclude_cross_listings, only original appears
+				originals_only = Gallery.list_photos_by_tags(%{include: ["test_tag"], exclude: []}, include_private: true, exclude_cross_listings: true)
+				assert length(originals_only) == 1
+				assert hd(originals_only).id == original.id
+			end
+
+			test "list_photos_by_folder still includes cross-listings (no regression)", %{folder_a: folder_a, folder_b: folder_b} do
+				# Create original photo in folder_a
+				original = photo_fixture(%{folder_id: folder_a.id, name: "original.jpg"})
+
+				# Create cross-listing in folder_b
+				{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+				# Folder_a should show only original
+				folder_a_photos = Gallery.list_photos_by_folder(folder_a.name, include_private: true)
+				assert length(folder_a_photos) == 1
+				assert hd(folder_a_photos).id == original.id
+
+				# Folder_b should show only cross-listing
+				folder_b_photos = Gallery.list_photos_by_folder(folder_b.name, include_private: true)
+				assert length(folder_b_photos) == 1
+				assert hd(folder_b_photos).id == cross_listing.id
+			end
+
+			test "multiple cross-listings all filtered in 'All folders' view", %{folder_a: folder_a, folder_b: folder_b} do
+				# Create original in folder_a
+				original = photo_fixture(%{folder_id: folder_a.id, name: "multi.jpg"})
+
+				# Create multiple cross-listings in folder_b and a third folder
+				{:ok, _cross_listing_1} = Gallery.create_cross_listing(original, folder_b.id)
+				folder_third = folder_fixture(%{name: "folder_third"})
+				{:ok, _cross_listing_2} = Gallery.create_cross_listing(original, folder_third.id)
+
+				# Without exclude_cross_listings, all three appear
+				all_photos = Gallery.list_photos(include_private: true)
+				assert length(all_photos) == 3
+
+				# With exclude_cross_listings, only original appears
+				originals_only = Gallery.list_photos(include_private: true, exclude_cross_listings: true)
+				assert length(originals_only) == 1
+				assert hd(originals_only).id == original.id
+			end
 	end
 end
