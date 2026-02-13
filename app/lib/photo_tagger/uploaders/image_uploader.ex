@@ -63,6 +63,8 @@ defmodule PhotoTagger.Uploaders.ImageUploader do
        do: name
 
   # Cross-listed photo without preloaded original - fall back to DB lookup
+  # WARNING: This triggers a DB query. Ensure queries preload [:original_photo, :folder]
+  # to avoid N+1 issues when rendering multiple cross-listings.
   defp resolve_storage_folder_name(%{original_photo_id: original_id})
        when not is_nil(original_id) do
     PhotoTagger.Gallery.Photo

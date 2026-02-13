@@ -43,7 +43,7 @@ mix assets.deploy      # Minify assets for production
 ## Style Conventions
 
 - Avoid unused variables where possible.
-- Always prefixed unused bariables with with `_`. `_unused_variable = 123;`
+- Always prefixed unused variables with with `_`. `_unused_variable = 123;`
 - Indent with 2 spaces instead of tabs in .ex and .exs files
 
 ## UI Design

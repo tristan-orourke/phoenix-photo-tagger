@@ -1,4 +1,10 @@
 defmodule PhotoTagger.Repo.Migrations.AddOriginalPhotoIdToPhotos do
+  @moduledoc """
+  Adds support for cross-listing photos across multiple folders.
+
+  Cross-listings are database references to an original photo, allowing
+  a single file to appear in multiple folders with independent metadata.
+  """
   use Ecto.Migration
 
   def change do
