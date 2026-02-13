@@ -25,7 +25,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
             photo_group={photo.group}
             photo_name={photo.name}
             photo_image={photo.image}
-            photo_folder={photo.folder}
+            photo_folder={PhotoTagger.Gallery.storage_folder(photo)}
             is_selected={photo.id in @selected_photo_ids}
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}

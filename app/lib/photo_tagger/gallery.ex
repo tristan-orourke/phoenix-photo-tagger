@@ -45,6 +45,18 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
+  defp only_original_photos(query) do
+    from(p in query, where: is_nil(p.original_photo_id))
+  end
+
+  defp only_original_photos_unless_forced(query, options) do
+    if Keyword.get(options, :exclude_cross_listings, false) do
+      only_original_photos(query)
+    else
+      query
+    end
+  end
+
   @type sort_option :: :date | :manual
 
   defp apply_sort_order(query, :manual) do
@@ -80,7 +92,7 @@ defmodule PhotoTagger.Gallery do
   defp list_photos_query(sort) do
     from(p in Photo,
       as: :photo,
-      preload: [:folder],
+      preload: [:folder, original_photo: :folder],
       select: p
     )
     |> apply_sort_order(sort)
@@ -101,6 +113,7 @@ defmodule PhotoTagger.Gallery do
     Repo.all(
       list_photos_query(sort)
       |> only_public_photos_unless_forced(options)
+      |> only_original_photos_unless_forced(options)
     )
   end
 
@@ -124,7 +137,7 @@ defmodule PhotoTagger.Gallery do
         inner_join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [folder: f]
+        preload: [folder: f, original_photo: :folder]
       )
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
@@ -140,8 +153,7 @@ defmodule PhotoTagger.Gallery do
         inner_join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [tags: t],
-        preload: [folder: f]
+        preload: [tags: t, folder: f, original_photo: :folder]
       )
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
@@ -196,9 +208,10 @@ defmodule PhotoTagger.Gallery do
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
-      from(p in query, preload: [:folder])
+      from(p in query, preload: [:folder, original_photo: :folder])
       |> apply_sort_order(sort)
       |> only_public_photos_unless_forced(options)
+      |> only_original_photos_unless_forced(options)
     )
   end
 
@@ -265,6 +278,7 @@ defmodule PhotoTagger.Gallery do
     Repo.all(
       query
       |> only_public_photos_unless_forced(options)
+      |> only_original_photos_unless_forced(options)
     )
   end
 
@@ -281,7 +295,7 @@ defmodule PhotoTagger.Gallery do
         join: f in assoc(p, :folder),
         as: :folder,
         where: f.name == ^folder_name,
-        preload: [folder: f]
+        preload: [folder: f, original_photo: :folder]
       )
       |> only_public_photos_unless_forced(options)
     )
@@ -347,10 +361,10 @@ defmodule PhotoTagger.Gallery do
   defp photo_full_path(%Photo{} = photo, version) do
     # Original keeps its extension, transforms use .webp (set in ImageUploader.transform/2)
     ext = if(version == :original, do: Path.extname(photo.image.file_name), else: ".webp")
-    photo = Repo.preload(photo, :folder)
+    photo = Repo.preload(photo, [:folder, original_photo: :folder])
 
     Path.join([
-      get_folder_path(photo.folder.name),
+      get_folder_path(storage_folder(photo).name),
       ImageUploader.filename(version, {photo.image, photo}) <> ext
     ])
   end
@@ -409,6 +423,40 @@ defmodule PhotoTagger.Gallery do
 
   """
   def update_photo(%Photo{} = photo, attrs) do
+    new_folder_id = Map.get(attrs, "folder_id") || Map.get(attrs, :folder_id)
+
+    # Check for cross-listing conflict when changing folders
+    if new_folder_id && to_string(new_folder_id) != to_string(photo.folder_id) do
+      # Prevent moving original to folder where cross-listing exists
+      conflict =
+        from(p in Photo,
+          where: p.original_photo_id == ^photo.id,
+          where: p.folder_id == ^new_folder_id
+        )
+        |> Repo.one()
+
+      cond do
+        conflict ->
+          {:error, :cross_listing_exists_in_target_folder}
+
+        is_cross_listing?(photo) ->
+          # Prevent moving cross-listing to same folder as original
+          original = Repo.get!(Photo, photo.original_photo_id)
+          if to_string(new_folder_id) == to_string(original.folder_id) do
+            {:error, :cross_listing_in_same_folder_as_original}
+          else
+            do_update_photo(photo, attrs)
+          end
+
+        true ->
+          do_update_photo(photo, attrs)
+      end
+    else
+      do_update_photo(photo, attrs)
+    end
+  end
+
+  defp do_update_photo(%Photo{} = photo, attrs) do
     # If the name is being updated, update the image file_name as well
     attrs =
       if(Map.has_key?(attrs, "name"),
@@ -417,7 +465,7 @@ defmodule PhotoTagger.Gallery do
       )
 
     changeset = Photo.changeset_update(photo, attrs)
-    photo = Repo.preload(photo, :folder)
+    photo = Repo.preload(photo, [:folder, original_photo: :folder])
 
     # Detect if manual_order is changing
     new_order =
@@ -465,6 +513,10 @@ defmodule PhotoTagger.Gallery do
   @doc """
   Deletes a photo.
 
+  For cross-listings, delegates to `remove_cross_listing/1` (no file deletion).
+  For originals, deletes image files and the database record. Cross-listing
+  records are automatically cascade-deleted by the database foreign key constraint.
+
   ## Examples
 
       iex> delete_photo(photo)
@@ -475,8 +527,13 @@ defmodule PhotoTagger.Gallery do
 
   """
   def delete_photo(%Photo{} = photo) do
-    ImageUploader.delete({photo.image, photo})
-    Repo.delete(photo)
+    if is_cross_listing?(photo) do
+      remove_cross_listing(photo)
+    else
+      # DB cascade (on_delete: :delete_all) handles cross-listing records
+      ImageUploader.delete({photo.image, photo})
+      Repo.delete(photo)
+    end
   end
 
   @doc """
@@ -495,6 +552,221 @@ defmodule PhotoTagger.Gallery do
   def update_photo_changeset(%Photo{} = photo, attrs \\ %{}) do
     Photo.changeset_update(photo, attrs)
   end
+
+  # ============================================================================
+  # Cross-listing functions
+  # ============================================================================
+
+  @doc """
+  Returns true if the photo is a cross-listing (has an original_photo_id).
+
+  ## Examples
+
+      iex> is_cross_listing?(photo)
+      false
+
+      iex> is_cross_listing?(cross_listing)
+      true
+  """
+  def is_cross_listing?(%Photo{} = photo) do
+    photo.original_photo_id != nil
+  end
+
+  @doc """
+  Returns the folder where a photo's image files are stored.
+
+  For original photos, this is the photo's own folder.
+  For cross-listed photos, this is the original photo's folder.
+
+  Requires `:folder` and `original_photo: :folder` to be preloaded.
+  """
+  def storage_folder(%Photo{original_photo_id: nil, folder: folder}), do: folder
+  def storage_folder(%Photo{original_photo: %Photo{folder: folder}}), do: folder
+
+  # Fallback for maps (e.g. from simplified photo structs in components)
+  def storage_folder(%{original_photo_id: nil, folder: folder}), do: folder
+  def storage_folder(%{original_photo: %{folder: folder}}), do: folder
+  def storage_folder(%{folder: folder}), do: folder
+
+  @doc """
+  Returns all cross-listings of an original photo.
+
+  Returns an empty list if the photo has no cross-listings or if the photo
+  is itself a cross-listing.
+
+  ## Examples
+
+      iex> get_cross_listings(original_photo)
+      [%Photo{}, %Photo{}]
+
+      iex> get_cross_listings(photo_without_cross_listings)
+      []
+  """
+  def get_cross_listings(%Photo{} = photo) do
+    from(p in Photo,
+      where: p.original_photo_id == ^photo.id
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Creates a cross-listing of a photo in another folder.
+
+  A cross-listing is a database-only entry that references the original photo's
+  image files without duplicating them. The cross-listing copies metadata and tags
+  from the original at creation time, but changes to either record do not affect
+  the other after creation.
+
+  ## Parameters
+
+    - photo: The original photo (must not itself be a cross-listing)
+    - target_folder_id: The folder ID to create the cross-listing in
+
+  ## Returns
+
+    - `{:ok, cross_listing}` on success
+    - `{:error, changeset}` if validation fails
+
+  ## Validations
+
+    - Photo cannot already be a cross-listing (must be an original)
+    - Target folder must differ from original's folder
+    - Cross-listing cannot already exist in target folder
+
+  ## Examples
+
+      iex> create_cross_listing(original_photo, other_folder.id)
+      {:ok, %Photo{original_photo_id: 123}}
+
+      iex> create_cross_listing(cross_listing_photo, folder.id)
+      {:error, %Ecto.Changeset{}}
+  """
+  def create_cross_listing(%Photo{} = photo, target_folder_id) do
+    # Preload tags if not loaded
+    photo = if Ecto.assoc_loaded?(photo.tags), do: photo, else: Repo.preload(photo, :tags)
+
+    changeset =
+      %Photo{}
+      |> Ecto.Changeset.cast(%{
+        name: photo.name,
+        folder_id: target_folder_id,
+        description: photo.description,
+        notes: photo.notes,
+        group: photo.group,
+        is_public: photo.is_public,
+        image_last_modified: photo.image_last_modified,
+        original_photo_id: photo.id,
+        manual_order: get_next_manual_order(target_folder_id)
+      }, [
+        :name,
+        :folder_id,
+        :description,
+        :notes,
+        :group,
+        :is_public,
+        :image_last_modified,
+        :original_photo_id,
+        :manual_order
+      ])
+      |> Ecto.Changeset.put_change(:image, photo.image)
+      |> validate_not_a_cross_listing()
+      |> validate_different_folder(photo.folder_id)
+      |> validate_no_duplicate_cross_listing(photo.id, target_folder_id)
+
+    case Repo.insert(changeset) do
+      {:ok, cross_listing} ->
+        # Copy tags from original
+        tag_ids = Enum.map(photo.tags, & &1.id)
+        copy_tags_to_photo(cross_listing, tag_ids)
+        {:ok, Repo.preload(cross_listing, :tags)}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  # Validates that the photo being cross-listed is not itself a cross-listing
+  defp validate_not_a_cross_listing(changeset) do
+    # Check if original_photo_id being set indicates this is creating a cross-listing
+    # If the source photo was already a cross-listing, we'd be trying to create
+    # a cross-listing of a cross-listing (not allowed)
+    original_photo_id = Ecto.Changeset.get_field(changeset, :original_photo_id)
+
+    case original_photo_id do
+      nil ->
+        changeset
+
+      id ->
+        source_photo = Repo.get!(Photo, id)
+
+        if source_photo.original_photo_id != nil do
+          Ecto.Changeset.add_error(
+            changeset,
+            :base,
+            "cannot create cross-listing from a cross-listing"
+          )
+        else
+          changeset
+        end
+    end
+  end
+
+  # Validates that target folder is different from original's folder
+  defp validate_different_folder(changeset, original_folder_id) do
+    target_folder_id = Ecto.Changeset.get_field(changeset, :folder_id)
+
+    if target_folder_id == original_folder_id do
+      Ecto.Changeset.add_error(changeset, :base, "cannot cross-list to the same folder")
+    else
+      changeset
+    end
+  end
+
+  # Validates that no cross-listing of this photo already exists in target folder
+  defp validate_no_duplicate_cross_listing(changeset, original_photo_id, target_folder_id) do
+    existing =
+      from(p in Photo,
+        where: p.original_photo_id == ^original_photo_id,
+        where: p.folder_id == ^target_folder_id
+      )
+      |> Repo.one()
+
+    if existing do
+      Ecto.Changeset.add_error(changeset, :base, "cross-listing already exists in this folder")
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  Removes a cross-listing from the database. Only works on cross-listed photos
+  (those with an original_photo_id). No file deletion occurs since image files
+  belong to the original photo.
+
+  Returns `{:error, :not_a_cross_listing}` if the photo is an original.
+  """
+  def remove_cross_listing(%Photo{} = photo) do
+    if is_cross_listing?(photo) do
+      Repo.delete(photo)
+    else
+      {:error, :not_a_cross_listing}
+    end
+  end
+
+  # Copies tags by ID to a photo (used internally for cross-listing)
+  defp copy_tags_to_photo(photo, tag_ids) when is_list(tag_ids) do
+    Enum.each(tag_ids, fn tag_id ->
+      tag = Repo.get!(Tag, tag_id)
+
+      %PhotoTag{}
+      |> PhotoTag.changeset(%{photo_id: photo.id, tag_id: tag.id})
+      |> Repo.insert(on_conflict: :nothing)
+    end)
+  end
+
+  # ============================================================================
+  # Tag functions
+  # ============================================================================
 
   def add_tag_to_photo(%Photo{} = photo, name) do
     tag = get_or_create_tag(name)

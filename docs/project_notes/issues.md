@@ -19,6 +19,39 @@ Track completed work and GitHub issues.
 
 ## Completed Work
 
+### [2026-02-13] Cross-listing feature (#129)
+
+**Summary**: Implemented cross-listing functionality allowing a single photo to appear in multiple folders without duplicating files on disk. Cross-listings are database references with independent metadata (tags, description, visibility) that share the original photo's image files.
+
+**Key Changes**:
+- Added `original_photo_id` field to photos table with cascade delete
+- Implemented `create_cross_listing/2` and `remove_cross_listing/1` API functions
+- Added validation to prevent cross-listing chains and folder conflicts
+- Updated `ImageUploader.storage_dir/2` to resolve URLs using original photo's folder
+- Added UI for single and bulk cross-listing in photo edit panel and multi-select
+- Integrated cross-listing selection into photo upload form
+- Added cross-listing badges and navigation links in photo info panel
+- Comprehensive test coverage with 54 new tests
+
+**Edge Cases Handled**:
+- Cannot cross-list a cross-listing (chains prevented)
+- Cannot cross-list to same folder as original
+- Cannot move original to folder where cross-listing exists
+- Cannot move cross-listing to same folder as original
+- Deleting original cascades to all cross-listings with user warning
+- Bulk operations filter to only original photos
+
+**Files Modified**:
+- `app/lib/photo_tagger/gallery.ex` (core API)
+- `app/lib/photo_tagger/gallery/photo.ex` (schema)
+- `app/lib/photo_tagger/uploaders/image_uploader.ex` (URL generation)
+- `app/lib/photo_tagger_web/live/gallery_live/main.ex` (UI and event handlers)
+- `app/lib/photo_tagger_web/controllers/photo_controller.ex` (upload integration)
+- `app/priv/repo/migrations/20260210055910_add_original_photo_id_to_photos.exs`
+- Test files with 54 new tests
+
+**Related**: PR #129, Decisions [2026-02-12] in decisions.md, Spec in docs/specs/cross-listing.md
+
 ### [2026-02-04] Add shift-click multiselect for photo selection
 
 **Summary**: Implemented shift-click multiselect functionality in the photo grid. When holding shift and clicking a photo, all photos between the last selected photo and the clicked photo are selected.
