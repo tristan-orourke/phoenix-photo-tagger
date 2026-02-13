@@ -42,8 +42,9 @@ mix assets.deploy      # Minify assets for production
 ```
 ## Style Conventions
 
-Avoid unused variables where possible. But if necessary, unused variables *must* be prefixed with `_`. 
-`_unused_variable = 123;`
+- Avoid unused variables where possible.
+- Always prefixed unused bariables with with `_`. `_unused_variable = 123;`
+- Indent with 2 spaces instead of tabs in .ex and .exs files
 
 ## UI Design
 
@@ -129,6 +130,8 @@ This project maintains a structured memory system in `docs/project_notes/` to tr
 - Document both what was done and why
 
 ## Testing
+
+Always run tests in a subagent to avoid polluting context, unless the details of how a test fails are important to solving it.
 
 ### LiveView Test Patterns
 
