@@ -48,7 +48,16 @@ defmodule PhotoTagger.Gallery.Photo do
 
   def changeset_update(photo, attrs) do
     photo
-    |> cast(attrs, [:name, :image, :folder_id, :description, :notes, :group, :is_public, :manual_order])
+    |> cast(attrs, [
+      :name,
+      :image,
+      :folder_id,
+      :description,
+      :notes,
+      :group,
+      :is_public,
+      :manual_order
+    ])
     |> unique_constraint([:name, :folder_id])
   end
 end

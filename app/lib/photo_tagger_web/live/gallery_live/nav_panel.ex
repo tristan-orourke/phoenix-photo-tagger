@@ -15,25 +15,23 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
     ~H"""
     <div>
       <%= if not @is_open do %>
-        <.button
-          phx-click="toggle_nav_panel"
-          phx-target={@myself}
-        >
+        <.button phx-click="toggle_nav_panel" phx-target={@myself}>
           <.icon name="hero-chevron-right" class="w-5 h-5" />
         </.button>
       <% else %>
         <div :if={@is_admin} class="relative">
-          <.button
-            phx-click="toggle_nav_panel"
-            phx-target={@myself}
-            class="absolute top-0 right-0"
-          >
+          <.button phx-click="toggle_nav_panel" phx-target={@myself} class="absolute top-0 right-0">
             <.icon name="hero-chevron-left" class="w-5 h-5" />
           </.button>
         </div>
         <h2 class="pt-4">Folders</h2>
         <form class="my-2" phx-change="change_folder">
-          <select value={@folder} name="folder" id="folder-select"  class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm">
+          <select
+            value={@folder}
+            name="folder"
+            id="folder-select"
+            class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+          >
             <option value="">All folders</option>
             <%= for %{name: folder} <- @all_folders do %>
               <option value={folder} selected={@folder == folder}>
@@ -49,11 +47,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
             <ul class="my-2">
               <%= for tag <- @current_tags do %>
                 <li class="mr-2">
-                  <.toggle_button
-                    selected={true}
-                    phx-click="toggle_tag"
-                    phx-value-tag={tag}
-                  >
+                  <.toggle_button selected={true} phx-click="toggle_tag" phx-value-tag={tag}>
                     {tag}
                   </.toggle_button>
                 </li>

@@ -55,8 +55,6 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPanel do
           )
       end
 
-
-
     socket =
       socket
       |> assign(:grid_size, get_grid_size(assigns.zoom_level, 1))

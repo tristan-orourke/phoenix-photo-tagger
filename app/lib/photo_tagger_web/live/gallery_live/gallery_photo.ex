@@ -18,7 +18,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
 
   def render(assigns) do
     ~H"""
-    <li class={"relative py-1 lg:py-1.5 lg:my-0.5
+    <li
+      class={"relative py-1 lg:py-1.5 lg:my-0.5
       #{if(@group_left, do: "pl-1 lg:pl-2", else: "pl-1.5 lg:ml-0.5")}
       #{if(@group_right, do: "pr-1 lg:pr-2", else: "pr-1.5 lg:mr-0.5")}
       #{if(@photo_group != nil and !@is_group_collapsed, do: "bg-blue-200", else: "")}
@@ -26,7 +27,9 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       data-gallery-photo-id={@photo_id}
     >
       <div class="aspect-square w-full h-full">
-        <button :if={@is_group_topper} class="z-50 absolute w-8 h-8 right-0 top-0"
+        <button
+          :if={@is_group_topper}
+          class="z-50 absolute w-8 h-8 right-0 top-0"
           phx-click="toggle_collapse_single_group"
           phx-value-photo_group={@photo_group}
         >
@@ -52,8 +55,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
             src={@photo_image_url}
           />
           <%= if @is_group_collapsed and @photo_group do %>
-            <div class={"w-full h-full -z-10 absolute left-1 bottom-1 bg-gray-500"} />
-            <div class={"w-full h-full -z-20 absolute left-2 bottom-2 bg-gray-400"} />
+            <div class="w-full h-full -z-10 absolute left-1 bottom-1 bg-gray-500" />
+            <div class="w-full h-full -z-20 absolute left-2 bottom-2 bg-gray-400" />
           <% end %>
         </button>
       </div>
@@ -66,12 +69,17 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
     # Only show when visibility outlines are enabled and photo is not selected
     visibility_outline_class =
       cond do
-        assigns.is_selected -> ""
+        assigns.is_selected ->
+          ""
+
         assigns.show_visibility_outline and assigns.photo_is_public == true ->
           "outline outline-green-400"
+
         assigns.show_visibility_outline and assigns.photo_is_public == false ->
           "outline outline-red-200"
-        true -> ""
+
+        true ->
+          ""
       end
 
     {:ok,

@@ -442,6 +442,7 @@ defmodule PhotoTagger.Gallery do
         is_cross_listing?(photo) ->
           # Prevent moving cross-listing to same folder as original
           original = Repo.get!(Photo, photo.original_photo_id)
+
           if to_string(new_folder_id) == to_string(original.folder_id) do
             {:error, :cross_listing_in_same_folder_as_original}
           else
@@ -647,27 +648,30 @@ defmodule PhotoTagger.Gallery do
 
     changeset =
       %Photo{}
-      |> Ecto.Changeset.cast(%{
-        name: photo.name,
-        folder_id: target_folder_id,
-        description: photo.description,
-        notes: photo.notes,
-        group: photo.group,
-        is_public: photo.is_public,
-        image_last_modified: photo.image_last_modified,
-        original_photo_id: photo.id,
-        manual_order: get_next_manual_order(target_folder_id)
-      }, [
-        :name,
-        :folder_id,
-        :description,
-        :notes,
-        :group,
-        :is_public,
-        :image_last_modified,
-        :original_photo_id,
-        :manual_order
-      ])
+      |> Ecto.Changeset.cast(
+        %{
+          name: photo.name,
+          folder_id: target_folder_id,
+          description: photo.description,
+          notes: photo.notes,
+          group: photo.group,
+          is_public: photo.is_public,
+          image_last_modified: photo.image_last_modified,
+          original_photo_id: photo.id,
+          manual_order: get_next_manual_order(target_folder_id)
+        },
+        [
+          :name,
+          :folder_id,
+          :description,
+          :notes,
+          :group,
+          :is_public,
+          :image_last_modified,
+          :original_photo_id,
+          :manual_order
+        ]
+      )
       |> Ecto.Changeset.put_change(:image, photo.image)
       |> validate_not_a_cross_listing()
       |> validate_different_folder(photo.folder_id)

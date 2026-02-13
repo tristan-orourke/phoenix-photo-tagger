@@ -16,7 +16,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
               <%= for %{name: folder} <- @folders do %>
                 <li>
                   <.link href={~p"/folders/#{folder}"} class="text-blue-500 hover:underline">
-                    <%= folder %>
+                    {folder}
                   </.link>
                 </li>
               <% end %>
@@ -110,11 +110,11 @@ defmodule PhotoTaggerWeb.FolderHTML do
     <h2>Create Folder</h2>
     <.form for={%{}} action={~p"/admin/folders"} method="post">
       <div class="flex items-center space-x-4">
-        <.label for={"new_folder_name"}>Name</.label>
+        <.label for="new_folder_name">Name</.label>
         <input
           type="text"
           name="name"
-          id={"new_folder_name"}
+          id="new_folder_name"
           class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
         />
       </div>
@@ -132,21 +132,11 @@ defmodule PhotoTaggerWeb.FolderHTML do
             <span class="ml-1">Private</span>
           </label>
           <label class="flex items-center">
-            <input
-              type="radio"
-              name="visibility_type"
-              value="public"
-              class="rounded focus:ring-0"
-            />
+            <input type="radio" name="visibility_type" value="public" class="rounded focus:ring-0" />
             <span class="ml-1">Public</span>
           </label>
           <label class="flex items-center">
-            <input
-              type="radio"
-              name="visibility_type"
-              value="unlisted"
-              class="rounded focus:ring-0"
-            />
+            <input type="radio" name="visibility_type" value="unlisted" class="rounded focus:ring-0" />
             <span class="ml-1">Unlisted</span>
           </label>
         </div>

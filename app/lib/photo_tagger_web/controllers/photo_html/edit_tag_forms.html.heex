@@ -8,7 +8,12 @@
     </li>
   <% end %>
 </ul>
-<.simple_form :let={f} for={%{"tag" => ""}} action={~p"/admin/photos/#{@photo}/tags"} method="post">
+<.simple_form
+  :let={f}
+  for={%{"tag" => ""}}
+  action={~p"/admin/photos/#{@photo}/tags"}
+  method="post"
+>
   <.input field={f[:tag]} type="text" label="New tag" />
   <:actions>
     <.button>Add tag</.button>

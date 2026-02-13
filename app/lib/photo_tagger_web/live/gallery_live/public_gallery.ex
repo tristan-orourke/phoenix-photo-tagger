@@ -55,10 +55,11 @@ defmodule PhotoTaggerWeb.GalleryLive.PublicGallery do
           Gallery.list_photos_by_folder_and_tags(folder, tags)
       end
 
-    selected_photo = case photo_id do
-      nil -> nil
-      _ -> Gallery.get_photo!(photo_id) |> Repo.preload(:tags)
-    end
+    selected_photo =
+      case photo_id do
+        nil -> nil
+        _ -> Gallery.get_photo!(photo_id) |> Repo.preload(:tags)
+      end
 
     # Reset scroll position of a section if the relevent params change
     socket =
@@ -75,12 +76,12 @@ defmodule PhotoTaggerWeb.GalleryLive.PublicGallery do
         else: socket
       )
 
-    {:noreply, socket
-        |> assign(:folder, folder)
-        |> assign(:tags, tags)
-        |> assign(:filtered_photos, filtered_photos)
-        |> assign(:selected_photo, selected_photo)
-    }
+    {:noreply,
+     socket
+     |> assign(:folder, folder)
+     |> assign(:tags, tags)
+     |> assign(:filtered_photos, filtered_photos)
+     |> assign(:selected_photo, selected_photo)}
   end
 
   ## Utility functions
@@ -91,5 +92,4 @@ defmodule PhotoTaggerWeb.GalleryLive.PublicGallery do
       _ -> false
     end
   end
-
 end

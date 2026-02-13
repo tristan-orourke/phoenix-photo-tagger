@@ -24,6 +24,7 @@ defmodule PhotoTaggerWeb.PhotoController do
 
     images = extracted["images"]
     metadata_string = extracted["file_metadata"]
+
     cross_list_folder_ids =
       (extracted["cross_list_folder_ids"] || [])
       |> Enum.map(&String.to_integer/1)

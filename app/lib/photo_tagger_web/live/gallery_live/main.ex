@@ -20,19 +20,19 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <div class="flex flex-row gap-4 h-full">
         <div id="tags-section" class="shrink basis-2/7 lg:basis-1/7 overflow-y-auto">
           <.live_component
-              id="nav-panel"
-              module={PhotoTaggerWeb.GalleryLive.NavPanel}
-              folder={@folder}
-              all_folders={@all_folders}
-              nav_tags={@nav_tags}
-              recommended_tags={@recommended_tags}
-              current_tags={@tags}
-              exclude_tags={@exclude_tags}
-              is_admin={@is_admin}
-            />
-              <%!-- all_folders={@all_folders} --%>
-              <%!-- selected_photo_ids={@selected_photo_ids} --%>
-              <%!-- folder={@folder} --%>
+            id="nav-panel"
+            module={PhotoTaggerWeb.GalleryLive.NavPanel}
+            folder={@folder}
+            all_folders={@all_folders}
+            nav_tags={@nav_tags}
+            recommended_tags={@recommended_tags}
+            current_tags={@tags}
+            exclude_tags={@exclude_tags}
+            is_admin={@is_admin}
+          />
+          <%!-- all_folders={@all_folders} --%>
+          <%!-- selected_photo_ids={@selected_photo_ids} --%>
+          <%!-- folder={@folder} --%>
         </div>
         <div id="gallery-section" class="flex-grow basis-3/7 lg:basis-4/7 overflow-y-auto">
           <.gallery_header
@@ -72,11 +72,15 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <.photo
                 photo={photo}
                 folder={@folder}
-                all_folders={@all_folders} tags={@tags} exclude_tags={@exclude_tags}
-                all_tags={@all_tags} recommended_tags={@recommended_tags}
+                all_folders={@all_folders}
+                tags={@tags}
+                exclude_tags={@exclude_tags}
+                all_tags={@all_tags}
+                recommended_tags={@recommended_tags}
                 related_tags={@recommended_tags}
                 update_photo_form={@update_photo_form}
-                is_admin={@is_admin} />
+                is_admin={@is_admin}
+              />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
             <% _ -> %>
@@ -97,51 +101,57 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </div>
       <.modal id="expanded_photo">
         <div class="w-full min-h-screen lg:h-screen flex items-center justify-center">
-        <%= case @selected_photos do %>
-          <% [photo] -> %>
-            <div
-              class="lg:h-full p-2 flex items-center justify-center"
-              phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
-            >
-              <img
-                class="object-contain max-w-full lg:max-h-full"
-                alt={photo.name}
-                src={ImageUploader.url({photo.image, photo}, :web_lg)}
-              />
-              <div class="absolute top-4 left-4 text-sm">
-                <ul>
-                  <li :for={tag <- photo.tags} class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-fit text-sm">
-                    #{tag.name}
-                  </li>
-                </ul>
-                <div :if={@is_admin} class="mt-4">
-                  <.form for={Component.to_form(%{"tag" => "", "photo_id" => photo.id})} phx-submit="add_tag">
-                    <input class="hidden" type="text" name="photo_id" value={photo.id} />
+          <%= case @selected_photos do %>
+            <% [photo] -> %>
+              <div
+                class="lg:h-full p-2 flex items-center justify-center"
+                phx-click-away={JS.exec("data-cancel", to: "#expanded_photo")}
+              >
+                <img
+                  class="object-contain max-w-full lg:max-h-full"
+                  alt={photo.name}
+                  src={ImageUploader.url({photo.image, photo}, :web_lg)}
+                />
+                <div class="absolute top-4 left-4 text-sm">
+                  <ul>
+                    <li
+                      :for={tag <- photo.tags}
+                      class="shadow-zinc-700/10 ring-zinc-800 shadow-2xl bg-white ring-1 rounded-full px-1 my-1 w-fit text-sm"
+                    >
+                      #{tag.name}
+                    </li>
+                  </ul>
+                  <div :if={@is_admin} class="mt-4">
+                    <.form
+                      for={Component.to_form(%{"tag" => "", "photo_id" => photo.id})}
+                      phx-submit="add_tag"
+                    >
+                      <input class="hidden" type="text" name="photo_id" value={photo.id} />
                       <%!-- TODO: convert this simple inline form to a component --%>
                       <%!-- <.label for="add_any_tag_modal">Add tag</.label> --%>
-                    <input
-                      type="text"
-                      name="tag"
-                      id="add_any_tag_modal"
-                      Placeholder="Add tag"
-                      list="tag-list"
-                      class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 block mb-2 text-sm md:text-base"
-                    />
-                    <.button type="submit" class="text-sm md:text-base">Submit</.button>
+                      <input
+                        type="text"
+                        name="tag"
+                        id="add_any_tag_modal"
+                        Placeholder="Add tag"
+                        list="tag-list"
+                        class="rounded-lg w-full max-w-40 text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 block mb-2 text-sm md:text-base"
+                      />
+                      <.button type="submit" class="text-sm md:text-base">Submit</.button>
                       <%!-- <datalist id="tag-list">
                         <%= for tag <- @all_tags do %>
                           <option value={tag} />
                         <% end %>
                       </datalist> --%>
-                  </.form>
+                    </.form>
+                  </div>
                 </div>
               </div>
-            </div>
-          <% [] -> %>
-            <p class="text-center">Select a photo to view details</p>
-          <% _ -> %>
-            <p class="text-center">Please select a single photo</p>
-        <% end %>
+            <% [] -> %>
+              <p class="text-center">Select a photo to view details</p>
+            <% _ -> %>
+              <p class="text-center">Please select a single photo</p>
+          <% end %>
         </div>
       </.modal>
     </div>
@@ -290,10 +300,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           prev_filtered_photos
 
         {nil, [], [], _} ->
-          Gallery.list_photos(include_private: is_admin, sort: sort, exclude_cross_listings: false)
+          Gallery.list_photos(
+            include_private: is_admin,
+            sort: sort,
+            exclude_cross_listings: false
+          )
 
         {nil, ["untagged"], _, _} ->
-          Gallery.list_photos_by_all_tags(nil, include_private: is_admin, sort: sort, exclude_cross_listings: false) ++
+          Gallery.list_photos_by_all_tags(nil,
+            include_private: is_admin,
+            sort: sort,
+            exclude_cross_listings: false
+          ) ++
             Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
               include_private: is_admin,
               sort: sort,
@@ -444,10 +462,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     assigns = assign(assigns, :selected, assigns.toggled_tag in assigns.tags)
 
     ~H"""
-    <.toggle_link
-      selected={@selected}
-      href={@href}
-    >
+    <.toggle_link selected={@selected} href={@href}>
       {render_slot(@inner_block)}
     </.toggle_link>
     """
@@ -471,7 +486,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <nav aria-label="Breadcrumb" class="flex-grow pb-1">
         <ul class="flex flex-wrap items-center">
           <li class="align-middle pr-2">
-            <.icon name="hero-folder" class=" w-4 h-4 lg:w-5 lg:h-5"/>
+            <.icon name="hero-folder" class=" w-4 h-4 lg:w-5 lg:h-5" />
             <.link
               id="breadcrumb-folder"
               aria-current={if(length(@breadcrumb_tags) == 0, do: "page", else: "false")}
@@ -482,7 +497,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </li>
           <%= for {[tag | _] = tags, index} <- Enum.with_index(@breadcrumb_tags) do %>
             <li id="breadcrumb-tags" class="">
-              <.icon name="hero-chevron-right" class="hero-chevron-right-mini lg:hero-chevron-right w-4 h-4 lg:w-5 lg:h-5"/>
+              <.icon
+                name="hero-chevron-right"
+                class="hero-chevron-right-mini lg:hero-chevron-right w-4 h-4 lg:w-5 lg:h-5"
+              />
               <.link
                 aria-current={if(index == length(@breadcrumb_tags) - 1, do: "page", else: "false")}
                 patch={Util.build_url(@folder, [], Enum.reverse(tags), [], @is_admin)}
@@ -496,12 +514,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <div class="flex-none pb-1 lg:pb-2 flex flex-row-reverse flex-wrap items-center">
         <div class="flex-none pr-3">
           <.button class="p-1 flex items-center" phx-click="zoom_out">
-            <.icon name="hero-magnifying-glass-minus" class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5" />
+            <.icon
+              name="hero-magnifying-glass-minus"
+              class="hero-magnifying-glass-minus-mini lg:hero-magnifying-glass-minus w-4 h-4 lg:w-5 lg:h-5"
+            />
           </.button>
         </div>
         <div class="flex-none pr-1">
           <.button class="p-1 flex items-center" phx-click="zoom_in">
-            <.icon name="hero-magnifying-glass-plus" class="hero-magnifying-glass-plus-mini lg:hero-magnifying-glass-plus w-4 h-4 lg:w-5 lg:h-5" />
+            <.icon
+              name="hero-magnifying-glass-plus"
+              class="hero-magnifying-glass-plus-mini lg:hero-magnifying-glass-plus w-4 h-4 lg:w-5 lg:h-5"
+            />
           </.button>
         </div>
         <div class="flex-none mr-3 lg:ml-3">
@@ -510,7 +534,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <div class="flex-none pr-3">
           <form phx-change="change_sort" class="flex items-center">
             <label class="sr-only lg:not-sr-only text-sm mr-2">Sort:</label>
-            <select id="sort-select" name="sort" class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8">
+            <select
+              id="sort-select"
+              name="sort"
+              class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8"
+            >
               <option value="date" selected={@sort == :date}>Date</option>
               <option value="manual" selected={@sort == :manual}>Curated</option>
             </select>
@@ -523,7 +551,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             phx-click="toggle_collapse_groups"
             class="flex items-center pl-3 pr-3 inline mr-1"
           >
-            <.icon name="hero-square-3-stack-3d" class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <.icon
+              name="hero-square-3-stack-3d"
+              class="hero-square-3-stack-3d-mini lg:hero-square-3-stack-3d my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5"
+            />
             <span class="sr-only lg:not-sr-only lg:ml-1">
               {if(@collapse_groups, do: "Expand groups", else: "Collapse groups")}
             </span>
@@ -535,7 +566,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             phx-click="toggle_multiselect"
             class="flex items-center pl-3 pr-3 inline"
           >
-            <.icon name="hero-squares-plus" class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <.icon
+              name="hero-squares-plus"
+              class="hero-squares-plus-mini lg:hero-squares-plus my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5"
+            />
             <span class="sr-only lg:not-sr-only lg:ml-1">
               Multiselect
             </span>
@@ -546,7 +580,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             phx-click="toggle_visibility_outlines"
             class="flex items-center pl-3 pr-3 inline ml-1"
           >
-            <.icon name="hero-eye" class="hero-eye-mini lg:hero-eye my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5" />
+            <.icon
+              name="hero-eye"
+              class="hero-eye-mini lg:hero-eye my-1 lg:my-0 w-4 h-4 lg:w-5 lg:h-5"
+            />
             <span class="sr-only lg:not-sr-only lg:ml-1">
               Visibility
             </span>
@@ -671,7 +708,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       md:#{get_grid_size(@zoom_level, 2)}
       lg:#{get_grid_size(@zoom_level, 4)}
       xl:#{get_grid_size(@zoom_level, 4)}
-      2xl:#{get_grid_size(@zoom_level, 6)}"}>
+      2xl:#{get_grid_size(@zoom_level, 6)}"}
+      >
         <%= for {photo, index} <- Enum.with_index(@photos) do %>
           <.live_component
             module={PhotoTaggerWeb.GalleryLive.GalleryPhoto}
@@ -688,9 +726,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 (index == 0 or photo.group != Enum.at(@photos, index - 1).group)
             }
             is_admin={@is_admin}
-            group_left={photo.group != nil and index > 0 and photo.group == Enum.at(@photos, index - 1).group}
+            group_left={
+              photo.group != nil and index > 0 and photo.group == Enum.at(@photos, index - 1).group
+            }
             group_right={
-              photo.group != nil and index < length(@photos) - 1 and photo.group == Enum.at(@photos, index + 1).group
+              photo.group != nil and index < length(@photos) - 1 and
+                photo.group == Enum.at(@photos, index + 1).group
             }
             photo_is_public={photo.is_public}
             show_visibility_outline={@show_visibility_outlines}
@@ -720,13 +761,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def photo(assigns) do
     assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder.name)
-    assigns = assign(assigns, :cross_listings_with_folders,
-      Repo.preload(assigns.photo.cross_listings, :folder))
+
+    assigns =
+      assign(
+        assigns,
+        :cross_listings_with_folders,
+        Repo.preload(assigns.photo.cross_listings, :folder)
+      )
 
     ~H"""
     <.list>
       <%!-- On medium screens and above, sticky the image section to the top --%>
-      <:item title="Image" class="w-full lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10">
+      <:item
+        title="Image"
+        class="w-full lg:sticky lg:top-0 lg:bg-white lg:border-b lg:border-zinc-100 lg:mb-4 lg:z-10"
+      >
         <button
           class="relative w-full max-h-[40vh] square-image group"
           phx-click={show_modal("expanded_photo")}
@@ -741,7 +790,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </div>
         </button>
       </:item>
-      <:item title="Folder" :if={@is_admin}>
+      <:item :if={@is_admin} title="Folder">
         <div class="flex items-center gap-2">
           <.link
             class="data-[active]:font-bold"
@@ -750,34 +799,60 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           >
             {@photo.folder.name}
           </.link>
-          <p :if={@is_admin} class={"text-sm px-2 py-0.5 rounded-full border #{if @photo.is_public, do: "text-green-600 border-green-600", else: "text-red-600 border-red-600"}"}>
+          <p
+            :if={@is_admin}
+            class={"text-sm px-2 py-0.5 rounded-full border #{if @photo.is_public, do: "text-green-600 border-green-600", else: "text-red-600 border-red-600"}"}
+          >
             {if @photo.is_public, do: "public", else: "private"}
           </p>
-          <p :if={@is_admin and Gallery.is_cross_listing?(@photo)}
-             class="text-sm px-2 py-0.5 rounded-full border text-purple-600 border-purple-600">
+          <p
+            :if={@is_admin and Gallery.is_cross_listing?(@photo)}
+            class="text-sm px-2 py-0.5 rounded-full border text-purple-600 border-purple-600"
+          >
             cross-listed from
-            <.link patch={Util.build_url(@photo.original_photo.folder.name, [@photo.original_photo.id], @tags, @exclude_tags, @is_admin)}
-                   class="underline hover:text-purple-800">
+            <.link
+              patch={
+                Util.build_url(
+                  @photo.original_photo.folder.name,
+                  [@photo.original_photo.id],
+                  @tags,
+                  @exclude_tags,
+                  @is_admin
+                )
+              }
+              class="underline hover:text-purple-800"
+            >
               {@photo.original_photo.folder.name}
             </.link>
           </p>
         </div>
       </:item>
-      <:item title="Cross-listed in" :if={@is_admin and not Gallery.is_cross_listing?(@photo) and not Enum.empty?(@photo.cross_listings)}>
+      <:item
+        :if={
+          @is_admin and not Gallery.is_cross_listing?(@photo) and
+            not Enum.empty?(@photo.cross_listings)
+        }
+        title="Cross-listed in"
+      >
         <div class="text-sm text-zinc-600">
           <span class="font-medium">Cross-listed in: </span>
           <%= for {listing, index} <- Enum.with_index(@cross_listings_with_folders) do %>
-            <.link patch={Util.build_url(listing.folder.name, [listing.id], @tags, @exclude_tags, @is_admin)}
-                   class="text-purple-600 hover:text-purple-800 underline">
+            <.link
+              patch={
+                Util.build_url(listing.folder.name, [listing.id], @tags, @exclude_tags, @is_admin)
+              }
+              class="text-purple-600 hover:text-purple-800 underline"
+            >
               {listing.folder.name}
-            </.link><%= if index < length(@cross_listings_with_folders) - 1, do: ", " %>
+            </.link>
+            {if index < length(@cross_listings_with_folders) - 1, do: ", "}
           <% end %>
         </div>
       </:item>
-      <:item title="Tags" :if={@is_admin or not Enum.empty?(@photo.tags)}>
+      <:item :if={@is_admin or not Enum.empty?(@photo.tags)} title="Tags">
         <ul class="flex flex-wrap">
           <%= for tag <- @photo.tags do %>
-          <%!-- Note that @photo.tags are full structs, including id, not just a name like our other tag lists --%>
+            <%!-- Note that @photo.tags are full structs, including id, not just a name like our other tag lists --%>
             <li class="mr-2 flex items-center">
               <%= if tag.name in @recommended_tags do %>
                 <.toggle_tag_button
@@ -791,7 +866,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   #{tag.name}
                 </.toggle_tag_button>
               <% else %>
-                <.link patch={Util.build_url(@folder, [@photo.id], [tag.name], @exclude_tags, @is_admin)}>
+                <.link patch={
+                  Util.build_url(@folder, [@photo.id], [tag.name], @exclude_tags, @is_admin)
+                }>
                   #{tag.name}
                 </.link>
               <% end %>
@@ -890,19 +967,33 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           {@photo.name}
         </.link>
       </:item>
-      <:item title="Details" :if={not @is_admin and (@photo.notes || @photo.description || @photo.image_last_modified)}>
+      <:item
+        :if={not @is_admin and (@photo.notes || @photo.description || @photo.image_last_modified)}
+        title="Details"
+      >
         <p :if={@photo.notes}>Notes: {@photo.notes}</p>
         <p :if={@photo.description}>Description: {@photo.description}</p>
         <p :if={@photo.image_last_modified}>Last modified: {@photo.image_last_modified}</p>
       </:item>
-      <:item title="Edit" :if={@is_admin}>
+      <:item :if={@is_admin} title="Edit">
         <.form for={@update_photo_form} id="update-photo-form" phx-submit="update_photo">
           <input class="hidden" type="text" name="photo_id" value={@update_photo_form.data.id} />
           <.input field={@update_photo_form[:name]} name="photo[name]" type="text" label="Name" />
-          <.input class="mt-1" field={@update_photo_form[:is_public]} name="photo[is_public]" type="checkbox"
-            label="Is public" />
-          <.input field={@update_photo_form[:folder_id]} name="photo[folder_id]" type="select"
-            label="Folder" required options={Enum.map(@all_folders, &([key: &1.name, value: &1.id]))} />
+          <.input
+            class="mt-1"
+            field={@update_photo_form[:is_public]}
+            name="photo[is_public]"
+            type="checkbox"
+            label="Is public"
+          />
+          <.input
+            field={@update_photo_form[:folder_id]}
+            name="photo[folder_id]"
+            type="select"
+            label="Folder"
+            required
+            options={Enum.map(@all_folders, &[key: &1.name, value: &1.id])}
+          />
           <.input
             field={@update_photo_form[:notes]}
             name="photo[notes]"
@@ -915,12 +1006,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             type="textarea"
             label="Description"
           />
-          <.input
-            field={@update_photo_form[:group]}
-            name="photo[group]"
-            type="text"
-            label="Group"
-          />
+          <.input field={@update_photo_form[:group]} name="photo[group]" type="text" label="Group" />
           <.input
             field={@update_photo_form[:manual_order]}
             name="photo[manual_order]"
@@ -930,22 +1016,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.button class="mt-4">Save</.button>
         </.form>
       </:item>
-      <:item title="Cross-list to folder" :if={@is_admin and not Gallery.is_cross_listing?(@photo)}>
+      <:item :if={@is_admin and not Gallery.is_cross_listing?(@photo)} title="Cross-list to folder">
         <div :if={not Enum.empty?(@photo.cross_listings)} class="mb-3 text-sm text-zinc-600">
           <p class="font-medium">Already cross-listed in:</p>
           <ul class="list-disc ml-4 mt-1">
             <%= for listing <- @cross_listings_with_folders do %>
               <li>
-                <.link patch={Util.build_url(listing.folder.name, [listing.id], [], [], @is_admin)}
-                       class="text-blue-600 hover:underline">
+                <.link
+                  patch={Util.build_url(listing.folder.name, [listing.id], [], [], @is_admin)}
+                  class="text-blue-600 hover:underline"
+                >
                   {listing.folder.name}
                 </.link>
               </li>
             <% end %>
           </ul>
         </div>
-        <.form for={Component.to_form(%{"photo_id" => @photo.id, "folder_id" => ""})}
-               phx-submit="create_cross_listing">
+        <.form
+          for={Component.to_form(%{"photo_id" => @photo.id, "folder_id" => ""})}
+          phx-submit="create_cross_listing"
+        >
           <input class="hidden" type="text" name="photo_id" value={@photo.id} />
           <div class="flex gap-2">
             <select name="folder_id" class="rounded-lg text-sm text-zinc-900">
@@ -958,10 +1048,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           </div>
         </.form>
       </:item>
-      <:item title="Image last modified" :if={@is_admin and @photo.image_last_modified}>
+      <:item :if={@is_admin and @photo.image_last_modified} title="Image last modified">
         <p>{@photo.image_last_modified}</p>
       </:item>
-      <:item title="Remove" :if={@is_admin and Gallery.is_cross_listing?(@photo)}>
+      <:item :if={@is_admin and Gallery.is_cross_listing?(@photo)} title="Remove">
         <.form
           phx-submit="remove_cross_listing"
           for={Component.to_form(%{"photo_id" => @photo.id})}
@@ -971,7 +1061,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <.button class="bg-orange-600 hover:bg-orange-700">Remove cross-listing</.button>
         </.form>
       </:item>
-      <:item title="Delete" :if={@is_admin and not Gallery.is_cross_listing?(@photo)}>
+      <:item :if={@is_admin and not Gallery.is_cross_listing?(@photo)} title="Delete">
         <.form
           phx-submit="delete_photo"
           for={Component.to_form(%{"photo_id" => @photo.id})}
@@ -1120,33 +1210,43 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <.button type="submit">Form group</.button>
           </div>
         </.form>
-        <.form :if={Enum.count(@groups) > 0} class="pt-2" for={Component.to_form(%{"group" => ""})} phx-submit="set_group_bulk">
-          <input
-            class="hidden"
-            type="text"
-            name="group"
-            id="bulk_group_input"
-            value=""
-          />
+        <.form
+          :if={Enum.count(@groups) > 0}
+          class="pt-2"
+          for={Component.to_form(%{"group" => ""})}
+          phx-submit="set_group_bulk"
+        >
+          <input class="hidden" type="text" name="group" id="bulk_group_input" value="" />
           <.button type="submit">Ungroup</.button>
         </.form>
       </:item>
       <:item title="Visibility">
         <p class="mb-2">
           <%= cond do %>
-            <% @private_count == 0 -> %>Visibility: All public
-            <% @public_count == 0 -> %>Visibility: All private
-            <% true -> %>Mixed visibility: {@public_count} public, {@private_count} private
+            <% @private_count == 0 -> %>
+              Visibility: All public
+            <% @public_count == 0 -> %>
+              Visibility: All private
+            <% true -> %>
+              Mixed visibility: {@public_count} public, {@private_count} private
           <% end %>
         </p>
         <div class="flex flex-wrap gap-2">
-          <.form :if={@private_count > 0} for={Component.to_form(%{"is_public" => "true"})} phx-submit="set_visibility_bulk">
+          <.form
+            :if={@private_count > 0}
+            for={Component.to_form(%{"is_public" => "true"})}
+            phx-submit="set_visibility_bulk"
+          >
             <input type="hidden" name="is_public" value="true" />
             <.button type="submit">
               Make all public
             </.button>
           </.form>
-          <.form :if={@public_count > 0} for={Component.to_form(%{"is_public" => "false"})} phx-submit="set_visibility_bulk">
+          <.form
+            :if={@public_count > 0}
+            for={Component.to_form(%{"is_public" => "false"})}
+            phx-submit="set_visibility_bulk"
+          >
             <input type="hidden" name="is_public" value="false" />
             <.button type="submit">
               Make all private
@@ -1275,7 +1375,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       visible_photos =
         Enum.filter(all_photos, fn photo ->
           photo.group == nil or
-            !Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups) or
+            !Map.get(
+              socket.assigns.collapse_group_exceptions,
+              photo.group,
+              socket.assigns.collapse_groups
+            ) or
             photo == List.first(grouped_photos[photo.group])
         end)
 
@@ -1287,12 +1391,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {nil, _} ->
           # Last selected photo not in current view, fall back to multi-select
           handle_multi_photo_select(photo_id, socket)
+
         {_, nil} ->
           # Current photo not found, shouldn't happen but fall back
           handle_multi_photo_select(photo_id, socket)
+
         {start_idx, end_idx} ->
           # Get the range of VISIBLE photos between start and end (inclusive)
-          {min_idx, max_idx} = if start_idx <= end_idx, do: {start_idx, end_idx}, else: {end_idx, start_idx}
+          {min_idx, max_idx} =
+            if start_idx <= end_idx, do: {start_idx, end_idx}, else: {end_idx, start_idx}
+
           range_visible_photos = Enum.slice(visible_photos, min_idx..max_idx)
 
           # For any photo in the range that belongs to a collapsed group,
@@ -1327,7 +1435,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   defp expand_collapsed_groups(range_photos, grouped_photos, socket) do
     Enum.flat_map(range_photos, fn photo ->
       if photo.group != nil do
-        is_collapsed = Map.get(socket.assigns.collapse_group_exceptions, photo.group, socket.assigns.collapse_groups)
+        is_collapsed =
+          Map.get(
+            socket.assigns.collapse_group_exceptions,
+            photo.group,
+            socket.assigns.collapse_groups
+          )
 
         if is_collapsed do
           # This group is collapsed, so include all photos from the group
@@ -1436,7 +1549,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("toggle_visibility_outlines", _params, socket) do
-    {:noreply, assign(socket, :show_visibility_outlines, !socket.assigns.show_visibility_outlines)}
+    {:noreply,
+     assign(socket, :show_visibility_outlines, !socket.assigns.show_visibility_outlines)}
   end
 
   def handle_event("toggle_collapse_groups", _params, socket) do
@@ -1463,7 +1577,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   # This version, with photo_group, must be listed first or the group event will fall through incorrectly
   def handle_event(
         "select_gallery_photo",
-    %{"photo_group" => photo_group, "photo_id" => photo_id, "ctrl_key_pressed" => ctrl_key_pressed, "shift_key_pressed" => shift_key_pressed},
+        %{
+          "photo_group" => photo_group,
+          "photo_id" => photo_id,
+          "ctrl_key_pressed" => ctrl_key_pressed,
+          "shift_key_pressed" => shift_key_pressed
+        },
         socket
       ) do
     # Handle shift-click by delegating to range select handler
@@ -1477,14 +1596,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   # Holding ctrl while clicking a photo will select multiple
   def handle_event(
         "select_gallery_photo",
-    %{"ctrl_key_pressed" => ctrl_key_pressed, "shift_key_pressed" => shift_key_pressed, "photo_id" => photo_id},
+        %{
+          "ctrl_key_pressed" => ctrl_key_pressed,
+          "shift_key_pressed" => shift_key_pressed,
+          "photo_id" => photo_id
+        },
         socket
       ) do
     cond do
       shift_key_pressed ->
         handle_shift_range_select(photo_id, socket)
+
       ctrl_key_pressed or socket.assigns.multiselect_active ->
         handle_multi_photo_select(photo_id, socket)
+
       true ->
         handle_single_photo_select(photo_id, socket)
     end
@@ -1611,15 +1736,23 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
       {:error, :cross_listing_exists_in_target_folder} ->
         target_folder = Repo.get!(PhotoTagger.Gallery.Folder, photo_params["folder_id"])
+
         {:noreply,
          socket
-         |> put_flash(:error, "Cannot move: this photo is cross-listed in #{target_folder.name}. Remove the cross-listing first.")}
+         |> put_flash(
+           :error,
+           "Cannot move: this photo is cross-listed in #{target_folder.name}. Remove the cross-listing first."
+         )}
 
       {:error, :cross_listing_in_same_folder_as_original} ->
         target_folder = Repo.get!(PhotoTagger.Gallery.Folder, photo_params["folder_id"])
+
         {:noreply,
          socket
-         |> put_flash(:error, "Cannot move cross-listing to #{target_folder.name}: the original photo is already in that folder.")}
+         |> put_flash(
+           :error,
+           "Cannot move cross-listing to #{target_folder.name}: the original photo is already in that folder."
+         )}
 
       {:error, failed_op, failed_value, _changeset} ->
         {:noreply,
@@ -1683,7 +1816,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> put_flash(:info, "Photos deleted successfully.")}
   end
 
-  def handle_event("create_cross_listing", %{"photo_id" => photo_id, "folder_id" => folder_id}, socket) do
+  def handle_event(
+        "create_cross_listing",
+        %{"photo_id" => photo_id, "folder_id" => folder_id},
+        socket
+      ) do
     photo = Gallery.get_photo!(photo_id, include_private: true)
     photo = Repo.preload(photo, [:folder, :tags, :cross_listings, original_photo: :folder])
 
@@ -1691,7 +1828,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       {:ok, cross_listing} ->
         cross_listing = Repo.preload(cross_listing, :folder)
         # Reload the photo to get updated cross_listings
-        _updated_photo = Gallery.get_photo!(photo.id, include_private: true)
+        _updated_photo =
+          Gallery.get_photo!(photo.id, include_private: true)
           |> Repo.preload([:folder, :tags, :cross_listings, original_photo: :folder])
 
         {:noreply,
@@ -1717,7 +1855,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         {:noreply,
          socket
          |> put_flash(:info, "Cross-listing removed")
-         |> push_patch(to: Util.build_url(folder_name, [], socket.assigns.tags, socket.assigns.exclude_tags, socket.assigns.is_admin))}
+         |> push_patch(
+           to:
+             Util.build_url(
+               folder_name,
+               [],
+               socket.assigns.tags,
+               socket.assigns.exclude_tags,
+               socket.assigns.is_admin
+             )
+         )}
 
       {:error, :not_a_cross_listing} ->
         {:noreply,
@@ -1732,9 +1879,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     # Filter to only original photos (skip cross-listings)
     originals = Enum.reject(socket.assigns.selected_photos, &Gallery.is_cross_listing?/1)
 
-    results = Enum.map(originals, fn photo ->
-      Gallery.create_cross_listing(photo, target_folder_id)
-    end)
+    results =
+      Enum.map(originals, fn photo ->
+        Gallery.create_cross_listing(photo, target_folder_id)
+      end)
 
     success_count = Enum.count(results, &match?({:ok, _}, &1))
     error_count = Enum.count(results, &match?({:error, _}, &1))
@@ -1742,11 +1890,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     socket =
       case {success_count, error_count} do
         {0, _} ->
-          put_flash(socket, :error, "No cross-listings created (photos may already exist in target folder)")
+          put_flash(
+            socket,
+            :error,
+            "No cross-listings created (photos may already exist in target folder)"
+          )
+
         {_, 0} ->
           put_flash(socket, :info, "Created #{success_count} cross-listing(s)")
+
         {_, _} ->
-          put_flash(socket, :info, "Created #{success_count} cross-listing(s), #{error_count} skipped")
+          put_flash(
+            socket,
+            :info,
+            "Created #{success_count} cross-listing(s), #{error_count} skipped"
+          )
       end
 
     {:noreply,
@@ -1765,11 +1923,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("change_sort", %{"sort" => sort}, socket) do
-    sort_atom = case sort do
-      "date" -> :date
-      "manual" -> :manual
-      _ -> :manual
-    end
+    sort_atom =
+      case sort do
+        "date" -> :date
+        "manual" -> :manual
+        _ -> :manual
+      end
 
     {:noreply,
      push_patch(socket,
@@ -1794,7 +1953,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       end
 
     {:noreply,
-     push_patch(socket, to: Util.build_url(folder, [], [], [], socket.assigns.is_admin, nil, socket.assigns.sort))}
+     push_patch(socket,
+       to: Util.build_url(folder, [], [], [], socket.assigns.is_admin, nil, socket.assigns.sort)
+     )}
   end
 
   def handle_event("toggle_tag", %{"tag" => tag}, socket) do
@@ -1875,7 +2036,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   defp delete_confirmation_message(photo) do
     case Enum.empty?(photo.cross_listings) do
-      true -> "Are you sure you want to permanently delete this photo?"
+      true ->
+        "Are you sure you want to permanently delete this photo?"
+
       false ->
         count = length(photo.cross_listings)
         "This will permanently delete this photo and #{count} cross-listing(s). Continue?"
@@ -1883,7 +2046,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   defp available_cross_list_folders(photo, all_folders) do
-    existing_folder_ids = MapSet.new([photo.folder_id | Enum.map(photo.cross_listings, & &1.folder_id)])
+    existing_folder_ids =
+      MapSet.new([photo.folder_id | Enum.map(photo.cross_listings, & &1.folder_id)])
+
     Enum.reject(all_folders, &(&1.id in existing_folder_ids))
   end
 
@@ -1897,5 +2062,16 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def clamp(x, min, max), do: min(max(x, min), max)
 
   # Keep only the values which are used by the UI
-  def simplify_photo(photo), do: Map.take(photo, [:id, :name, :group, :image, :folder, :is_public, :original_photo_id, :original_photo])
+  def simplify_photo(photo),
+    do:
+      Map.take(photo, [
+        :id,
+        :name,
+        :group,
+        :image,
+        :folder,
+        :is_public,
+        :original_photo_id,
+        :original_photo
+      ])
 end
