@@ -1615,6 +1615,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
          socket
          |> put_flash(:error, "Cannot move: this photo is cross-listed in #{target_folder.name}. Remove the cross-listing first.")}
 
+      {:error, :cross_listing_in_same_folder_as_original} ->
+        target_folder = Repo.get!(PhotoTagger.Gallery.Folder, photo_params["folder_id"])
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot move cross-listing to #{target_folder.name}: the original photo is already in that folder.")}
+
       {:error, failed_op, failed_value, _changeset} ->
         {:noreply,
          socket

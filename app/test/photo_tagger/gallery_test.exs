@@ -1072,6 +1072,23 @@ defmodule PhotoTagger.GalleryTest do
 			assert updated.description == "New description"
 			assert updated.folder_id == folder_a.id
 		end
+
+		test "prevents moving cross-listing to same folder as original" do
+			folder_a = folder_fixture(%{name: "folder_a"})
+			folder_b = folder_fixture(%{name: "folder_b"})
+
+			# Create original photo in folder A
+			original = photo_fixture(%{folder_id: folder_a.id})
+
+			# Create cross-listing in folder B
+			{:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
+
+			# Attempt to move cross-listing to folder A (same as original)
+			result = Gallery.update_photo(cross_listing, %{"folder_id" => folder_a.id})
+
+			# Should return error
+			assert {:error, :cross_listing_in_same_folder_as_original} = result
+		end
 	end
 
 	describe "cross-listing integration tests" do

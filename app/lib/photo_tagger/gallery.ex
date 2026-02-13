@@ -427,6 +427,7 @@ defmodule PhotoTagger.Gallery do
 
     # Check for cross-listing conflict when changing folders
     if new_folder_id && to_string(new_folder_id) != to_string(photo.folder_id) do
+      # Prevent moving original to folder where cross-listing exists
       conflict =
         from(p in Photo,
           where: p.original_photo_id == ^photo.id,
@@ -434,10 +435,21 @@ defmodule PhotoTagger.Gallery do
         )
         |> Repo.one()
 
-      if conflict do
-        {:error, :cross_listing_exists_in_target_folder}
-      else
-        do_update_photo(photo, attrs)
+      cond do
+        conflict ->
+          {:error, :cross_listing_exists_in_target_folder}
+
+        is_cross_listing?(photo) ->
+          # Prevent moving cross-listing to same folder as original
+          original = Repo.get!(Photo, photo.original_photo_id)
+          if to_string(new_folder_id) == to_string(original.folder_id) do
+            {:error, :cross_listing_in_same_folder_as_original}
+          else
+            do_update_photo(photo, attrs)
+          end
+
+        true ->
+          do_update_photo(photo, attrs)
       end
     else
       do_update_photo(photo, attrs)

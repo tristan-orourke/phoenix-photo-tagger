@@ -97,3 +97,17 @@ Document important technical decisions and their rationale.
 **Alternatives Considered**:
 - Promote one cross-listing to original: Complex file ownership transfer; which one gets promoted?
 - Soft delete / archive: Adds complexity without clear user benefit
+
+---
+
+### [2026-02-12] Block moving cross-listing to same folder as original
+
+**Status**: Accepted
+**Context**: A cross-listing exists to allow a photo to appear in multiple folders. If a cross-listing is moved to the same folder as its original, both records would exist in the same folder, defeating the purpose and creating UI confusion.
+**Decision**: `update_photo/2` returns `{:error, :cross_listing_in_same_folder_as_original}` if attempting to move a cross-listing to its original's folder. The LiveView displays a user-friendly error message.
+**Consequences**:
+- Positive: Prevents invalid state where original and cross-listing coexist in same folder; maintains clear separation
+- Negative: Users must delete the cross-listing first if they want both in the same folder (rare scenario)
+**Alternatives Considered**:
+- Auto-delete the cross-listing on move: Could surprise users; explicit action is safer
+- Allow the invalid state: Would confuse UI and violate the cross-listing concept
