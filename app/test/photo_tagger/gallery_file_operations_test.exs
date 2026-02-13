@@ -221,7 +221,7 @@ defmodule PhotoTagger.GalleryFileOperationsTest do
       assert String.contains?(old_photo_path, "old_folder")
 
       # Rename folder
-      {:ok, updated_folder} = Gallery.update_folder(folder, %{"name" => "new_folder"})
+      {:ok, _updated_folder} = Gallery.update_folder(folder, %{"name" => "new_folder"})
 
       # Reload photo
       updated_photo = Gallery.get_photo!(photo.id, include_private: true)
@@ -313,7 +313,7 @@ defmodule PhotoTagger.GalleryFileOperationsTest do
       assert path == "uploads/images/path_test"
     end
 
-    test "filename/2 for original version preserves basename", context do
+    test "filename/2 for original version preserves basename", _context do
       file = %{file_name: "sunset.jpg"}
 
       filename = ImageUploader.filename(:original, {file, nil})
@@ -321,7 +321,7 @@ defmodule PhotoTagger.GalleryFileOperationsTest do
       assert filename == "sunset"
     end
 
-    test "filename/2 for transformed versions adds version suffix", context do
+    test "filename/2 for transformed versions adds version suffix", _context do
       file = %{file_name: "sunset.jpg"}
 
       thumb_filename = ImageUploader.filename(:thumb, {file, nil})

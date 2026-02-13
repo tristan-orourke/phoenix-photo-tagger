@@ -10,8 +10,6 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
   import Phoenix.LiveViewTest
   import PhotoTagger.GalleryFixtures
 
-  alias PhotoTagger.Gallery
-
   # ============================================================================
   # Helper Functions
   # ============================================================================
@@ -51,9 +49,9 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
     test "loads initial photo from available photos", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
-      photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+      _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
 
-      {:ok, view, html} = live(conn, ~p"/photos/#{photo1.id}/drift")
+      {:ok, view, _html} = live(conn, ~p"/photos/#{photo1.id}/drift")
 
       # Should show one of the photos
       assert has_element?(view, "#drift-photo")
@@ -64,9 +62,9 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
       public_folder = folder_fixture(%{name: "Public", visibility_type: :public})
       private_folder = folder_fixture(%{name: "Private", visibility_type: :private})
       public_photo = photo_fixture(%{folder_id: public_folder.id, filename: "public.jpg"})
-      private_photo = photo_fixture(%{folder_id: private_folder.id, filename: "private.jpg"})
+      _private_photo = photo_fixture(%{folder_id: private_folder.id, filename: "private.jpg"})
 
-      {:ok, view, html} = live(conn, ~p"/photos/#{public_photo.id}/drift")
+      {:ok, _view, _html} = live(conn, ~p"/photos/#{public_photo.id}/drift")
 
       # Public user should only see public photos
       # TODO: Verify only public photos are in rotation
@@ -96,13 +94,13 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
     test "advances to next photo", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
-      photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
-      photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
+      _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+      _photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg"})
 
-      {:ok, view, html_before} = live(conn, ~p"/photos/#{photo1.id}/drift")
+      {:ok, view, _html_before} = live(conn, ~p"/photos/#{photo1.id}/drift")
 
       # TODO: Deterministic test would require seeding the RNG or mocking weighted selection
-      html_after = render_click(view, "switch_photos", %{})
+      _html_after = render_click(view, "switch_photos", %{})
 
       # Should still have a photo displayed
       assert has_element?(view, "#drift-photo")
@@ -115,9 +113,9 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
       folder1 = folder_fixture(%{name: "Folder1"})
       folder2 = folder_fixture(%{name: "Folder2"})
       photo1 = photo_fixture(%{folder_id: folder1.id, filename: "photo1.jpg"})
-      photo2 = photo_fixture(%{folder_id: folder2.id, filename: "photo2.jpg"})
+      _photo2 = photo_fixture(%{folder_id: folder2.id, filename: "photo2.jpg"})
 
-      {:ok, view, html} = live(conn, ~p"/folders/Folder1/photos/#{photo1.id}/drift")
+      {:ok, view, _html} = live(conn, ~p"/folders/Folder1/photos/#{photo1.id}/drift")
 
       # TODO: More deterministic test would verify only Folder1 photos appear
       # across multiple switch_photos events
