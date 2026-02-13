@@ -170,3 +170,39 @@ docker compose -f docker-compose-dev.yml run --rm dev_app bash -c 'MIX_ENV=test 
 ```
 
 **Prevention**: When writing manual test scripts, use unique names (e.g., `"test_#{System.unique_integer([:positive])}"`) instead of hardcoded names like "test_folder".
+
+### [2026-02-13] Elixir compiler warnings for unused variables
+
+**Pattern**: Prefix unused variables with underscore (`_`) to suppress warnings:
+```elixir
+# Instead of: photo2 = photo_fixture(...)
+# Use: _photo2 = photo_fixture(...)
+```
+
+**When to prefix**:
+- Variables assigned but never referenced later in the test
+- Setup data created for database state but not directly used in assertions
+- Pattern matching captures that aren't needed (e.g., `{:ok, _view, html}` when only `html` is used)
+
+**When NOT to prefix**:
+- Variables referenced in assertions or other code, even if only once
+- Variables used in later function calls
+
+**Helper functions**: If a helper function is currently unused but will be needed later, keep it without underscore prefix. The warning serves as documentation that it's not yet used.
+
+**Tag placement**: Use `@describetag` inside describe blocks, not `@tag` before them:
+```elixir
+# Incorrect:
+@tag :skip
+describe "some tests" do
+  test "..." do
+  end
+end
+
+# Correct:
+describe "some tests" do
+  @describetag :skip
+  test "..." do
+  end
+end
+```
