@@ -75,18 +75,10 @@ defmodule PhotoTagger.Gallery do
   Gets the next available manual_order position for a folder.
   Returns 1 if no photos exist in the folder, otherwise max + 1.
   """
-  def get_next_manual_order(folder_id) do
-    # Ensure folder_id is an integer (may come as string from form params)
-    folder_id_int =
-      cond do
-        is_integer(folder_id) -> folder_id
-        is_binary(folder_id) -> String.to_integer(folder_id)
-        true -> raise ArgumentError, "folder_id must be an integer or string, got: #{inspect(folder_id)}"
-      end
-
+  def get_next_manual_order(folder_id) when is_integer(folder_id) do
     max_order =
       from(p in Photo,
-        where: p.folder_id == ^folder_id_int,
+        where: p.folder_id == ^folder_id,
         select: max(p.manual_order)
       )
       |> Repo.one()
@@ -355,7 +347,14 @@ defmodule PhotoTagger.Gallery do
     # Auto-assign manual_order if not provided
     attrs =
       if Map.has_key?(attrs, "folder_id") and not Map.has_key?(attrs, "manual_order") do
-        next_order = get_next_manual_order(attrs["folder_id"])
+        # Convert folder_id to integer if it's a string (from form params)
+        folder_id =
+          case attrs["folder_id"] do
+            id when is_integer(id) -> id
+            id when is_binary(id) -> String.to_integer(id)
+          end
+
+        next_order = get_next_manual_order(folder_id)
         Map.put(attrs, "manual_order", next_order)
       else
         attrs

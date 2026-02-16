@@ -30,13 +30,13 @@ Track bugs with root causes and solutions for future reference.
 
 **Root Cause**: The `Gallery.get_next_manual_order/1` function receives `folder_id` as a string from the form parameters (e.g., `"5"`), but was using it directly in an Ecto query where `folder_id` is an integer database column. The query `where: p.folder_id == ^"5"` doesn't match integer column values, so `max(manual_order)` returned `nil`, causing the function to always return `1`.
 
-**Solution**: Modified `get_next_manual_order/1` in `lib/photo_tagger/gallery.ex` to convert string `folder_id` values to integers before querying. Used `cond` with type guards to handle both integer (from tests/fixtures) and string (from forms) inputs. Added explicit error handling for invalid types (nil, atoms, etc.) to fail fast with a clear error message.
+**Solution**: Converted string `folder_id` to integer in `create_photo/1` before calling `get_next_manual_order/1`. This handles type conversion at the system boundary (where form params enter) rather than inside the helper function. Made `get_next_manual_order/1` only accept integers using a guard clause (`when is_integer(folder_id)`), making its contract clearer and consistent with how other callers (e.g., `create_cross_listing`) handle the conversion.
 
 **Files Changed**:
-- `app/lib/photo_tagger/gallery.ex` - Added type conversion and validation to `get_next_manual_order/1`
-- `app/test/photo_tagger/gallery_test.exs` - Added tests for string folder_id handling and error cases
+- `app/lib/photo_tagger/gallery.ex` - Added type conversion in `create_photo/1`; simplified `get_next_manual_order/1` to only accept integers
+- `app/test/photo_tagger/gallery_test.exs` - Integration test through `create_photo` with string folder_id verifies the fix
 
-**Testing**: Added unit test for string folder_id, integration test through `create_photo`, and error handling test for invalid types.
+**Testing**: Existing integration test verifies that `create_photo` correctly handles string folder_id from form params and assigns sequential manual_order values.
 
 **Related Issues**: Issue "uploaded photos should get a manual order number at the end of their folder"
 
