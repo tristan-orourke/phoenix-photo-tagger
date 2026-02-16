@@ -92,6 +92,36 @@ defmodule PhotoTagger.GalleryTest do
       assert photo2.manual_order == 2
       assert photo3.manual_order == 3
     end
+
+    test "create_photo/1 with string folder_id assigns correct sequential manual_order", %{
+      folder: folder
+    } do
+      # Simulate what happens when folder_id comes from form as string
+      # Create first photo with string folder_id
+      image1 = %{file_name: "test1.jpg", updated_at: DateTime.utc_now()}
+
+      {:ok, photo1} =
+        Gallery.create_photo(%{
+          "name" => "test1.jpg",
+          "folder_id" => to_string(folder.id),
+          "image" => image1,
+          "image_last_modified" => DateTime.utc_now()
+        })
+
+      # Create second photo - should get manual_order = 2, not 1
+      image2 = %{file_name: "test2.jpg", updated_at: DateTime.utc_now()}
+
+      {:ok, photo2} =
+        Gallery.create_photo(%{
+          "name" => "test2.jpg",
+          "folder_id" => to_string(folder.id),
+          "image" => image2,
+          "image_last_modified" => DateTime.utc_now()
+        })
+
+      assert photo1.manual_order == 1
+      assert photo2.manual_order == 2
+    end
   end
 
   describe "photos (real files)" do
@@ -460,6 +490,14 @@ defmodule PhotoTagger.GalleryTest do
       _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
 
       assert Gallery.get_next_manual_order(folder.id) == 6
+    end
+
+    test "get_next_manual_order/1 handles string folder_id (from form params)", %{folder: folder} do
+      _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 2})
+      _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1})
+
+      # When folder_id comes from a form, it's a string
+      assert Gallery.get_next_manual_order(to_string(folder.id)) == 3
     end
   end
 

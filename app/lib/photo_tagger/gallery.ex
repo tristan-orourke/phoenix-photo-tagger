@@ -76,9 +76,16 @@ defmodule PhotoTagger.Gallery do
   Returns 1 if no photos exist in the folder, otherwise max + 1.
   """
   def get_next_manual_order(folder_id) do
+    # Ensure folder_id is an integer (may come as string from form params)
+    folder_id_int =
+      case folder_id do
+        id when is_integer(id) -> id
+        id when is_binary(id) -> String.to_integer(id)
+      end
+
     max_order =
       from(p in Photo,
-        where: p.folder_id == ^folder_id,
+        where: p.folder_id == ^folder_id_int,
         select: max(p.manual_order)
       )
       |> Repo.one()
