@@ -17,43 +17,52 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
       />
       <div class="absolute top-4 left-4 text-sm">
         <ul>
-          <li :for={tag <- @tags} class={case {tag in @photo_tags, tag in @prev_photo_tags} do
-              {true, true} -> "shared-tag"
-              {true, false} -> "new-tag"
-              {false, true} -> "old-tag"
-              {false, false} -> "h-0"
-            end}
+          <li
+            :for={tag <- @tags}
+            class={
+              case {tag in @photo_tags, tag in @prev_photo_tags} do
+                {true, true} -> "shared-tag"
+                {true, false} -> "new-tag"
+                {false, true} -> "old-tag"
+                {false, false} -> "h-0"
+              end
+            }
             id={"tag-#{tag}"}
             data-hide={
-              JS.transition({"transition-all transform ease-in duration-1000",
-                "h-6 opacity-100",
-                "h-0 opacity-0"},
-              to: "#tag-#{tag}",
-              time: 1000
-            )}
-            data-show={JS.transition(
-                {"transition-all transform ease-in duration-1000",
-                "h-0 opacity-0",
-                "h-6 opacity-100"},
-              to: "#tag-#{tag}",
-              time: 1000
-            )}
+              JS.transition(
+                {"transition-all transform ease-in duration-1000", "h-6 opacity-100",
+                 "h-0 opacity-0"},
+                to: "#tag-#{tag}",
+                time: 1000
+              )
+            }
+            data-show={
+              JS.transition(
+                {"transition-all transform ease-in duration-1000", "h-0 opacity-0",
+                 "h-6 opacity-100"},
+                to: "#tag-#{tag}",
+                time: 1000
+              )
+            }
           >
-            <%
-              is_shared = tag in @photo_tags and tag in @prev_photo_tags
-              is_focus = tag == @focus_tag
-              bg_class = cond do
+            <% is_shared = tag in @photo_tags and tag in @prev_photo_tags
+            is_focus = tag == @focus_tag
+
+            bg_class =
+              cond do
                 is_shared -> "bg-green-50"
                 is_focus -> "bg-cyan-100"
                 true -> "bg-white"
               end
-              ring_class = cond do
+
+            ring_class =
+              cond do
                 is_focus -> "ring-2 ring-cyan-400 ring-offset-1 ring-offset-zinc-800"
                 is_shared -> "ring-1 ring-green-400 ring-offset-1 ring-offset-zinc-800"
                 true -> ""
-              end
-            %>
-            <p class={"rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
+              end %>
+            <p
+              class={"rounded-full px-1 w-max text-sm transition-all duration-300 #{bg_class} #{ring_class}"}
               data-attention={is_focus}
               data-shared={is_shared}
               id={"tag-p-#{tag}"}
@@ -101,9 +110,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Drift do
             <span id="countdown-seconds" class="text-white text-xs font-semibold">0</span>
           </div>
         </div>
-        <.button
-          phx-click="increase_tempo"
-        >
+        <.button phx-click="increase_tempo">
           <.icon name="hero-clock" class="w-5 h-5" />
           {case @interval_ms do
             2000 -> "2s"

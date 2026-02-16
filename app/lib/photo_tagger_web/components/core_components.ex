@@ -329,11 +329,10 @@ defmodule PhotoTaggerWeb.CoreComponents do
     ~H"""
     <.link
       class={[
-          "border rounded-full px-1 my-1 no-underline",
-          "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
-          "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700",
-        ]
-      }
+        "border rounded-full px-1 my-1 no-underline",
+        "border border-blue-600 text-blue-600 bg-white hover:bg-blue-100 hover:text-blue-800",
+        "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700"
+      ]}
       aria-selected={if(@selected, do: "true", else: "false")}
       {@nav}
       {@rest}
@@ -640,7 +639,15 @@ defmodule PhotoTaggerWeb.CoreComponents do
     ~H"""
     <div class="mt-0">
       <dl class="-my-4">
-        <div :for={item <- @item} class={ClassHelper.tw(["py-4 text-sm leading-6 sm:gap-8 border-b border-zinc-100 text-zinc-700", Map.get(item, :class, "")])}>
+        <div
+          :for={item <- @item}
+          class={
+            ClassHelper.tw([
+              "py-4 text-sm leading-6 sm:gap-8 border-b border-zinc-100 text-zinc-700",
+              Map.get(item, :class, "")
+            ])
+          }
+        >
           <%!-- <dt class="hidden lg:inline w-1/6 flex-none text-zinc-500">{item.title}</dt> --%>
           <%!-- <dd class="text-zinc-700">{render_slot(item)}</dd> --%>
           {render_slot(item)}

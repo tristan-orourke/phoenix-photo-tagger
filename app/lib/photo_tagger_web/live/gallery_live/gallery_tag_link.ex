@@ -16,14 +16,11 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryTagLink do
     ~H"""
     <div>
       <%= if @is_recommended do %>
-        <.toggle_link
-          selected={@is_selected}
-          href={@url}
-        >
+        <.toggle_link selected={@is_selected} href={@url}>
           {@tag}
         </.toggle_link>
       <% else %>
-        <.link class="mr-2 my-1" patch={@url} >
+        <.link class="mr-2 my-1" patch={@url}>
           {@tag}
         </.link>
       <% end %>

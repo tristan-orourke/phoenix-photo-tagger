@@ -19,8 +19,15 @@ defmodule PhotoTaggerWeb.PhotoController do
   end
 
   def create(conn, %{"photo" => photo_params}) do
-    {%{"images" => images, "file_metadata" => metadata_string}, other_params} =
-      Map.split(photo_params, ["images", "file_metadata"])
+    {extracted, other_params} =
+      Map.split(photo_params, ["images", "file_metadata", "cross_list_folder_ids"])
+
+    images = extracted["images"]
+    metadata_string = extracted["file_metadata"]
+
+    cross_list_folder_ids =
+      (extracted["cross_list_folder_ids"] || [])
+      |> Enum.map(&String.to_integer/1)
 
     metadata = JSON.decode!(metadata_string)
     folder = other_params["folder"]
@@ -38,18 +45,22 @@ defmodule PhotoTaggerWeb.PhotoController do
       end)
 
     results = Enum.map(photo_attrs, &Gallery.create_photo(&1))
+    successful_photos = for {:ok, photo} <- results, do: photo
 
-    if Enum.all?(results, fn
-         {:ok, _} -> true
-         _ -> false
-       end) do
+    # Create cross-listings for each successfully created photo
+    Enum.each(successful_photos, fn photo ->
+      Enum.each(cross_list_folder_ids, fn folder_id ->
+        Gallery.create_cross_listing(photo, folder_id)
+      end)
+    end)
+
+    if Enum.all?(results, &match?({:ok, _}, &1)) do
       url = build_url(folder, List.first(results) |> elem(1))
 
       conn
       |> put_flash(:info, "Photos created successfully.")
       |> redirect(to: url)
     else
-      successful_photos = for {:ok, photo} <- results, do: photo
       failed_photos = for {:error, changeset} <- results, do: changeset.changes.name
       # {Keyword.get(changeset.errors, :image) |> elem(0)}"
       url =

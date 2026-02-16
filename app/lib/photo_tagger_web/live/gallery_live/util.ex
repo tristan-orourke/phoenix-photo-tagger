@@ -1,7 +1,17 @@
 defmodule PhotoTaggerWeb.GalleryLive.Util do
   require Logger
 
-  def build_url(folder, selected_photo_ids, tags, exclude_tags, is_admin, tail \\ nil, sort \\ nil, pg \\ nil, sort_direction \\ nil) do
+  def build_url(
+        folder,
+        selected_photo_ids,
+        tags,
+        exclude_tags,
+        is_admin,
+        tail \\ nil,
+        sort \\ nil,
+        pg \\ nil,
+        sort_direction \\ nil
+      ) do
     {photo_id, selected_photo_ids} =
       case selected_photo_ids do
         [photo_id] -> {photo_id, []}

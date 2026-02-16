@@ -44,6 +44,16 @@ docker compose -f docker-compose-dev.yml run dev_app <command>
 - **Public/private filtering**: Most functions accept `:include_private` option
 - **File operations**: Use `Ecto.Multi` to coordinate DB changes with filesystem
 
+## Photo Selection
+
+- **Click metadata capture**: JavaScript in `app.js` captures `shift_key_pressed` and `ctrl_key_pressed` in LiveView click events
+- **Selection tracking**: `last_selected_photo_id` tracked in socket assigns for shift-click range selection
+- **Multi-select modes**: 
+  - Single click: Select one photo
+  - Ctrl+click or multiselect mode: Toggle individual photos
+  - Shift+click (with ctrl or in multiselect mode): Select range from last selected to clicked photo
+- **Collapsed groups**: When selecting a range that includes a collapsed group's representative photo, all photos in that group are included in the selection
+
 ## Routes
 
 - `/` - Public browsing (folders, photos, drift view)
@@ -160,3 +170,39 @@ docker compose -f docker-compose-dev.yml run --rm dev_app bash -c 'MIX_ENV=test 
 ```
 
 **Prevention**: When writing manual test scripts, use unique names (e.g., `"test_#{System.unique_integer([:positive])}"`) instead of hardcoded names like "test_folder".
+
+### [2026-02-13] Elixir compiler warnings for unused variables
+
+**Pattern**: Prefix unused variables with underscore (`_`) to suppress warnings:
+```elixir
+# Instead of: photo2 = photo_fixture(...)
+# Use: _photo2 = photo_fixture(...)
+```
+
+**When to prefix**:
+- Variables assigned but never referenced later in the test
+- Setup data created for database state but not directly used in assertions
+- Pattern matching captures that aren't needed (e.g., `{:ok, _view, html}` when only `html` is used)
+
+**When NOT to prefix**:
+- Variables referenced in assertions or other code, even if only once
+- Variables used in later function calls
+
+**Helper functions**: If a helper function is currently unused but will be needed later, keep it without underscore prefix. The warning serves as documentation that it's not yet used.
+
+**Tag placement**: Use `@describetag` inside describe blocks, not `@tag` before them:
+```elixir
+# Incorrect:
+@tag :skip
+describe "some tests" do
+  test "..." do
+  end
+end
+
+# Correct:
+describe "some tests" do
+  @describetag :skip
+  test "..." do
+  end
+end
+```

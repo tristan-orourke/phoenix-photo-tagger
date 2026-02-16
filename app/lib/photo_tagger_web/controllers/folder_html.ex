@@ -16,7 +16,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
               <%= for %{name: folder} <- @folders do %>
                 <li>
                   <.link href={~p"/folders/#{folder}"} class="text-blue-500 hover:underline">
-                    <%= folder %>
+                    {folder}
                   </.link>
                 </li>
               <% end %>
@@ -37,7 +37,7 @@ defmodule PhotoTaggerWeb.FolderHTML do
     </h2>
 
     <ul>
-      <%= for %{name: folder, is_public: is_public} <- @folders do %>
+      <%= for %{name: folder, visibility_type: visibility_type} <- @folders do %>
         <li class="mb-8">
           <p class="font-bold">{folder}</p>
           <div class="ml-4">
@@ -55,16 +55,39 @@ defmodule PhotoTaggerWeb.FolderHTML do
                   />
                 </div>
                 <div class="flex items-center space-x-4 mt-4">
-                  <.label for={"folder_is_public_#{folder}"}>Is public</.label>
-                  <input type="hidden" name="is_public" value="false" />
-                  <input
-                    type="checkbox"
-                    id={"folder_is_public_#{folder}"}
-                    name="is_public"
-                    checked={is_public}
-                    value="true"
-                    class="rounded focus:ring-0"
-                  />
+                  <.label>Visibility</.label>
+                  <div class="flex space-x-4">
+                    <label class="flex items-center">
+                      <input
+                        type="radio"
+                        name="visibility_type"
+                        value="private"
+                        checked={visibility_type == :private}
+                        class="rounded focus:ring-0"
+                      />
+                      <span class="ml-1">Private</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input
+                        type="radio"
+                        name="visibility_type"
+                        value="public"
+                        checked={visibility_type == :public}
+                        class="rounded focus:ring-0"
+                      />
+                      <span class="ml-1">Public</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input
+                        type="radio"
+                        name="visibility_type"
+                        value="unlisted"
+                        checked={visibility_type == :unlisted}
+                        class="rounded focus:ring-0"
+                      />
+                      <span class="ml-1">Unlisted</span>
+                    </label>
+                  </div>
                 </div>
                 <.button class="mt-4" type="submit">Update folder</.button>
               </.form>
@@ -87,25 +110,36 @@ defmodule PhotoTaggerWeb.FolderHTML do
     <h2>Create Folder</h2>
     <.form for={%{}} action={~p"/admin/folders"} method="post">
       <div class="flex items-center space-x-4">
-        <.label for={"new_folder_name"}>Name</.label>
+        <.label for="new_folder_name">Name</.label>
         <input
           type="text"
           name="name"
-          id={"new_folder_name"}
+          id="new_folder_name"
           class="block max-w-64 rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6"
         />
       </div>
       <div class="flex items-center space-x-4 mt-4">
-        <.label for="new_folder_is_public">Is public</.label>
-        <input type="hidden" name="is_public" value="false" />
-        <input
-          type="checkbox"
-          id="new_folder_is_public"
-          name="is_public"
-          value="true"
-          checked={false}
-          class="rounded focus:ring-0"
-        />
+        <.label>Visibility</.label>
+        <div class="flex space-x-4">
+          <label class="flex items-center">
+            <input
+              type="radio"
+              name="visibility_type"
+              value="private"
+              checked={true}
+              class="rounded focus:ring-0"
+            />
+            <span class="ml-1">Private</span>
+          </label>
+          <label class="flex items-center">
+            <input type="radio" name="visibility_type" value="public" class="rounded focus:ring-0" />
+            <span class="ml-1">Public</span>
+          </label>
+          <label class="flex items-center">
+            <input type="radio" name="visibility_type" value="unlisted" class="rounded focus:ring-0" />
+            <span class="ml-1">Unlisted</span>
+          </label>
+        </div>
       </div>
       <.button type="submit">Create folder</.button>
     </.form>
