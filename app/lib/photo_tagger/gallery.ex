@@ -78,9 +78,10 @@ defmodule PhotoTagger.Gallery do
   def get_next_manual_order(folder_id) do
     # Ensure folder_id is an integer (may come as string from form params)
     folder_id_int =
-      case folder_id do
-        id when is_integer(id) -> id
-        id when is_binary(id) -> String.to_integer(id)
+      cond do
+        is_integer(folder_id) -> folder_id
+        is_binary(folder_id) -> String.to_integer(folder_id)
+        true -> raise ArgumentError, "folder_id must be an integer or string, got: #{inspect(folder_id)}"
       end
 
     max_order =

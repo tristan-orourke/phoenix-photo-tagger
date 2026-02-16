@@ -1,0 +1,28 @@
+FROM elixir:1.18.2
+
+# Build Args
+ARG PHOENIX_VERSION=1.7.14
+
+# Dependencies
+RUN apt update \
+  && apt upgrade -y \
+  && apt install -y bash curl git build-essential inotify-tools
+
+# App Directory
+ENV APP_HOME /app
+COPY ./app $APP_HOME
+WORKDIR $APP_HOME
+
+# Install Hex from GitHub instead of online builds.hex.pm
+RUN mix archive.install --force github hexpm/hex branch latest || true
+
+# Install Dependencies - with retries
+RUN for i in 1 2 3; do mix deps.get && break || sleep 10; done || true
+RUN for i in 1 2 3; do mix assets.setup && break || sleep 10; done || true
+RUN for i in 1 2 3; do mix assets.build && break || sleep 10; done || true
+
+# App Port
+# EXPOSE 4000
+
+# Default Command
+CMD ["mix", "phx.server"]

@@ -499,6 +499,16 @@ defmodule PhotoTagger.GalleryTest do
       # When folder_id comes from a form, it's a string
       assert Gallery.get_next_manual_order(to_string(folder.id)) == 3
     end
+
+    test "get_next_manual_order/1 raises ArgumentError for invalid folder_id type" do
+      assert_raise ArgumentError, ~r/folder_id must be an integer or string/, fn ->
+        Gallery.get_next_manual_order(nil)
+      end
+
+      assert_raise ArgumentError, ~r/folder_id must be an integer or string/, fn ->
+        Gallery.get_next_manual_order(:invalid)
+      end
+    end
   end
 
   describe "related tags" do
