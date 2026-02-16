@@ -288,7 +288,7 @@ defmodule PhotoTagger.GalleryTest do
       assert photo_names == ["a_photo.jpg", "b_photo.jpg", "c_photo.jpg"]
     end
 
-    test "list_photos/1 with sort: :manual orders by manual_order asc", %{folder: folder} do
+    test "list_photos/1 with sort: :manual defaults to descending order", %{folder: folder} do
       _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
       _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
       _photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
@@ -296,7 +296,98 @@ defmodule PhotoTagger.GalleryTest do
       photos = Gallery.list_photos(sort: :manual, include_private: true)
       photo_names = Enum.map(photos, & &1.name)
 
+      # Default direction is :desc (highest/newest first)
+      assert photo_names == ["third.jpg", "second.jpg", "first.jpg"]
+    end
+
+    test "list_photos/1 with sort: :manual and sort_direction: :asc orders by manual_order ascending", %{
+      folder: folder
+    } do
+      _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+      _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+      _photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+
+      photos = Gallery.list_photos(sort: :manual, sort_direction: :asc, include_private: true)
+      photo_names = Enum.map(photos, & &1.name)
+
       assert photo_names == ["first.jpg", "second.jpg", "third.jpg"]
+    end
+
+    test "list_photos/1 with sort: :manual and sort_direction: :desc orders by manual_order descending", %{
+      folder: folder
+    } do
+      _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+      _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+      _photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+
+      photos = Gallery.list_photos(sort: :manual, sort_direction: :desc, include_private: true)
+      photo_names = Enum.map(photos, & &1.name)
+
+      assert photo_names == ["third.jpg", "second.jpg", "first.jpg"]
+    end
+
+    test "list_photos/1 with sort: :date and sort_direction: :asc orders by date ascending", %{
+      folder: folder
+    } do
+      import Ecto.Query
+      alias PhotoTagger.Repo
+
+      photo1 = photo_fixture(%{folder_id: folder.id, name: "oldest.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, name: "middle.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, name: "newest.jpg"})
+
+      # Update inserted_at timestamps to ensure different values
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo1.id),
+        set: [inserted_at: ~N[2024-01-01 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo2.id),
+        set: [inserted_at: ~N[2024-01-02 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo3.id),
+        set: [inserted_at: ~N[2024-01-03 10:00:00]]
+      )
+
+      # Test ascending order (oldest first)
+      photos = Gallery.list_photos(sort: :date, sort_direction: :asc, include_private: true)
+      photo_names = Enum.map(photos, & &1.name)
+      assert photo_names == ["oldest.jpg", "middle.jpg", "newest.jpg"]
+    end
+
+    test "list_photos/1 with sort: :date and sort_direction: :desc orders by date descending", %{
+      folder: folder
+    } do
+      import Ecto.Query
+      alias PhotoTagger.Repo
+
+      photo1 = photo_fixture(%{folder_id: folder.id, name: "oldest.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, name: "middle.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, name: "newest.jpg"})
+
+      # Update inserted_at timestamps
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo1.id),
+        set: [inserted_at: ~N[2024-01-01 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo2.id),
+        set: [inserted_at: ~N[2024-01-02 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo3.id),
+        set: [inserted_at: ~N[2024-01-03 10:00:00]]
+      )
+
+      # Test descending order (newest first) - this is the default
+      photos = Gallery.list_photos(sort: :date, sort_direction: :desc, include_private: true)
+      photo_names = Enum.map(photos, & &1.name)
+      assert photo_names == ["newest.jpg", "middle.jpg", "oldest.jpg"]
     end
 
     test "list_photos_by_folder/1 returns only photos in folder", %{folder: folder} do
