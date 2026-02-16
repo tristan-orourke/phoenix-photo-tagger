@@ -40,6 +40,12 @@ mix test test/path/to/test.exs:42        # Run specific test at line 42
 mix assets.build       # Build Tailwind CSS and esbuild assets
 mix assets.deploy      # Minify assets for production
 ```
+## Workflow Rules
+
+When asked to implement code from a plan, write the actual code immediately. Do NOT create another planning document or explore the codebase extensively first. Start writing tests/code within the first 2-3 tool calls.
+
+When asked to run tests, run them immediately. Do not explore files or enter plan mode first.
+
 ## Style Conventions
 
 - Avoid unused variables where possible.
@@ -129,9 +135,15 @@ This project maintains a structured memory system in `docs/project_notes/` to tr
 - Include file paths affected by changes
 - Document both what was done and why
 
+## Code Editing
+
+When editing files, always re-read the file immediately before making edits to avoid content mismatch errors. Never use overly broad replace_all operations — prefer targeted, surgical edits.
+
 ## Testing
 
 Always run tests in a subagent to avoid polluting context, unless the details of how a test fails are important to solving it.
+
+This is an Elixir/Phoenix LiveView project. When writing tests: ensure preloads are included for nested associations, use correct LiveView assertion functions (assert_patch vs assert_redirect), and verify test fixtures don't collide with existing setup fixtures.
 
 ### LiveView Test Patterns
 
@@ -152,6 +164,10 @@ Always run tests in a subagent to avoid polluting context, unless the details of
 
 - Admin routes: `/admin`, `/admin/photos/{id}`, `/admin/folders/{name}` (no `/admin/gallery`)
 - Drift routes require photo context: `/photos/{id}/drift` or `/folders/{folder}/photos/{id}/drift`
+
+### Code Review
+
+For code reviews, use: gh pr diff <PR_NUMBER> to fetch PR details. If gh CLI fails, try gh pr view <PR_NUMBER> as fallback.
 
 ## Context Efficiency
 
