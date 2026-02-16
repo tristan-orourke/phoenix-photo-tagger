@@ -19,6 +19,21 @@ Track completed work and GitHub issues.
 
 ## Completed Work
 
+### [2026-02-16] Fix uploaded photos manual_order assignment
+
+**Summary**: Fixed bug where newly uploaded photos were incorrectly assigned `manual_order = 1` instead of the next sequential number in the folder. The issue occurred because `folder_id` from form parameters came as a string but was used directly in database queries expecting an integer.
+
+**Key Changes**:
+- Modified `Gallery.get_next_manual_order/1` to convert string folder_id to integer before querying
+- Added validation to raise clear error for invalid folder_id types (nil, atoms, etc.)
+- Added comprehensive test coverage for string folder_id handling and error cases
+
+**Files Modified**:
+- `app/lib/photo_tagger/gallery.ex`
+- `app/test/photo_tagger/gallery_test.exs`
+
+**Related**: GitHub issue "uploaded photos should get a manual order number at the end of their folder"
+
 ### [2026-02-13] Cross-listing feature (#129)
 
 **Summary**: Implemented cross-listing functionality allowing a single photo to appear in multiple folders without duplicating files on disk. Cross-listings are database references with independent metadata (tags, description, visibility) that share the original photo's image files.

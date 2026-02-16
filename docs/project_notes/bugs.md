@@ -24,6 +24,22 @@ Track bugs with root causes and solutions for future reference.
 
 ## Resolved Bugs
 
+### [2026-02-16] Uploaded photos assigned incorrect manual_order (always 1)
+
+**Symptoms**: When uploading new photos to a folder that already contained photos, the new photos were being assigned `manual_order = 1` instead of the next sequential number (e.g., if the folder had 3 photos, new uploads should get orders 4, 5, 6, but were all getting 1). This caused confusion in photo ordering and potential conflicts.
+
+**Root Cause**: The `Gallery.get_next_manual_order/1` function receives `folder_id` as a string from the form parameters (e.g., `"5"`), but was using it directly in an Ecto query where `folder_id` is an integer database column. The query `where: p.folder_id == ^"5"` doesn't match integer column values, so `max(manual_order)` returned `nil`, causing the function to always return `1`.
+
+**Solution**: Modified `get_next_manual_order/1` in `lib/photo_tagger/gallery.ex` to convert string `folder_id` values to integers before querying. Used `cond` with type guards to handle both integer (from tests/fixtures) and string (from forms) inputs. Added explicit error handling for invalid types (nil, atoms, etc.) to fail fast with a clear error message.
+
+**Files Changed**:
+- `app/lib/photo_tagger/gallery.ex` - Added type conversion and validation to `get_next_manual_order/1`
+- `app/test/photo_tagger/gallery_test.exs` - Added tests for string folder_id handling and error cases
+
+**Testing**: Added unit test for string folder_id, integration test through `create_photo`, and error handling test for invalid types.
+
+**Related Issues**: Issue "uploaded photos should get a manual order number at the end of their folder"
+
 ### [2026-02-04] Private folders not visible in upload dropdown
 
 **Symptoms**: When uploading photos, only public folders appeared in the folder dropdown. Users could not select private folders for upload even if they had access.
