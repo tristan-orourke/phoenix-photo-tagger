@@ -58,17 +58,22 @@ defmodule PhotoTagger.Gallery do
   end
 
   @type sort_option :: :date | :manual
+  @type sort_direction :: :asc | :desc
 
-  defp apply_sort_order(query, :manual) do
-    from(p in query, order_by: [asc_nulls_last: p.manual_order, asc: p.name])
+  defp apply_sort_order(query, :manual, direction) do
+    order_direction = if direction == :asc, do: :asc_nulls_last, else: :desc_nulls_last
+    name_direction = if direction == :asc, do: :asc, else: :desc
+    from(p in query, order_by: [{^order_direction, p.manual_order}, {^name_direction, p.name}])
   end
 
-  defp apply_sort_order(query, :date) do
-    from(p in query, order_by: [desc: p.inserted_at, asc: p.name])
+  defp apply_sort_order(query, :date, direction) do
+    order_direction = if direction == :asc, do: :asc, else: :desc
+    name_direction = if direction == :asc, do: :asc, else: :desc
+    from(p in query, order_by: [{^order_direction, p.inserted_at}, {^name_direction, p.name}])
   end
 
-  defp apply_sort_order(query, _default) do
-    apply_sort_order(query, :date)
+  defp apply_sort_order(query, _default, direction) do
+    apply_sort_order(query, :manual, direction)
   end
 
   @doc """
@@ -89,13 +94,13 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
-  defp list_photos_query(sort) do
+  defp list_photos_query(sort, sort_direction) do
     from(p in Photo,
       as: :photo,
       preload: [:folder, original_photo: :folder],
       select: p
     )
-    |> apply_sort_order(sort)
+    |> apply_sort_order(sort, sort_direction)
   end
 
   @doc """
@@ -109,9 +114,10 @@ defmodule PhotoTagger.Gallery do
   """
   def list_photos(options \\ []) do
     sort = Keyword.get(options, :sort, :date)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
 
     Repo.all(
-      list_photos_query(sort)
+      list_photos_query(sort, sort_direction)
       |> only_public_photos_unless_forced(options)
       |> only_original_photos_unless_forced(options)
     )
@@ -119,9 +125,10 @@ defmodule PhotoTagger.Gallery do
 
   def list_photos_preload_tags(options \\ []) do
     sort = Keyword.get(options, :sort, :date)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
 
     Repo.all(
-      from(p in list_photos_query(sort),
+      from(p in list_photos_query(sort, sort_direction),
         left_join: t in assoc(p, :tags),
         preload: [tags: t]
       )
@@ -131,6 +138,7 @@ defmodule PhotoTagger.Gallery do
 
   def list_photos_by_folder(folder_name, options \\ []) do
     sort = Keyword.get(options, :sort, :date)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
 
     Repo.all(
       from(p in Photo,
@@ -139,13 +147,14 @@ defmodule PhotoTagger.Gallery do
         where: f.name == ^folder_name,
         preload: [folder: f, original_photo: :folder]
       )
-      |> apply_sort_order(sort)
+      |> apply_sort_order(sort, sort_direction)
       |> only_public_photos_unless_forced(options)
     )
   end
 
   def list_photos_by_folder_preload_tags(folder_name, options \\ []) do
     sort = Keyword.get(options, :sort, :date)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
 
     Repo.all(
       from(p in Photo,
@@ -155,7 +164,7 @@ defmodule PhotoTagger.Gallery do
         where: f.name == ^folder_name,
         preload: [tags: t, folder: f, original_photo: :folder]
       )
-      |> apply_sort_order(sort)
+      |> apply_sort_order(sort, sort_direction)
       |> only_public_photos_unless_forced(options)
     )
   end
@@ -205,18 +214,19 @@ defmodule PhotoTagger.Gallery do
 
   def list_photos_by_all_tags(tag_names, options) do
     sort = Keyword.get(options, :sort, :date)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
     query = photos_by_tags_query(tag_names)
 
     Repo.all(
       from(p in query, preload: [:folder, original_photo: :folder])
-      |> apply_sort_order(sort)
+      |> apply_sort_order(sort, sort_direction)
       |> only_public_photos_unless_forced(options)
       |> only_original_photos_unless_forced(options)
     )
   end
 
-  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort \\ :date) do
-    query = list_photos_query(sort)
+  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort \\ :date, sort_direction \\ :desc) do
+    query = list_photos_query(sort, sort_direction)
 
     query =
       case include_tags do
@@ -273,7 +283,8 @@ defmodule PhotoTagger.Gallery do
 
   def list_photos_by_tags(%{include: include_tags, exclude: exclude_tags}, options \\ []) do
     sort = Keyword.get(options, :sort, :date)
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort, sort_direction)
 
     Repo.all(
       query
@@ -288,7 +299,8 @@ defmodule PhotoTagger.Gallery do
         options \\ []
       ) do
     sort = Keyword.get(options, :sort, :date)
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort)
+    sort_direction = Keyword.get(options, :sort_direction, :desc)
+    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort, sort_direction)
 
     Repo.all(
       from(p in query,

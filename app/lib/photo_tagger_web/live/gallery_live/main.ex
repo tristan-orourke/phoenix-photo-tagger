@@ -43,6 +43,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             collapse_groups={@collapse_groups}
             is_admin={@is_admin}
             sort={@sort}
+            sort_direction={@sort_direction}
             show_visibility_outlines={@show_visibility_outlines}
           />
           <%!-- <.live_component
@@ -181,6 +182,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       |> assign(:expand_photo, false)
       |> assign(:show_visibility_outlines, false)
       |> assign(:sort, :manual)
+      |> assign(:sort_direction, :desc)
       |> assign(:last_selected_photo_id, nil),
       #  |> assign(%{
       #    folder: nil,
@@ -208,6 +210,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         _ -> :manual
       end
 
+    sort_direction =
+      case Map.get(params, "sort_direction", "desc") do
+        "asc" -> :asc
+        "desc" -> :desc
+        _ -> :desc
+      end
+
     prev_pg = Map.get(socket.assigns, :pg, 1)
 
     pg =
@@ -220,7 +229,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       Map.get(params, "pg_size", Integer.to_string(prev_pg_size))
       |> Util.safe_integer_parse(prev_pg_size)
 
-    socket = assign(socket, %{pg: pg, pg_size: pg_size, sort: sort})
+    socket = assign(socket, %{pg: pg, pg_size: pg_size, sort: sort, sort_direction: sort_direction})
 
     # Set last_selected_photo_id when navigating to a photo URL, so shift-click range selection works
     socket =
@@ -290,19 +299,22 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     _action = Map.get(socket.assigns, :live_action, nil)
     is_admin = Map.get(socket.assigns, :is_admin, false)
     sort = Map.get(socket.assigns, :sort, :manual)
+    sort_direction = Map.get(socket.assigns, :sort_direction, :desc)
     prev_sort = Map.get(socket.assigns, :prev_sort, sort)
+    prev_sort_direction = Map.get(socket.assigns, :prev_sort_direction, sort_direction)
 
     filtered_photos =
       case {folder, tags, exclude_tags, prev_filtered_photos} do
         # If the folder, tags, and sort are unchanged, and we have previously cached filtered photos, use them without querying the database
         {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos}
-        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort ->
+        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort and sort_direction == prev_sort_direction ->
           prev_filtered_photos
 
         {nil, [], [], _} ->
           Gallery.list_photos(
             include_private: is_admin,
             sort: sort,
+            sort_direction: sort_direction,
             exclude_cross_listings: false
           )
 
@@ -310,11 +322,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           Gallery.list_photos_by_all_tags(nil,
             include_private: is_admin,
             sort: sort,
+            sort_direction: sort_direction,
             exclude_cross_listings: false
           ) ++
             Gallery.list_photos_by_tags(%{include: ["untagged"], exclude: []},
               include_private: is_admin,
               sort: sort,
+              sort_direction: sort_direction,
               exclude_cross_listings: false
             )
 
@@ -322,27 +336,35 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
             include_private: is_admin,
             sort: sort,
+            sort_direction: sort_direction,
             exclude_cross_listings: false
           )
 
         {folder, [], [], _} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
+          Gallery.list_photos_by_folder(folder,
+            include_private: is_admin,
+            sort: sort,
+            sort_direction: sort_direction
+          )
 
         {folder, ["untagged"], _, _} ->
           # TODO:
           Gallery.list_photos_by_folder_and_tags(folder, %{include: nil, exclude: []},
             include_private: is_admin,
-            sort: sort
+            sort: sort,
+            sort_direction: sort_direction
           ) ++
             Gallery.list_photos_by_folder_and_tags(folder, %{include: ["untagged"], exclude: []},
               include_private: is_admin,
-              sort: sort
+              sort: sort,
+              sort_direction: sort_direction
             )
 
         {folder, tags, exclude_tags, _} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
             include_private: is_admin,
-            sort: sort
+            sort: sort,
+            sort_direction: sort_direction
           )
       end
 
@@ -419,7 +441,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       recommended_tags: recommended_tags,
       nav_tags: nav_tags,
       update_photo_form: update_photo_form,
-      prev_sort: sort
+      prev_sort: sort,
+      prev_sort_direction: sort_direction
     }
   end
 
@@ -543,6 +566,31 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               <option value="manual" selected={@sort == :manual}>Curated</option>
             </select>
           </form>
+        </div>
+        <div class="flex-none pr-3">
+          <.button
+            id="sort-direction-toggle"
+            class="p-1 flex items-center"
+            phx-click="toggle_sort_direction"
+            aria-label={
+              if(@sort_direction == :asc,
+                do: "Sort ascending (click to sort descending)",
+                else: "Sort descending (click to sort ascending)"
+              )
+            }
+          >
+            <%= if @sort_direction == :asc do %>
+              <.icon
+                name="hero-arrow-up"
+                class="hero-arrow-up-mini lg:hero-arrow-up w-4 h-4 lg:w-5 lg:h-5"
+              />
+            <% else %>
+              <.icon
+                name="hero-arrow-down"
+                class="hero-arrow-down-mini lg:hero-arrow-down w-4 h-4 lg:w-5 lg:h-5"
+              />
+            <% end %>
+          </.button>
         </div>
         <div class="flex-none pr-3">
           <.toggle_button
@@ -1494,25 +1542,36 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   def refresh_filtered_photos(socket) do
     is_admin = socket.assigns.is_admin
     sort = socket.assigns.sort
+    sort_direction = socket.assigns.sort_direction
 
     filtered_photos =
       case {socket.assigns.folder, socket.assigns.tags, socket.assigns.exclude_tags} do
         {nil, [], []} ->
-          Gallery.list_photos(include_private: is_admin, sort: sort)
+          Gallery.list_photos(
+            include_private: is_admin,
+            sort: sort,
+            sort_direction: sort_direction
+          )
 
         {nil, tags, exclude_tags} ->
           Gallery.list_photos_by_tags(%{include: tags, exclude: exclude_tags},
             include_private: is_admin,
-            sort: sort
+            sort: sort,
+            sort_direction: sort_direction
           )
 
         {folder, [], []} ->
-          Gallery.list_photos_by_folder(folder, include_private: is_admin, sort: sort)
+          Gallery.list_photos_by_folder(folder,
+            include_private: is_admin,
+            sort: sort,
+            sort_direction: sort_direction
+          )
 
         {folder, tags, exclude_tags} ->
           Gallery.list_photos_by_folder_and_tags(folder, %{include: tags, exclude: exclude_tags},
             include_private: is_admin,
-            sort: sort
+            sort: sort,
+            sort_direction: sort_direction
           )
       end
 
@@ -1945,6 +2004,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      )}
   end
 
+  def handle_event("toggle_sort_direction", _params, socket) do
+    new_direction = if socket.assigns.sort_direction == :asc, do: :desc, else: :asc
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort,
+           nil,
+           new_direction
+         )
+     )}
+  end
+
   def handle_event("change_folder", %{"folder" => folder}, socket) do
     folder =
       case folder do
@@ -1954,7 +2033,18 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
     {:noreply,
      push_patch(socket,
-       to: Util.build_url(folder, [], [], [], socket.assigns.is_admin, nil, socket.assigns.sort)
+       to:
+         Util.build_url(
+           folder,
+           [],
+           [],
+           [],
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
+         )
      )}
   end
 
