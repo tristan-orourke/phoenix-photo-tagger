@@ -24,6 +24,22 @@ Track bugs with root causes and solutions for future reference.
 
 ## Resolved Bugs
 
+### [2026-02-16] Uploaded photos assigned incorrect manual_order (always 1)
+
+**Symptoms**: When uploading new photos to a folder that already contained photos, the new photos were being assigned `manual_order = 1` instead of the next sequential number (e.g., if the folder had 3 photos, new uploads should get orders 4, 5, 6, but were all getting 1). This caused confusion in photo ordering and potential conflicts.
+
+**Root Cause**: The `Gallery.get_next_manual_order/1` function receives `folder_id` as a string from the form parameters (e.g., `"5"`), but was using it directly in an Ecto query where `folder_id` is an integer database column. The query `where: p.folder_id == ^"5"` doesn't match integer column values, so `max(manual_order)` returned `nil`, causing the function to always return `1`.
+
+**Solution**: Converted string `folder_id` to integer in `create_photo/1` before calling `get_next_manual_order/1`. This handles type conversion at the system boundary (where form params enter) rather than inside the helper function. Made `get_next_manual_order/1` only accept integers using a guard clause (`when is_integer(folder_id)`), making its contract clearer and consistent with how other callers (e.g., `create_cross_listing`) handle the conversion.
+
+**Files Changed**:
+- `app/lib/photo_tagger/gallery.ex` - Added type conversion in `create_photo/1`; simplified `get_next_manual_order/1` to only accept integers
+- `app/test/photo_tagger/gallery_test.exs` - Integration test through `create_photo` with string folder_id verifies the fix
+
+**Testing**: Existing integration test verifies that `create_photo` correctly handles string folder_id from form params and assigns sequential manual_order values.
+
+**Related Issues**: Issue "uploaded photos should get a manual order number at the end of their folder"
+
 ### [2026-02-04] Private folders not visible in upload dropdown
 
 **Symptoms**: When uploading photos, only public folders appeared in the folder dropdown. Users could not select private folders for upload even if they had access.
