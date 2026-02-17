@@ -6,6 +6,10 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "docker compose -f docker-compose-dev.yml run dev_app mix format $CLAUDE_FILE_PATH 2>&1 | head -20"
+					},
+					{
+						"type": "command",
 						"command": "docker compose -f docker-compose-dev.yml run dev_app mix compile --warnings-as-errors 2>&1 | head -20"
 					}
 				]
