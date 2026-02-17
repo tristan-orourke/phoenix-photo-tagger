@@ -90,10 +90,39 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
     end
   end
 
+  defp extract_sort_direction_from_button(html) do
+    doc = Floki.parse_document!(html)
+
+    case Floki.find(doc, "#sort-direction-toggle .hero-arrow-up, #sort-direction-toggle .hero-arrow-down") do
+      [{_tag, attrs, _children}] ->
+        class = Enum.find_value(attrs, fn {key, value} -> if key == "class", do: value end)
+
+        cond do
+          String.contains?(class, "hero-arrow-up") -> :asc
+          String.contains?(class, "hero-arrow-down") -> :desc
+          true -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_photo_ids_from_gallery(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("[data-gallery-photo-id]")
+    |> Enum.map(fn element ->
+      {_tag, attrs, _children} = element
+      Enum.find_value(attrs, fn {key, value} -> if key == "data-gallery-photo-id", do: value end)
+    end)
+    |> Enum.map(&String.to_integer/1)
+  end
+
   defp extract_page_number(html) do
     doc = Floki.parse_document!(html)
 
-    case Floki.find(doc, "#page-input") do
+    case Floki.find(doc, "input[name='page-input']") do
       [{_tag, attrs, _children}] ->
         value = Enum.find_value(attrs, fn {key, val} -> if key == "value", do: val end)
         String.to_integer(value || "1")
@@ -608,53 +637,53 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
     end
 
     test "shift-click on collapsed group ADDS to existing selection", %{conn: conn} do
-      # BUG: Currently clicking on a collapsed group replaces the selection instead of adding to it
+      # Default sort is :manual descending, so display order is:
+      # photo5(GroupA rep), photo4, photo3, photo2, photo1
+      # Visible (collapsed): photo5(GroupA rep), photo2, photo1
       folder = folder_fixture()
-      photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
-      _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
-      photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
+      _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+      _photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
       _photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg", group: "GroupA"})
-      _photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg", group: "GroupA"})
+      photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg", group: "GroupA"})
 
-      # Start by selecting photo1 (groups are collapsed by default)
-      {:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo1.id}")
+      # Start by selecting photo2
+      {:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo2.id}")
 
-      # Shift-click photo3 (first visible photo in collapsed GroupA)
-      # This should select range photo1 -> photo3, and since photo3 is in a collapsed group,
-      # it should include all photos in GroupA (photo3, photo4, photo5)
-      # Total selection should be: photo1, photo2, photo3, photo4, photo5
+      # Shift-click photo5 (the collapsed group representative in desc order).
+      # Visible range from photo2 -> photo5 (desc): photo5, photo2
+      # expand_collapsed_groups includes all of GroupA (photo3, photo4, photo5)
+      # Merged: photo2 (existing) + photo5, photo2, photo3, photo4 = 4 unique photos
       html =
         render_click(view, "select_gallery_photo", %{
-          "photo_id" => to_string(photo3.id),
+          "photo_id" => to_string(photo5.id),
+          "photo_group" => "GroupA",
           "ctrl_key_pressed" => false,
           "shift_key_pressed" => true
         })
 
-      # Should have 5 photos selected (photo1, photo2, and the 3 in the collapsed group)
-      assert count_selected_photos(html) == 5
+      # Should have 4 photos selected: photo2 + all 3 in collapsed GroupA
+      assert count_selected_photos(html) == 4
     end
 
     test "shift-click from collapsed group to another photo adds to selection", %{conn: conn} do
-      # Test that starting from a collapsed group and shift-clicking to another photo works correctly
+      # Default sort is :manual descending, so display order is:
+      # photo5, photo4, photo3(GroupA rep), photo2(GroupA), photo1(GroupA)
+      # Visible (collapsed): photo5, photo4, photo3(GroupA rep)
       folder = folder_fixture()
-      photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg", group: "GroupA"})
+      _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg", group: "GroupA"})
       _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg", group: "GroupA"})
-      _photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
+      photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "GroupA"})
       _photo4 = photo_fixture(%{folder_id: folder.id, filename: "photo4.jpg"})
       photo5 = photo_fixture(%{folder_id: folder.id, filename: "photo5.jpg"})
 
-      # Groups are collapsed by default - select photo1 (the group representative)
-      {:ok, view, _html} = live(conn, ~p"/admin")
+      # Select photo3 (the group representative in desc order)
+      {:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo3.id}")
 
-      # Click on photo1 (collapsed group representative) to select it
-      render_click(view, "select_gallery_photo", %{
-        "photo_id" => to_string(photo1.id),
-        "ctrl_key_pressed" => false,
-        "shift_key_pressed" => false
-      })
-
-      # Now shift-click photo5 to extend selection from the collapsed group
-      # Should select all photos in the range: photo1, photo2, photo3 (all in collapsed group), photo4, photo5
+      # Shift-click photo5 to extend selection from the collapsed group
+      # Visible range from photo3(idx 2) to photo5(idx 0): [photo5, photo4, photo3]
+      # expand_collapsed_groups includes all of GroupA for photo3: [photo1, photo2, photo3]
+      # Merged: photo5, photo4, photo1, photo2, photo3 = 5 photos
       html =
         render_click(view, "select_gallery_photo", %{
           "photo_id" => to_string(photo5.id),
@@ -970,7 +999,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "toggle_tag event" do
-    @tag :skip
     test "adds tag to query_tags filter", %{conn: conn} do
       folder = folder_fixture()
       tag = tag_fixture(%{name: "landscape"})
@@ -1312,6 +1340,218 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   # ============================================================================
+  # Test Group 8b: Sort Direction Toggle
+  # ============================================================================
+
+  describe "toggle_sort_direction event" do
+    test "toggles sort direction from descending to ascending", %{conn: conn} do
+      folder = folder_fixture()
+      photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+      photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+
+      {:ok, view, html} = live(conn, ~p"/admin?sort=date")
+
+      # Default should be descending
+      assert extract_sort_direction_from_button(html) == :desc
+
+      html = render_click(view, "toggle_sort_direction", %{})
+
+      # Should now be ascending
+      assert extract_sort_direction_from_button(html) == :asc
+    end
+
+    test "toggles sort direction from ascending to descending", %{conn: conn} do
+      folder = folder_fixture()
+      photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+      photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+
+      {:ok, view, html} = live(conn, ~p"/admin?sort=date&sort_direction=asc")
+
+      # Should start as ascending
+      assert extract_sort_direction_from_button(html) == :asc
+
+      html = render_click(view, "toggle_sort_direction", %{})
+
+      # Should now be descending
+      assert extract_sort_direction_from_button(html) == :desc
+    end
+
+    test "preserves sort type when toggling direction", %{conn: conn} do
+      folder = folder_fixture()
+      photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+
+      {:ok, view, _html} = live(conn, ~p"/admin?sort=date")
+
+      html = render_click(view, "toggle_sort_direction", %{})
+
+      # Sort should still be "date"
+      assert extract_sort_value(html) == "date"
+    end
+
+    test "renders sort direction toggle button", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin")
+      assert has_element?(view, "#sort-direction-toggle")
+    end
+
+    test "date sort ascending shows photos oldest to newest", %{conn: conn} do
+      import Ecto.Query
+      alias PhotoTagger.Repo
+
+      folder = folder_fixture()
+      photo1 = photo_fixture(%{folder_id: folder.id, name: "oldest.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, name: "middle.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, name: "newest.jpg"})
+
+      # Set different inserted_at timestamps
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo1.id),
+        set: [inserted_at: ~N[2024-01-01 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo2.id),
+        set: [inserted_at: ~N[2024-01-02 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo3.id),
+        set: [inserted_at: ~N[2024-01-03 10:00:00]]
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/admin?sort=date&sort_direction=asc")
+
+      photo_ids = extract_photo_ids_from_gallery(html)
+      assert photo_ids == [photo1.id, photo2.id, photo3.id]
+    end
+
+    test "date sort descending shows photos newest to oldest", %{conn: conn} do
+      import Ecto.Query
+      alias PhotoTagger.Repo
+
+      folder = folder_fixture()
+      photo1 = photo_fixture(%{folder_id: folder.id, name: "oldest.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, name: "middle.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, name: "newest.jpg"})
+
+      # Set different inserted_at timestamps
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo1.id),
+        set: [inserted_at: ~N[2024-01-01 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo2.id),
+        set: [inserted_at: ~N[2024-01-02 10:00:00]]
+      )
+
+      Repo.update_all(
+        from(p in Photo, where: p.id == ^photo3.id),
+        set: [inserted_at: ~N[2024-01-03 10:00:00]]
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/admin?sort=date&sort_direction=desc")
+
+      photo_ids = extract_photo_ids_from_gallery(html)
+      assert photo_ids == [photo3.id, photo2.id, photo1.id]
+    end
+
+    test "manual sort ascending shows photos in curated order", %{conn: conn} do
+      folder = folder_fixture()
+      photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+
+      {:ok, _view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=asc")
+
+      photo_ids = extract_photo_ids_from_gallery(html)
+      assert photo_ids == [photo1.id, photo2.id, photo3.id]
+    end
+
+    test "manual sort descending shows photos in reverse curated order", %{conn: conn} do
+      folder = folder_fixture()
+      photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+
+      {:ok, _view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=desc")
+
+      photo_ids = extract_photo_ids_from_gallery(html)
+      assert photo_ids == [photo3.id, photo2.id, photo1.id]
+    end
+
+    test "toggling direction reorders photos immediately", %{conn: conn} do
+      folder = folder_fixture()
+      photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
+      photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
+      photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
+
+      {:ok, view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=asc")
+
+      # Initial order should be ascending
+      photo_ids = extract_photo_ids_from_gallery(html)
+      assert photo_ids == [photo1.id, photo2.id, photo3.id]
+
+      # Toggle direction
+      html = render_click(view, "toggle_sort_direction", %{})
+
+      # Order should now be descending
+      photo_ids = extract_photo_ids_from_gallery(html)
+      assert photo_ids == [photo3.id, photo2.id, photo1.id]
+    end
+
+    test "ascending sort direction is preserved across navigation actions", %{conn: conn} do
+      # Setup: Create two folders with multiple photos for pagination
+      folder1 = folder_fixture(%{name: "Folder1"})
+      folder2 = folder_fixture(%{name: "Folder2"})
+
+      # Create enough photos to trigger pagination (15+ photos)
+      photos_f1 =
+        for i <- 1..15 do
+          photo_fixture(%{folder_id: folder1.id, manual_order: i, name: "f1_photo#{i}.jpg"})
+        end
+
+      photos_f2 =
+        for i <- 1..5 do
+          photo_fixture(%{folder_id: folder2.id, manual_order: i, name: "f2_photo#{i}.jpg"})
+        end
+
+      # Add tags to some photos
+      Gallery.add_tag_to_photo(Enum.at(photos_f2, 1), "landscape")
+      Gallery.add_tag_to_photo(Enum.at(photos_f2, 0), "portrait")
+
+      # Start with ascending sort direction and small page size to enable pagination
+      {:ok, view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=asc&pg_size=12")
+      assert extract_sort_direction_from_button(html) == :asc
+
+      # Action 1: Navigate to page 2
+      html = render_click(view, "change_page", %{"pg" => "2"})
+      assert extract_sort_direction_from_button(html) == :asc
+
+      # Action 2: Select a photo
+      selected_photo = Enum.at(photos_f1, 10)
+
+      html =
+        render_click(view, "select_gallery_photo", %{
+          "photo_id" => Integer.to_string(selected_photo.id),
+          "ctrl_key_pressed" => "false",
+          "shift_key_pressed" => "false"
+        })
+
+      assert extract_sort_direction_from_button(html) == :asc
+
+      # Action 3: Change to a different folder
+      html = render_click(view, "change_folder", %{"folder" => "Folder2"})
+      assert extract_sort_direction_from_button(html) == :asc
+      assert folder_in_breadcrumb?(view, "Folder2")
+
+      # Action 4: Select a tag filter using the tag panel (toggle_tag event)
+      html = render_click(view, "toggle_tag", %{"tag" => "landscape"})
+      assert extract_sort_direction_from_button(html) == :asc
+      assert tag_in_current_filters?(view, "landscape")
+    end
+  end
+
+  # ============================================================================
   # Test Group 9: Folder Navigation Events
   # ============================================================================
 
@@ -1434,7 +1674,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       {:ok, view, _html} = live(conn, ~p"/admin")
 
-      assert has_element?(view, "#page-input")
+      assert has_element?(view, "input[name='page-input']")
     end
   end
 
