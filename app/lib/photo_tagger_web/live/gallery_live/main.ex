@@ -1126,7 +1126,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.form
           phx-submit="delete_photo"
           for={Component.to_form(%{"photo_id" => @photo.id})}
-          onsubmit={"return confirm('#{delete_confirmation_message(@photo)}')"}
+          phx-hook="ConfirmSubmit"
+          data-confirm={delete_confirmation_message(@photo)}
         >
           <input class="hidden" type="text" name="photo_id" value={@photo.id} />
           <.button class="bg-red-600 hover:bg-red-900">
@@ -1332,7 +1333,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <.form
           phx-submit="delete_photo_bulk"
           for={Component.to_form(%{})}
-          onsubmit="return confirm('Are you sure you want to permanently delete these photos?')"
+          phx-hook="ConfirmSubmit"
+          data-confirm="Are you sure you want to permanently delete these photos?"
         >
           <.button class="bg-red-600 hover:bg-red-900">Delete</.button>
         </.form>
