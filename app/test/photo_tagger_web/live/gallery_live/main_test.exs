@@ -637,7 +637,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
     end
 
     test "shift-click on collapsed group ADDS to existing selection", %{conn: conn} do
-      # BUG: Currently clicking on a collapsed group replaces the selection instead of adding to it
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
       _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
@@ -655,6 +654,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       html =
         render_click(view, "select_gallery_photo", %{
           "photo_id" => to_string(photo3.id),
+          "photo_group" => "GroupA",
           "ctrl_key_pressed" => false,
           "shift_key_pressed" => true
         })
