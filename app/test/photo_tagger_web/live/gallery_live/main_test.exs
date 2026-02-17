@@ -93,7 +93,10 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   defp extract_sort_direction_from_button(html) do
     doc = Floki.parse_document!(html)
 
-    case Floki.find(doc, "#sort-direction-toggle .hero-arrow-up, #sort-direction-toggle .hero-arrow-down") do
+    case Floki.find(
+           doc,
+           "#sort-direction-toggle .hero-arrow-up, #sort-direction-toggle .hero-arrow-down"
+         ) do
       [{_tag, attrs, _children}] ->
         class = Enum.find_value(attrs, fn {key, value} -> if key == "class", do: value end)
 
@@ -1059,7 +1062,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert count_photos_in_html(html_after) == 2
     end
 
-    test "shows exclude tags in current filters even when no positive tags are selected", %{conn: conn} do
+    test "shows exclude tags in current filters even when no positive tags are selected", %{
+      conn: conn
+    } do
       folder = folder_fixture()
       tag = tag_fixture(%{name: "blurry"})
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -2111,7 +2116,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       [{_tag, attrs, _children}] = delete_forms
       hook_attr = Enum.find_value(attrs, fn {key, value} -> if key == "phx-hook", do: value end)
-      confirm_attr = Enum.find_value(attrs, fn {key, value} -> if key == "data-confirm", do: value end)
+
+      confirm_attr =
+        Enum.find_value(attrs, fn {key, value} -> if key == "data-confirm", do: value end)
 
       assert hook_attr == "ConfirmSubmit"
       assert confirm_attr =~ "Are you sure you want to permanently delete this photo?"
@@ -2133,7 +2140,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       [{_tag, attrs, _children}] = delete_forms
       hook_attr = Enum.find_value(attrs, fn {key, value} -> if key == "phx-hook", do: value end)
-      confirm_attr = Enum.find_value(attrs, fn {key, value} -> if key == "data-confirm", do: value end)
+
+      confirm_attr =
+        Enum.find_value(attrs, fn {key, value} -> if key == "data-confirm", do: value end)
 
       assert hook_attr == "ConfirmSubmit"
       assert confirm_attr =~ "Are you sure you want to permanently delete these photos?"

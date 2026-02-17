@@ -231,7 +231,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       Map.get(params, "pg_size", Integer.to_string(prev_pg_size))
       |> Util.safe_integer_parse(prev_pg_size)
 
-    socket = assign(socket, %{pg: pg, pg_size: pg_size, sort: sort, sort_direction: sort_direction})
+    socket =
+      assign(socket, %{pg: pg, pg_size: pg_size, sort: sort, sort_direction: sort_direction})
 
     # Set last_selected_photo_id when navigating to a photo URL, so shift-click range selection works
     socket =
@@ -309,7 +310,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       case {folder, tags, exclude_tags, prev_filtered_photos} do
         # If the folder, tags, and sort are unchanged, and we have previously cached filtered photos, use them without querying the database
         {^prev_folder, ^prev_tags, ^prev_exclude_tags, prev_filtered_photos}
-        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort and sort_direction == prev_sort_direction ->
+        when is_list(prev_filtered_photos) and prev_filtered_photos != [] and sort == prev_sort and
+               sort_direction == prev_sort_direction ->
           prev_filtered_photos
 
         {nil, [], [], _} ->
@@ -928,7 +930,17 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 </.toggle_tag_button>
               <% else %>
                 <.link patch={
-                  Util.build_url(@folder, [@photo.id], [tag.name], @exclude_tags, @is_admin, nil, @sort, nil, @sort_direction)
+                  Util.build_url(
+                    @folder,
+                    [@photo.id],
+                    [tag.name],
+                    @exclude_tags,
+                    @is_admin,
+                    nil,
+                    @sort,
+                    nil,
+                    @sort_direction
+                  )
                 }>
                   #{tag.name}
                 </.link>

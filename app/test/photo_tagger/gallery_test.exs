@@ -92,7 +92,6 @@ defmodule PhotoTagger.GalleryTest do
       assert photo2.manual_order == 2
       assert photo3.manual_order == 3
     end
-
   end
 
   describe "photos (real files)" do
@@ -295,9 +294,10 @@ defmodule PhotoTagger.GalleryTest do
       assert photo_names == ["third.jpg", "second.jpg", "first.jpg"]
     end
 
-    test "list_photos/1 with sort: :manual and sort_direction: :asc orders by manual_order ascending", %{
-      folder: folder
-    } do
+    test "list_photos/1 with sort: :manual and sort_direction: :asc orders by manual_order ascending",
+         %{
+           folder: folder
+         } do
       _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
       _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
       _photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
@@ -308,9 +308,10 @@ defmodule PhotoTagger.GalleryTest do
       assert photo_names == ["first.jpg", "second.jpg", "third.jpg"]
     end
 
-    test "list_photos/1 with sort: :manual and sort_direction: :desc orders by manual_order descending", %{
-      folder: folder
-    } do
+    test "list_photos/1 with sort: :manual and sort_direction: :desc orders by manual_order descending",
+         %{
+           folder: folder
+         } do
       _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3, name: "third.jpg"})
       _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 1, name: "first.jpg"})
       _photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 2, name: "second.jpg"})
