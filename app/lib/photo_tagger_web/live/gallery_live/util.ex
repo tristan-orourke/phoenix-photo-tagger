@@ -9,7 +9,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Util do
         is_admin,
         tail \\ nil,
         sort \\ nil,
-        pg \\ nil
+        pg \\ nil,
+        sort_direction \\ nil
       ) do
     {photo_id, selected_photo_ids} =
       case selected_photo_ids do
@@ -48,6 +49,13 @@ defmodule PhotoTaggerWeb.GalleryLive.Util do
           # Manual mode is default, so it is not added to url
           # :manual -> Map.put(q, :sort, "manual")
           :date -> Map.put(q, :sort, "date")
+          _ -> q
+        end
+      end)
+      |> then(fn q ->
+        case sort_direction do
+          # Descending is default, so it is not added to url
+          :asc -> Map.put(q, :sort_direction, "asc")
           _ -> q
         end
       end)
