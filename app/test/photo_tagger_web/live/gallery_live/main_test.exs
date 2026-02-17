@@ -1058,6 +1058,20 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       assert count_photos_in_html(html_after) == 2
     end
+
+    test "shows exclude tags in current filters even when no positive tags are selected", %{conn: conn} do
+      folder = folder_fixture()
+      tag = tag_fixture(%{name: "blurry"})
+      photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
+      _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg"})
+      Gallery.add_tag_to_photo(photo1, tag.name)
+
+      {:ok, view, _html} = live(conn, ~p"/admin?exclude_tags[]=blurry")
+
+      # Verify that the exclude tag is shown in the "Current filters" section
+      # even though no positive tags are selected
+      assert tag_in_current_filters?(view, "-blurry")
+    end
   end
 
   # ============================================================================

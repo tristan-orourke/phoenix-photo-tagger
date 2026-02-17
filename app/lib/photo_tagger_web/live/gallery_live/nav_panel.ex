@@ -42,7 +42,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
         </form>
         <h2 class="">Tags</h2>
         <nav class="my-2 pl-2 list-none">
-          <%= if not Enum.empty?(@current_tags) do %>
+          <%= if not Enum.empty?(@current_tags) or not Enum.empty?(@exclude_tags) do %>
             <h3 class="text-sm font-bold">Current filters</h3>
             <ul id="current-filters" class="my-2">
               <%= for tag <- @current_tags do %>
