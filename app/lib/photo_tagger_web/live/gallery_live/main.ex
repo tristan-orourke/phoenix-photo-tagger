@@ -81,6 +81,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 related_tags={@recommended_tags}
                 update_photo_form={@update_photo_form}
                 is_admin={@is_admin}
+                sort={@sort}
+                sort_direction={@sort_direction}
               />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
@@ -452,6 +454,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:exclude_tags, :list, default: [])
   attr(:toggled_tag, :string, required: true)
   attr(:is_admin, :boolean, required: true)
+  attr(:sort, :atom, default: nil)
+  attr(:sort_direction, :atom, default: nil)
   slot(:inner_block)
 
   def toggle_tag_button(assigns) do
@@ -478,7 +482,11 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           assigns.selected_photo_ids,
           tags_list,
           new_exclude_tags,
-          assigns.is_admin
+          assigns.is_admin,
+          nil,
+          assigns.sort,
+          nil,
+          assigns.sort_direction
         )
       )
 
@@ -498,6 +506,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:collapse_groups, :boolean, required: true)
   attr(:is_admin, :boolean, required: true)
   attr(:sort, :atom, default: :manual)
+  attr(:sort_direction, :atom, default: :desc)
   attr(:show_visibility_outlines, :boolean, default: false)
 
   def gallery_header(assigns) do
@@ -668,7 +677,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       </.button>
       <span class="self-center">
         <span class="hidden lg:inline">Page </span>
-        <input id="page-input" type="hidden" value={@pg} />
+        <input name="page-input" type="hidden" value={@pg} />
         {@pg} of {@total_pages}
       </span>
       <.button
@@ -806,6 +815,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:update_photo_form, :map, required: true)
   attr(:is_admin, :boolean, required: true)
   attr(:all_folders, :list, required: true)
+  attr(:sort, :atom, default: nil)
+  attr(:sort_direction, :atom, default: nil)
 
   def photo(assigns) do
     assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder.name)
@@ -910,12 +921,14 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   exclude_tags={@exclude_tags}
                   toggled_tag={tag.name}
                   is_admin={@is_admin}
+                  sort={@sort}
+                  sort_direction={@sort_direction}
                 >
                   #{tag.name}
                 </.toggle_tag_button>
               <% else %>
                 <.link patch={
-                  Util.build_url(@folder, [@photo.id], [tag.name], @exclude_tags, @is_admin)
+                  Util.build_url(@folder, [@photo.id], [tag.name], @exclude_tags, @is_admin, nil, @sort, nil, @sort_direction)
                 }>
                   #{tag.name}
                 </.link>
@@ -1350,7 +1363,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.is_admin,
            nil,
            socket.assigns.sort,
-           socket.assigns.pg
+           socket.assigns.pg,
+           socket.assigns.sort_direction
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1368,7 +1382,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.is_admin,
            nil,
            socket.assigns.sort,
-           socket.assigns.pg
+           socket.assigns.pg,
+           socket.assigns.sort_direction
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1401,7 +1416,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1470,7 +1487,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                  socket.assigns.exclude_tags,
                  socket.assigns.is_admin,
                  nil,
-                 socket.assigns.sort
+                 socket.assigns.sort,
+                 nil,
+                 socket.assigns.sort_direction
                )
            )
            |> assign(:last_selected_photo_id, photo_id)}
@@ -1842,7 +1861,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
          )
      )
      |> put_flash(:info, "Photo deleted successfully.")}
@@ -1869,7 +1890,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
          )
      )
      |> put_flash(:info, "Photos deleted successfully.")}
@@ -2065,7 +2088,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
          )
      )}
   end
@@ -2081,7 +2106,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
          )
      )}
   end
@@ -2103,7 +2130,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            new_exclude_tags,
            socket.assigns.is_admin,
            nil,
-           socket.assigns.sort
+           socket.assigns.sort,
+           nil,
+           socket.assigns.sort_direction
          )
      )}
   end
@@ -2112,7 +2141,21 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     pg = Util.safe_integer_parse(pg, 1)
 
     {:noreply,
-     assign(socket, :pg, pg) |> push_event("scroll_to_top", %{selector: "#gallery-section"})}
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin,
+           nil,
+           socket.assigns.sort,
+           pg,
+           socket.assigns.sort_direction
+         )
+     )
+     |> push_event("scroll_to_top", %{selector: "#gallery-section"})}
   end
 
   ## Utility functions

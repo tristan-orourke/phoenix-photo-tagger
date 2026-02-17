@@ -44,7 +44,7 @@ defmodule PhotoTaggerWeb.GalleryLive.NavPanel do
         <nav class="my-2 pl-2 list-none">
           <%= if not Enum.empty?(@current_tags) do %>
             <h3 class="text-sm font-bold">Current filters</h3>
-            <ul class="my-2">
+            <ul id="current-filters" class="my-2">
               <%= for tag <- @current_tags do %>
                 <li class="mr-2">
                   <.toggle_button selected={true} phx-click="toggle_tag" phx-value-tag={tag}>

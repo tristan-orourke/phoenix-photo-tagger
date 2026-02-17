@@ -122,7 +122,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   defp extract_page_number(html) do
     doc = Floki.parse_document!(html)
 
-    case Floki.find(doc, "#page-input") do
+    case Floki.find(doc, "input[name='page-input']") do
       [{_tag, attrs, _children}] ->
         value = Enum.find_value(attrs, fn {key, val} -> if key == "value", do: val end)
         String.to_integer(value || "1")
@@ -999,7 +999,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "toggle_tag event" do
-    @tag :skip
     test "adds tag to query_tags filter", %{conn: conn} do
       folder = folder_fixture()
       tag = tag_fixture(%{name: "landscape"})
@@ -1499,6 +1498,57 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       photo_ids = extract_photo_ids_from_gallery(html)
       assert photo_ids == [photo3.id, photo2.id, photo1.id]
     end
+
+    test "ascending sort direction is preserved across navigation actions", %{conn: conn} do
+      # Setup: Create two folders with multiple photos for pagination
+      folder1 = folder_fixture(%{name: "Folder1"})
+      folder2 = folder_fixture(%{name: "Folder2"})
+
+      # Create enough photos to trigger pagination (15+ photos)
+      photos_f1 =
+        for i <- 1..15 do
+          photo_fixture(%{folder_id: folder1.id, manual_order: i, name: "f1_photo#{i}.jpg"})
+        end
+
+      photos_f2 =
+        for i <- 1..5 do
+          photo_fixture(%{folder_id: folder2.id, manual_order: i, name: "f2_photo#{i}.jpg"})
+        end
+
+      # Add tags to some photos
+      Gallery.add_tag_to_photo(Enum.at(photos_f2, 1), "landscape")
+      Gallery.add_tag_to_photo(Enum.at(photos_f2, 0), "portrait")
+
+      # Start with ascending sort direction and small page size to enable pagination
+      {:ok, view, html} = live(conn, ~p"/admin?sort=manual&sort_direction=asc&pg_size=12")
+      assert extract_sort_direction_from_button(html) == :asc
+
+      # Action 1: Navigate to page 2
+      html = render_click(view, "change_page", %{"pg" => "2"})
+      assert extract_sort_direction_from_button(html) == :asc
+
+      # Action 2: Select a photo
+      selected_photo = Enum.at(photos_f1, 10)
+
+      html =
+        render_click(view, "select_gallery_photo", %{
+          "photo_id" => Integer.to_string(selected_photo.id),
+          "ctrl_key_pressed" => "false",
+          "shift_key_pressed" => "false"
+        })
+
+      assert extract_sort_direction_from_button(html) == :asc
+
+      # Action 3: Change to a different folder
+      html = render_click(view, "change_folder", %{"folder" => "Folder2"})
+      assert extract_sort_direction_from_button(html) == :asc
+      assert folder_in_breadcrumb?(view, "Folder2")
+
+      # Action 4: Select a tag filter using the tag panel (toggle_tag event)
+      html = render_click(view, "toggle_tag", %{"tag" => "landscape"})
+      assert extract_sort_direction_from_button(html) == :asc
+      assert tag_in_current_filters?(view, "landscape")
+    end
   end
 
   # ============================================================================
@@ -1624,7 +1674,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       {:ok, view, _html} = live(conn, ~p"/admin")
 
-      assert has_element?(view, "#page-input")
+      assert has_element?(view, "input[name='page-input']")
     end
   end
 
