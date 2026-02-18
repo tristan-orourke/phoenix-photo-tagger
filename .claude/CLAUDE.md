@@ -151,14 +151,19 @@ This is an Elixir/Phoenix LiveView project. When writing tests: ensure preloads 
 - No access to `view.assigns` in tests - verify behavior through rendered HTML with `has_element?/3` and Floki parsing
 - Use mocked fixtures from `PhotoTagger.GalleryFixtures` - no filesystem operations needed
 - LiveComponent events bubble up to parent LiveView's `handle_event/3`
+- **Fixture `filename:` key is ignored** — `photo_fixture(%{filename: "x.jpg"})` does NOT set the photo's `:name` field (defaults to `unique_photo_name()`). Use `photo.name` in assertions, not hardcoded filenames.
+- **Default assigns on mount**: `collapse_groups: true` (groups collapsed), `pg_size: 100`, `sort: :manual`. Tests needing all photos visible should `render_click(view, "toggle_collapse_groups", %{})` first. Pagination tests with <100 photos need `pg_size=10` in URL.
+- **Dual pagination**: Pagination renders top and bottom of gallery. Floki selectors must use `[head | _]` pattern, not single-element `[element]` match.
+- **Nav panel tags**: Tags are behind a letter index selector — not directly visible in HTML on initial load. Assert `#index-selectors button` letters exist, not tag names.
 
 ### Gallery API Signatures
 
 - `Gallery.add_tag_to_photo(photo, tag_name)` - takes photo struct and tag name (string), not tag struct
-- `Gallery.get_photo!/1` exists but `Gallery.get_photo/1` doesn't - use `catch_error(Gallery.get_photo!/1) == :error` for deletion tests
+- `Gallery.get_photo!/1` exists but `Gallery.get_photo/1` doesn't - use `assert_raise Ecto.NoResultsError, fn -> Gallery.get_photo!(id) end` for deletion tests
 - Event handler parameter names: `"tag"` (not "tag_id"), `"photo_group"` (not "group_name"), `"folder"` (not "folder_name")
 - `update_photo` event requires nested parameters: `%{"photo_id" => id, "photo" => %{"description" => "..."}}`
 - `form_group_from_selected` takes no parameters - auto-generates timestamp-based group names or reuses existing group from selected photos
+- `change_page` event uses `"pg"` param (not `"page"`)
 
 ### Route Patterns
 
