@@ -126,7 +126,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
     doc = Floki.parse_document!(html)
 
     case Floki.find(doc, "input[name='page-input']") do
-      [{_tag, attrs, _children}] ->
+      [{_tag, attrs, _children} | _] ->
         value = Enum.find_value(attrs, fn {key, val} -> if key == "value", do: val end)
         String.to_integer(value || "1")
 
@@ -174,7 +174,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   # ============================================================================
 
   describe "mount/3" do
-    @tag :skip
     test "admin user sees admin layout with all folders and tags", %{conn: conn} do
       _folder1 = folder_fixture(%{name: "Folder1", visibility_type: :public})
       _folder2 = folder_fixture(%{name: "Folder2", visibility_type: :private})
@@ -185,8 +184,8 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       assert html =~ "Folder1"
       assert html =~ "Folder2"
-      assert has_element?(view, "#nav-panel", "tag1")
-      assert has_element?(view, "#nav-panel", "tag2")
+      # Tags appear behind letter index — verify the "T" index button exists
+      assert has_element?(view, "#index-selectors button", "T")
     end
 
     test "public user sees public layout with only public folders", %{conn: conn} do
@@ -209,14 +208,12 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       refute has_collapse_groups_active?(html)
     end
 
-    @tag :skip
-    test "initializes with default sort order (newest first)", %{conn: conn} do
+    test "initializes with default sort order", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/admin")
 
-      assert extract_sort_value(html) == "newest"
+      assert extract_sort_value(html) == "manual"
     end
 
-    @tag :skip
     test "loads tags grouped by first letter for admin", %{conn: conn} do
       tag_fixture(%{name: "apple"})
       tag_fixture(%{name: "banana"})
@@ -224,9 +221,9 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       {:ok, view, _html} = live(conn, ~p"/admin")
 
-      assert has_element?(view, "#nav-panel .letter-index", "A")
-      assert has_element?(view, "#nav-panel .letter-index", "B")
-      assert has_element?(view, "#nav-panel .letter-index", "C")
+      assert has_element?(view, "#index-selectors button", "A")
+      assert has_element?(view, "#index-selectors button", "B")
+      assert has_element?(view, "#index-selectors button", "C")
     end
   end
 
@@ -259,7 +256,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "handle_params - tag filtering" do
-    @tag :skip
     test "filters photos by query_tags (include tags)", %{conn: conn} do
       folder = folder_fixture()
       tag1 = tag_fixture(%{name: "landscape"})
@@ -311,14 +307,13 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "handle_params - photo selection" do
-    @tag :skip
     test "selects single photo via photo_id parameter", %{conn: conn} do
       folder = folder_fixture()
       photo = photo_fixture(%{folder_id: folder.id, filename: "selected.jpg"})
 
       {:ok, view, html} = live(conn, ~p"/admin/photos/#{photo.id}")
 
-      assert photo_in_panel?(view, "selected.jpg")
+      assert photo_in_panel?(view, photo.name)
       assert count_selected_photos(html) == 1
     end
 
@@ -335,7 +330,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "handle_params - sort and pagination" do
-    @tag :skip
     test "applies sort parameter to photo ordering", %{conn: conn} do
       folder = folder_fixture()
       _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -346,22 +340,20 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert extract_sort_value(html) == "date"
     end
 
-    @tag :skip
     test "applies page parameter for pagination", %{conn: conn} do
       folder = folder_fixture()
 
       _photos =
         for i <- 1..15, do: photo_fixture(%{folder_id: folder.id, filename: "photo#{i}.jpg"})
 
-      {:ok, _view, html} = live(conn, ~p"/admin?page=2")
+      {:ok, _view, html} = live(conn, ~p"/admin?page=2&pg_size=10")
 
       assert extract_page_number(html) == 2
     end
   end
 
   describe "handle_params - scroll events" do
-    @describetag :skip
-    # Skipped: Phoenix LiveView 1.0 does not support assert_push_event/3
+    @describetag skip: "Requires assert_push_event/3, unavailable in LiveView 1.0"
     test "scroll event triggers scroll to top", %{conn: conn} do
       {:ok, _view, _html} = live(conn, ~p"/admin")
 
@@ -380,7 +372,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   # ============================================================================
 
   describe "select_gallery_photo event" do
-    @tag :skip
     test "selects single photo without ctrl key", %{conn: conn} do
       folder = folder_fixture()
       photo = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -395,7 +386,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
         })
 
       assert count_selected_photos(html) == 1
-      assert photo_in_panel?(view, "photo1.jpg")
+      assert photo_in_panel?(view, photo.name)
     end
 
     test "adds photo to selection with ctrl key pressed", %{conn: conn} do
@@ -452,7 +443,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert count_selected_photos(html) == 1
     end
 
-    @tag :skip
     test "REGRESSION: selecting photo preserves sort order", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -490,7 +480,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert get_zoom_level_from_grid(html) > 0
     end
 
-    @tag :skip
     test "REGRESSION: selecting photo preserves page number", %{conn: conn} do
       folder = folder_fixture()
 
@@ -499,7 +488,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       photo_from_page_2 = Enum.at(photos, 10)
 
-      {:ok, view, _html} = live(conn, ~p"/admin?page=2")
+      {:ok, view, _html} = live(conn, ~p"/admin?page=2&pg_size=10")
 
       html =
         render_click(view, "select_gallery_photo", %{
@@ -769,7 +758,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "select_gallery_photo with photo_group event" do
-    @tag :skip
     test "selects all photos in a group", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg", group: "GroupA"})
@@ -841,14 +829,16 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "toggle_collapse_single_group event" do
-    @tag :skip
     test "collapses a single group", %{conn: conn} do
       folder = folder_fixture()
       _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg", group: "Group1"})
       _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg", group: "Group1"})
       _photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "Group2"})
 
-      {:ok, view, html_before} = live(conn, ~p"/admin")
+      {:ok, view, _html} = live(conn, ~p"/admin")
+
+      # Disable default collapse_groups to show all photos
+      html_before = render_click(view, "toggle_collapse_groups", %{})
 
       assert count_photos_in_html(html_before) == 3
 
@@ -859,14 +849,16 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert count_photos_in_html(html_collapsed) < count_photos_in_html(html_before)
     end
 
-    @tag :skip
     test "expands a collapsed group", %{conn: conn} do
       folder = folder_fixture()
       _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg", group: "Group1"})
       _photo2 = photo_fixture(%{folder_id: folder.id, filename: "photo2.jpg", group: "Group1"})
       _photo3 = photo_fixture(%{folder_id: folder.id, filename: "photo3.jpg", group: "Group2"})
 
-      {:ok, view, html_before} = live(conn, ~p"/admin")
+      {:ok, view, _html} = live(conn, ~p"/admin")
+
+      # Disable default collapse_groups to show all photos
+      html_before = render_click(view, "toggle_collapse_groups", %{})
 
       assert count_photos_in_html(html_before) == 3
 
@@ -1084,7 +1076,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   # ============================================================================
 
   describe "update_photo event" do
-    @tag :skip
     test "updates photo metadata successfully", %{conn: conn} do
       folder = folder_fixture()
 
@@ -1103,23 +1094,23 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert updated_photo.description == "new description"
     end
 
-    @tag :skip
     test "handles update_photo failure gracefully", %{conn: conn} do
       folder = folder_fixture()
+      _existing = photo_fixture(%{folder_id: folder.id, filename: "existing.jpg"})
       photo = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
 
       {:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo.id}")
 
-      # Try to update with invalid data (e.g., invalid folder_id)
+      # Try to update with a name that conflicts with an existing photo
       _html =
         render_click(view, "update_photo", %{
           "photo_id" => to_string(photo.id),
-          "photo" => %{"folder_id" => "999999"}
+          "photo" => %{"name" => "existing.jpg"}
         })
 
       # Photo should remain unchanged
       unchanged_photo = Gallery.get_photo!(photo.id)
-      assert unchanged_photo.folder_id == folder.id
+      assert unchanged_photo.name != "existing.jpg"
     end
 
     test "REGRESSION: update_photo preserves selected_photos", %{conn: conn} do
@@ -1139,7 +1130,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert count_selected_photos(html) == 2
     end
 
-    @tag :skip
     test "REGRESSION: update_photo preserves tag filters", %{conn: conn} do
       folder = folder_fixture()
       tag = tag_fixture(%{name: "landscape"})
@@ -1158,7 +1148,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "delete_photo event" do
-    @tag :skip
     test "deletes photo and removes from selection", %{conn: conn} do
       folder = folder_fixture()
       photo = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -1167,13 +1156,12 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
 
       html = render_click(view, "delete_photo", %{"photo_id" => to_string(photo.id)})
 
-      assert catch_error(Gallery.get_photo!(photo.id)) == :error
+      assert_raise Ecto.NoResultsError, fn -> Gallery.get_photo!(photo.id) end
       assert count_selected_photos(html) == 0
     end
   end
 
   describe "delete_photo_bulk event" do
-    @tag :skip
     test "deletes multiple selected photos", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -1188,9 +1176,10 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       html_after = render_click(view, "delete_photo_bulk", %{})
 
       assert count_photos_in_html(html_after) == 1
-      assert catch_error(Gallery.get_photo!(photo1.id)) == :error
-      assert catch_error(Gallery.get_photo!(photo2.id)) == :error
-      assert catch_error(Gallery.get_photo!(photo3.id)) != :error
+      assert_raise Ecto.NoResultsError, fn -> Gallery.get_photo!(photo1.id) end
+      assert_raise Ecto.NoResultsError, fn -> Gallery.get_photo!(photo2.id) end
+      # photo3 should still exist
+      assert Gallery.get_photo!(photo3.id)
     end
   end
 
@@ -1331,7 +1320,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "change_sort event" do
-    @tag :skip
     test "changes sort order to specified value", %{conn: conn} do
       folder = folder_fixture()
       _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -1608,24 +1596,22 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   # ============================================================================
 
   describe "change_page event" do
-    @tag :skip
     test "changes page number", %{conn: conn} do
       folder = folder_fixture()
 
       _photos =
         for i <- 1..15, do: photo_fixture(%{folder_id: folder.id, filename: "photo#{i}.jpg"})
 
-      {:ok, view, _html} = live(conn, ~p"/admin")
+      {:ok, view, _html} = live(conn, ~p"/admin?pg_size=10")
 
-      html = render_click(view, "change_page", %{"page" => "2"})
+      html = render_click(view, "change_page", %{"pg" => "2"})
 
       assert extract_page_number(html) == 2
     end
   end
 
   describe "change_page - scroll behavior" do
-    @describetag :skip
-    # Skipped: Phoenix LiveView 1.0 does not support assert_push_event/3
+    @describetag skip: "Requires assert_push_event/3, unavailable in LiveView 1.0"
     test "triggers scroll to top when changing pages", %{conn: conn} do
       folder = folder_fixture()
 
@@ -1672,7 +1658,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "gallery component rendering" do
-    @tag :skip
     test "renders photos in grid with correct zoom level", %{conn: conn} do
       folder = folder_fixture()
       _photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -1684,21 +1669,19 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       assert count_photos_in_html(html) == 2
     end
 
-    @tag :skip
     test "renders pagination controls when needed", %{conn: conn} do
       folder = folder_fixture()
 
       _photos =
         for i <- 1..15, do: photo_fixture(%{folder_id: folder.id, filename: "photo#{i}.jpg"})
 
-      {:ok, view, _html} = live(conn, ~p"/admin")
+      {:ok, view, _html} = live(conn, ~p"/admin?pg_size=10")
 
       assert has_element?(view, "input[name='page-input']")
     end
   end
 
   describe "photo_panel component rendering" do
-    @tag :skip
     test "renders photo details for selected photo", %{conn: conn} do
       folder = folder_fixture()
 
@@ -1708,7 +1691,7 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
       {:ok, view, _html} = live(conn, ~p"/admin/photos/#{photo.id}")
 
       assert has_element?(view, "#photo-section")
-      assert photo_in_panel?(view, "photo1.jpg")
+      assert photo_in_panel?(view, photo.name)
     end
 
     test "renders tags for selected photo", %{conn: conn} do
@@ -1766,7 +1749,6 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
   end
 
   describe "simplify_photo/1" do
-    @tag :skip
     test "simplifies photo for URL caching", %{conn: conn} do
       folder = folder_fixture()
       photo = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})

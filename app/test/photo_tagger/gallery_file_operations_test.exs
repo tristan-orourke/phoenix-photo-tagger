@@ -194,7 +194,6 @@ defmodule PhotoTagger.GalleryFileOperationsTest do
       assert File.dir?(folder_path)
     end
 
-    @tag :skip
     test "update_folder/2 renames directory when name changes", %{temp_dir: temp_dir} do
       folder = folder_fixture_with_files(%{temp_dir: temp_dir, name: "old_folder"})
 
