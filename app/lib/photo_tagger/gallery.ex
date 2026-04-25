@@ -223,7 +223,11 @@ defmodule PhotoTagger.Gallery do
     )
   end
 
-  def list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort \\ :date, sort_direction \\ :desc) do
+  def list_photos_by_tags_query(
+        %{include: include_tags, exclude: exclude_tags},
+        sort \\ :date,
+        sort_direction \\ :desc
+      ) do
     query = list_photos_query(sort, sort_direction)
 
     query =
@@ -282,7 +286,13 @@ defmodule PhotoTagger.Gallery do
   def list_photos_by_tags(%{include: include_tags, exclude: exclude_tags}, options \\ []) do
     sort = Keyword.get(options, :sort, :date)
     sort_direction = Keyword.get(options, :sort_direction, :desc)
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort, sort_direction)
+
+    query =
+      list_photos_by_tags_query(
+        %{include: include_tags, exclude: exclude_tags},
+        sort,
+        sort_direction
+      )
 
     Repo.all(
       query
@@ -298,7 +308,13 @@ defmodule PhotoTagger.Gallery do
       ) do
     sort = Keyword.get(options, :sort, :date)
     sort_direction = Keyword.get(options, :sort_direction, :desc)
-    query = list_photos_by_tags_query(%{include: include_tags, exclude: exclude_tags}, sort, sort_direction)
+
+    query =
+      list_photos_by_tags_query(
+        %{include: include_tags, exclude: exclude_tags},
+        sort,
+        sort_direction
+      )
 
     Repo.all(
       from(p in query,

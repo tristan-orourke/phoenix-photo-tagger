@@ -14,24 +14,10 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
   # Helper Functions
   # ============================================================================
 
-  defp extract_current_photo_filename(html) do
-    doc = Floki.parse_document!(html)
-
-    case Floki.find(doc, "#drift-photo img") do
-      [{_tag, attrs, _children}] ->
-        src = Enum.find_value(attrs, fn {key, value} -> if key == "src", do: value end)
-        # Extract filename from path
-        src |> String.split("/") |> List.last()
-
-      _ ->
-        nil
-    end
-  end
-
   defp extract_tempo_value(html) do
     doc = Floki.parse_document!(html)
 
-    case Floki.find(doc, "#tempo-display") do
+    case Floki.find(doc, "button[phx-click='increase_tempo']") do
       [{_tag, _attrs, children}] ->
         children |> Floki.text() |> String.trim()
 
@@ -45,7 +31,6 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
   # ============================================================================
 
   describe "mount/3" do
-    @tag :skip
     test "loads initial photo from available photos", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -54,8 +39,7 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
       {:ok, view, _html} = live(conn, ~p"/photos/#{photo1.id}/drift")
 
       # Should show one of the photos
-      assert has_element?(view, "#drift-photo")
-      # TODO: More specific assertion about which photo is shown
+      assert has_element?(view, "img[alt]")
     end
 
     test "respects public/private access control", %{conn: conn} do
@@ -72,7 +56,6 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
   end
 
   describe "increase_tempo event" do
-    @tag :skip
     test "cycles through tempo values", %{conn: conn} do
       folder = folder_fixture()
       photo = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -90,7 +73,6 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
   end
 
   describe "switch_photos event" do
-    @tag :skip
     test "advances to next photo", %{conn: conn} do
       folder = folder_fixture()
       photo1 = photo_fixture(%{folder_id: folder.id, filename: "photo1.jpg"})
@@ -103,12 +85,11 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
       _html_after = render_click(view, "switch_photos", %{})
 
       # Should still have a photo displayed
-      assert has_element?(view, "#drift-photo")
+      assert has_element?(view, "img[alt]")
     end
   end
 
   describe "folder scoping" do
-    @tag :skip
     test "only shows photos from specified folder", %{conn: conn} do
       folder1 = folder_fixture(%{name: "Folder1"})
       folder2 = folder_fixture(%{name: "Folder2"})
@@ -119,7 +100,7 @@ defmodule PhotoTaggerWeb.GalleryLive.DriftTest do
 
       # TODO: More deterministic test would verify only Folder1 photos appear
       # across multiple switch_photos events
-      assert has_element?(view, "#drift-photo")
+      assert has_element?(view, "img[alt]")
     end
   end
 end
