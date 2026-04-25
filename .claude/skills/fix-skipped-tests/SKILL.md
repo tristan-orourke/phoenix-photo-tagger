@@ -1,5 +1,5 @@
 ---
-description: Find and fix all skipped (@tag :skip) tests in the project
+description: Find and fix all skipped tests in the project (@tag :skip, @tag skip: "...", @describetag skip: "...")
 trigger: fix skipped tests, unskip tests, fix test skips
 ---
 
@@ -19,13 +19,13 @@ docker compose -f docker-compose-dev.yml run dev_app bash
 
 ### Find all skipped tests
 ```bash
-grep -rn "@tag :skip" app/test/
+grep -rn "@tag :skip\|@tag skip:\|@describetag skip:" test/
 ```
 
 ### Fix tests in batches by file, starting with the smallest files first
 
 For each file with skipped tests:
-1. Identify all `@tag :skip` annotations and group by `describe` block
+1. Identify all skip annotations (`@tag :skip`, `@tag skip: "..."`, `@describetag skip: "..."`) and group by `describe` block
 2. For each group:
    a. Remove the `@tag :skip` tags for that group
    b. Run just those tests: `mix test test/path/to/file.exs:LINE`
