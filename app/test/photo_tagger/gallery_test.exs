@@ -578,6 +578,27 @@ defmodule PhotoTagger.GalleryTest do
 
       assert Gallery.get_next_manual_order(folder.id) == 6
     end
+
+    test "get_next_manual_order/0 returns 1 when no photos exist" do
+      assert Gallery.get_next_manual_order() == 1
+    end
+
+    test "get_next_manual_order/0 returns max + 1 across all folders", %{folder: folder} do
+      other_folder = folder_fixture(%{name: "other_folder"})
+      _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
+      _photo2 = photo_fixture(%{folder_id: other_folder.id, manual_order: 7})
+
+      assert Gallery.get_next_manual_order() == 8
+    end
+
+    test "get_next_manual_order/0 ignores folder boundaries", %{folder: folder} do
+      other_folder = folder_fixture(%{name: "other_folder"})
+      _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 10})
+      _photo2 = photo_fixture(%{folder_id: other_folder.id, manual_order: 2})
+
+      # Should return 11, not 3 — looks at all photos globally
+      assert Gallery.get_next_manual_order() == 11
+    end
   end
 
   describe "related tags" do

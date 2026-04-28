@@ -92,6 +92,20 @@ defmodule PhotoTagger.Gallery do
     end
   end
 
+  @doc """
+  Gets the next available manual_order for all photos.
+  Returns 1 if no photos exist, otherwise max + 1.
+  """
+  def get_next_manual_order() do
+    max_order = from(p in Photo, select: max(p.manual_order)) 
+      |> Repo.one()
+
+    case max_order do
+      nil -> 1
+      n -> n + 1
+    end
+  end
+
   defp list_photos_query(sort, sort_direction) do
     from(p in Photo,
       as: :photo,
@@ -380,7 +394,7 @@ defmodule PhotoTagger.Gallery do
             id when is_binary(id) -> String.to_integer(id)
           end
 
-        next_order = get_next_manual_order(folder_id)
+        next_order = get_next_manual_order()
         Map.put(attrs, "manual_order", next_order)
       else
         attrs
@@ -691,7 +705,7 @@ defmodule PhotoTagger.Gallery do
           is_public: photo.is_public,
           image_last_modified: photo.image_last_modified,
           original_photo_id: photo.id,
-          manual_order: get_next_manual_order(target_folder_id)
+          manual_order: get_next_manual_order()
         },
         [
           :name,
