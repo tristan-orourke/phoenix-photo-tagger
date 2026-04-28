@@ -386,14 +386,7 @@ defmodule PhotoTagger.Gallery do
 
     # Auto-assign manual_order if not provided
     attrs =
-      if Map.has_key?(attrs, "folder_id") and not Map.has_key?(attrs, "manual_order") do
-        # Convert folder_id to integer if it's a string (from form params)
-        folder_id =
-          case attrs["folder_id"] do
-            id when is_integer(id) -> id
-            id when is_binary(id) -> String.to_integer(id)
-          end
-
+      if not Map.has_key?(attrs, "manual_order") do
         next_order = get_next_manual_order()
         Map.put(attrs, "manual_order", next_order)
       else
