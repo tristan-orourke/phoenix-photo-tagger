@@ -75,29 +75,12 @@ defmodule PhotoTagger.Gallery do
   end
 
   @doc """
-  Gets the next available manual_order position for a folder.
-  Returns 1 if no photos exist in the folder, otherwise max + 1.
-  """
-  def get_next_manual_order(folder_id) when is_integer(folder_id) do
-    max_order =
-      from(p in Photo,
-        where: p.folder_id == ^folder_id,
-        select: max(p.manual_order)
-      )
-      |> Repo.one()
-
-    case max_order do
-      nil -> 1
-      n -> n + 1
-    end
-  end
-
-  @doc """
   Gets the next available manual_order for all photos.
   Returns 1 if no photos exist, otherwise max + 1.
   """
   def get_next_manual_order() do
-    max_order = from(p in Photo, select: max(p.manual_order)) 
+    max_order =
+      from(p in Photo, select: max(p.manual_order))
       |> Repo.one()
 
     case max_order do

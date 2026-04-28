@@ -567,18 +567,6 @@ defmodule PhotoTagger.GalleryTest do
       assert photo_ids == Enum.sort([photo1.id, photo2.id])
     end
 
-    test "get_next_manual_order/1 returns 1 for empty folder", %{folder: _folder} do
-      empty_folder = folder_fixture(%{name: "empty_folder"})
-      assert Gallery.get_next_manual_order(empty_folder.id) == 1
-    end
-
-    test "get_next_manual_order/1 returns max + 1 for folder with photos", %{folder: folder} do
-      _photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 5})
-      _photo2 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
-
-      assert Gallery.get_next_manual_order(folder.id) == 6
-    end
-
     test "get_next_manual_order/0 returns 1 when no photos exist" do
       assert Gallery.get_next_manual_order() == 1
     end
