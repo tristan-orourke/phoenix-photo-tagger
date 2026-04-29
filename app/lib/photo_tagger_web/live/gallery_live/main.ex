@@ -45,6 +45,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             sort={@sort}
             sort_direction={@sort_direction}
             show_visibility_outlines={@show_visibility_outlines}
+            pg_size={@pg_size}
           />
           <%!-- <.live_component
             id="gallery-panel"
@@ -83,6 +84,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                 is_admin={@is_admin}
                 sort={@sort}
                 sort_direction={@sort_direction}
+                pg_size={@pg_size}
               />
             <% [] -> %>
               <p class="text-center">Select a photo to view details</p>
@@ -456,6 +458,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:is_admin, :boolean, required: true)
   attr(:sort, :atom, default: nil)
   attr(:sort_direction, :atom, default: nil)
+  attr(:pg_size, :integer, default: nil)
   slot(:inner_block)
 
   def toggle_tag_button(assigns) do
@@ -483,10 +486,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           tags_list,
           new_exclude_tags,
           assigns.is_admin,
-          nil,
-          assigns.sort,
-          nil,
-          assigns.sort_direction
+          sort: assigns.sort,
+          sort_direction: assigns.sort_direction,
+          pg_size: assigns.pg_size
         )
       )
 
@@ -508,6 +510,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:sort, :atom, default: :manual)
   attr(:sort_direction, :atom, default: :desc)
   attr(:show_visibility_outlines, :boolean, default: false)
+  attr(:pg_size, :integer, default: @default_pg_size)
 
   def gallery_header(assigns) do
     breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
@@ -522,7 +525,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <.link
               id="breadcrumb-folder"
               aria-current={if(length(@breadcrumb_tags) == 0, do: "page", else: "false")}
-              patch={Util.build_url(@folder, [], [], [], @is_admin)}
+              patch={Util.build_url(@folder, [], [], [], @is_admin, pg_size: @pg_size)}
             >
               {@folder || "All folders"}
             </.link>
@@ -535,7 +538,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
               />
               <.link
                 aria-current={if(index == length(@breadcrumb_tags) - 1, do: "page", else: "false")}
-                patch={Util.build_url(@folder, [], Enum.reverse(tags), [], @is_admin)}
+                patch={Util.build_url(@folder, [], Enum.reverse(tags), [], @is_admin, pg_size: @pg_size)}
               >
                 #{tag}
               </.link>
@@ -817,6 +820,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:all_folders, :list, required: true)
   attr(:sort, :atom, default: nil)
   attr(:sort_direction, :atom, default: nil)
+  attr(:pg_size, :integer, default: @default_pg_size)
 
   def photo(assigns) do
     assigns = assign(assigns, :folder_is_active, assigns.folder == assigns.photo.folder.name)
@@ -853,7 +857,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         <div class="flex items-center gap-2">
           <.link
             class="data-[active]:font-bold"
-            patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin)}
+            patch={Util.build_url(@photo.folder.name, [@photo.id], @tags, @exclude_tags, @is_admin, pg_size: @pg_size)}
             data-active={@folder_is_active}
           >
             {@photo.folder.name}
@@ -876,7 +880,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   [@photo.original_photo.id],
                   @tags,
                   @exclude_tags,
-                  @is_admin
+                  @is_admin,
+                  pg_size: @pg_size
                 )
               }
               class="underline hover:text-purple-800"
@@ -898,7 +903,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
           <%= for {listing, index} <- Enum.with_index(@cross_listings_with_folders) do %>
             <.link
               patch={
-                Util.build_url(listing.folder.name, [listing.id], @tags, @exclude_tags, @is_admin)
+                Util.build_url(listing.folder.name, [listing.id], @tags, @exclude_tags, @is_admin, pg_size: @pg_size)
               }
               class="text-purple-600 hover:text-purple-800 underline"
             >
@@ -923,6 +928,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                   is_admin={@is_admin}
                   sort={@sort}
                   sort_direction={@sort_direction}
+                  pg_size={@pg_size}
                 >
                   #{tag.name}
                 </.toggle_tag_button>
@@ -934,10 +940,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                     [tag.name],
                     @exclude_tags,
                     @is_admin,
-                    nil,
-                    @sort,
-                    nil,
-                    @sort_direction
+                    sort: @sort,
+                    sort_direction: @sort_direction,
+                    pg_size: @pg_size
                   )
                 }>
                   #{tag.name}
@@ -1094,7 +1099,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             <%= for listing <- @cross_listings_with_folders do %>
               <li>
                 <.link
-                  patch={Util.build_url(listing.folder.name, [listing.id], [], [], @is_admin)}
+                  patch={Util.build_url(listing.folder.name, [listing.id], [], [], @is_admin, pg_size: @pg_size)}
                   class="text-blue-600 hover:underline"
                 >
                   {listing.folder.name}
@@ -1148,7 +1153,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <:item title="Drift">
         <.link
           class="text-blue-600 hover:text-blue-800"
-          patch={Util.build_url(@folder, [@photo.id], @tags, @exclude_tags, false, "drift")}
+          patch={Util.build_url(@folder, [@photo.id], @tags, @exclude_tags, false, tail: "drift")}
         >
           drift<.icon name="hero-arrow-up-right" class="w-3 h-3 ml-1" />
         </.link>
@@ -1373,10 +1378,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           socket.assigns.pg,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           pg: socket.assigns.pg,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1392,10 +1397,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           socket.assigns.pg,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           pg: socket.assigns.pg,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1427,10 +1432,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )
      |> assign(:last_selected_photo_id, photo_id)}
@@ -1498,10 +1502,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                  socket.assigns.tags,
                  socket.assigns.exclude_tags,
                  socket.assigns.is_admin,
-                 nil,
-                 socket.assigns.sort,
-                 nil,
-                 socket.assigns.sort_direction
+                 sort: socket.assigns.sort,
+                 sort_direction: socket.assigns.sort_direction,
+                 pg_size: socket.assigns.pg_size
                )
            )
            |> assign(:last_selected_photo_id, photo_id)}
@@ -1872,10 +1875,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )
      |> put_flash(:info, "Photo deleted successfully.")}
@@ -1901,10 +1903,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )
      |> put_flash(:info, "Photos deleted successfully.")}
@@ -1956,7 +1957,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
                [],
                socket.assigns.tags,
                socket.assigns.exclude_tags,
-               socket.assigns.is_admin
+               socket.assigns.is_admin,
+               pg_size: socket.assigns.pg_size
              )
          )}
 
@@ -2033,8 +2035,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           sort_atom
+           sort: sort_atom,
+           pg_size: socket.assigns.pg_size
          )
      )}
   end
@@ -2051,10 +2053,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           new_direction
+           sort: socket.assigns.sort,
+           sort_direction: new_direction,
+           pg_size: socket.assigns.pg_size
          )
      )}
   end
@@ -2075,10 +2076,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            [],
            [],
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )}
   end
@@ -2099,10 +2099,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            new_tags,
            Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )}
   end
@@ -2117,10 +2116,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            [tag],
            Enum.filter(socket.assigns.exclude_tags, fn t -> t != tag end),
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )}
   end
@@ -2141,10 +2139,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            Enum.filter(socket.assigns.tags, fn t -> t != tag end),
            new_exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           nil,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )}
   end
@@ -2161,10 +2158,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
            socket.assigns.tags,
            socket.assigns.exclude_tags,
            socket.assigns.is_admin,
-           nil,
-           socket.assigns.sort,
-           pg,
-           socket.assigns.sort_direction
+           sort: socket.assigns.sort,
+           pg: pg,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: socket.assigns.pg_size
          )
      )
      |> push_event("scroll_to_top", %{selector: "#gallery-section"})}

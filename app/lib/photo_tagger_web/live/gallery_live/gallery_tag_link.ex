@@ -11,6 +11,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryTagLink do
   attr(:is_admin, :boolean, default: false)
   attr(:is_recommended, :boolean, default: false)
   attr(:is_selected, :boolean, default: false)
+  attr(:pg_size, :integer, default: nil)
 
   def render(assigns) do
     ~H"""
@@ -50,7 +51,8 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryTagLink do
         assigns.selected_photo_ids,
         tags_list,
         assigns.exclude_tags,
-        assigns.is_admin
+        assigns.is_admin,
+        pg_size: assigns.pg_size
       )
 
     {:ok,
