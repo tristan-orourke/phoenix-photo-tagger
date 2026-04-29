@@ -225,11 +225,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       (Map.get(params, "pg") || Map.get(params, "page") || "1")
       |> Util.safe_integer_parse(1)
 
-    prev_pg_size = Map.get(socket.assigns, :pg_size, @default_pg_size)
-
     pg_size =
-      Map.get(params, "pg_size", Integer.to_string(prev_pg_size))
-      |> Util.safe_integer_parse(prev_pg_size)
+      Map.get(params, "pg_size", Integer.to_string(@default_pg_size))
+      |> Util.safe_integer_parse(@default_pg_size)
 
     socket =
       assign(socket, %{pg: pg, pg_size: pg_size, sort: sort, sort_direction: sort_direction})
@@ -514,7 +512,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   def gallery_header(assigns) do
     breadcrumb_tags = Enum.scan(assigns.tags, [], fn tag, acc -> [tag | acc] end)
-    assigns = assign(assigns, :breadcrumb_tags, breadcrumb_tags)
+    show_pg_size_select = assigns.pg_size != @default_pg_size or assigns.item_count > @default_pg_size
+
+    assigns =
+      assigns
+      |> assign(:breadcrumb_tags, breadcrumb_tags)
+      |> assign(:show_pg_size_select, show_pg_size_select)
 
     ~H"""
     <div class="md:flex sticky top-0 bg-white z-50">
@@ -565,6 +568,20 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div class="flex-none mr-3 lg:ml-3">
           <p class="font-bold">{"#{@item_count}"}<span class="hidden md:inline">{" items"}</span></p>
+        </div>
+        <div :if={@show_pg_size_select} class="flex-none pr-3">
+          <form phx-change="change_pg_size" class="flex items-center">
+            <label class="sr-only lg:not-sr-only text-sm mr-2">Per page:</label>
+            <select
+              id="pg-size-select"
+              name="pg_size"
+              class="text-sm rounded-lg border-gray-300 ml-1 py-1 pl-2 pr-8"
+            >
+              <option value="500" selected={@pg_size == 500}>500</option>
+              <option value="1000" selected={@pg_size == 1000}>1000</option>
+              <option value="2000" selected={@pg_size == 2000}>2000</option>
+            </select>
+          </form>
         </div>
         <div class="flex-none pr-3">
           <form phx-change="change_sort" class="flex items-center">
@@ -2165,6 +2182,26 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
          )
      )
      |> push_event("scroll_to_top", %{selector: "#gallery-section"})}
+  end
+
+  def handle_event("change_pg_size", %{"pg_size" => pg_size}, socket) do
+    pg_size = Util.safe_integer_parse(pg_size, @default_pg_size)
+
+    {:noreply,
+     push_patch(socket,
+       to:
+         Util.build_url(
+           socket.assigns.folder,
+           socket.assigns.selected_photo_ids,
+           socket.assigns.tags,
+           socket.assigns.exclude_tags,
+           socket.assigns.is_admin,
+           sort: socket.assigns.sort,
+           pg: 1,
+           sort_direction: socket.assigns.sort_direction,
+           pg_size: pg_size
+         )
+     )}
   end
 
   ## Utility functions
