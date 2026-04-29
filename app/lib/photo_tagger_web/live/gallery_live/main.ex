@@ -219,11 +219,9 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         _ -> :desc
       end
 
-    prev_pg = Map.get(socket.assigns, :pg, 1)
-
     pg =
-      (Map.get(params, "pg") || Map.get(params, "page") || Integer.to_string(prev_pg))
-      |> Util.safe_integer_parse(prev_pg)
+      (Map.get(params, "pg") || Map.get(params, "page") || "1")
+      |> Util.safe_integer_parse(1)
 
     prev_pg_size = Map.get(socket.assigns, :pg_size, @default_pg_size)
 
