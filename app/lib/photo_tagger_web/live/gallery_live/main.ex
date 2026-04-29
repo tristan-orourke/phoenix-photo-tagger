@@ -12,7 +12,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
 
   require Logger
 
-  @default_pg_size 100
+  @default_pg_size 500
 
   def render(assigns) do
     ~H"""
