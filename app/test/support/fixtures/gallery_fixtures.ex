@@ -96,7 +96,7 @@ defmodule PhotoTagger.GalleryFixtures do
 
     # Get next manual order if not provided
     manual_order =
-      Map.get_lazy(attrs, :manual_order, fn -> Gallery.get_next_manual_order(folder_id) end)
+      Map.get_lazy(attrs, :manual_order, fn -> Gallery.get_next_manual_order() end)
 
     name = Map.get(attrs, :name, unique_photo_name())
 
