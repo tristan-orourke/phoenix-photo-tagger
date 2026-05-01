@@ -228,6 +228,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
     pg_size =
       Map.get(params, "pg_size", Integer.to_string(@default_pg_size))
       |> Util.safe_integer_parse(@default_pg_size)
+      |> max(1)
+      |> min(3000)
 
     socket =
       assign(socket, %{pg: pg, pg_size: pg_size, sort: sort, sort_direction: sort_direction})
@@ -571,7 +573,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
         </div>
         <div :if={@show_pg_size_select} class="flex-none pr-3">
           <form phx-change="change_pg_size" class="flex items-center">
-            <label class="sr-only lg:not-sr-only text-sm mr-2">Per page:</label>
+            <label for="pg-size-select" class="sr-only lg:not-sr-only text-sm mr-2">Per page:</label>
             <select
               id="pg-size-select"
               name="pg_size"
@@ -2185,7 +2187,10 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   end
 
   def handle_event("change_pg_size", %{"pg_size" => pg_size}, socket) do
-    pg_size = Util.safe_integer_parse(pg_size, @default_pg_size)
+    pg_size =
+      Util.safe_integer_parse(pg_size, @default_pg_size)
+      |> max(1)
+      |> min(3000)
 
     {:noreply,
      push_patch(socket,
