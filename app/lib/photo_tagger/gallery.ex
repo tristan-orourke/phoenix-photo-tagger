@@ -397,35 +397,27 @@ defmodule PhotoTagger.Gallery do
   # - If old_order is nil: shifts all photos at target_order and above up by 1
   # - If old_order > target_order (moving earlier): shifts photos in [target, old) up by 1
   # - If old_order < target_order (moving later): shifts photos in (old, target] down by 1
-  defp reorder_photos_for_insert(folder_id, target_order, old_order) do
+  defp reorder_photos_for_insert(target_order, old_order) do
     query =
       cond do
-        # New photo or no old position - shift everything at target and above
         is_nil(old_order) ->
           from(p in Photo,
-            where: p.folder_id == ^folder_id and p.manual_order >= ^target_order,
+            where: p.manual_order >= ^target_order,
             update: [inc: [manual_order: 1]]
           )
 
-        # Moving down (from higher number to lower) - shift photos in [target, old) up by 1
         old_order > target_order ->
           from(p in Photo,
-            where:
-              p.folder_id == ^folder_id and p.manual_order >= ^target_order and
-                p.manual_order < ^old_order,
+            where: p.manual_order >= ^target_order and p.manual_order < ^old_order,
             update: [inc: [manual_order: 1]]
           )
 
-        # Moving up (from lower number to higher) - shift photos in (old, target] down by 1
         old_order < target_order ->
           from(p in Photo,
-            where:
-              p.folder_id == ^folder_id and p.manual_order > ^old_order and
-                p.manual_order <= ^target_order,
+            where: p.manual_order > ^old_order and p.manual_order <= ^target_order,
             update: [inc: [manual_order: -1]]
           )
 
-        # No change
         true ->
           nil
       end
@@ -505,7 +497,7 @@ defmodule PhotoTagger.Gallery do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:reorder, fn _repo, _changes ->
       if new_order && new_order != old_order do
-        reorder_photos_for_insert(photo.folder_id, new_order, old_order)
+        reorder_photos_for_insert(new_order, old_order)
       else
         {:ok, :no_reorder}
       end
