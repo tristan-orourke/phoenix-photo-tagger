@@ -804,6 +804,23 @@ defmodule PhotoTagger.GalleryTest do
       assert {:ok, %{photo: updated}} = Gallery.update_photo(photo3, %{"manual_order" => 1})
       assert updated.manual_order == 1
     end
+
+    test "update_photo/2 reorders globally across folders", %{folder: folder} do
+      folder_b = folder_fixture(%{name: "reorder_folder_b"})
+      photo1 = photo_fixture(%{folder_id: folder.id, manual_order: 1})
+      photo2 = photo_fixture(%{folder_id: folder_b.id, manual_order: 2})
+      photo3 = photo_fixture(%{folder_id: folder.id, manual_order: 3})
+
+      assert {:ok, %{photo: updated}} = Gallery.update_photo(photo3, %{"manual_order" => 1})
+      assert updated.manual_order == 1
+
+      reloaded_photo1 = Gallery.get_photo!(photo1.id)
+      reloaded_photo2 = Gallery.get_photo!(photo2.id)
+
+      # photo1 and photo2 should have shifted up regardless of folder
+      assert reloaded_photo1.manual_order == 2
+      assert reloaded_photo2.manual_order == 3
+    end
   end
 
   describe "cross-listing schema" do
@@ -834,7 +851,7 @@ defmodule PhotoTagger.GalleryTest do
             folder_id: folder_b.id,
             image_last_modified: DateTime.utc_now(),
             original_photo_id: original.id,
-            manual_order: 1
+            manual_order: Gallery.get_next_manual_order()
           },
           [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order]
         )
@@ -863,7 +880,7 @@ defmodule PhotoTagger.GalleryTest do
             folder_id: folder_b.id,
             image_last_modified: DateTime.utc_now(),
             original_photo_id: original.id,
-            manual_order: 1
+            manual_order: Gallery.get_next_manual_order()
           },
           [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order]
         )
@@ -894,7 +911,7 @@ defmodule PhotoTagger.GalleryTest do
             folder_id: folder_b.id,
             image_last_modified: DateTime.utc_now(),
             original_photo_id: original.id,
-            manual_order: 1
+            manual_order: Gallery.get_next_manual_order()
           },
           [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order]
         )
@@ -929,7 +946,7 @@ defmodule PhotoTagger.GalleryTest do
             folder_id: folder_b.id,
             image_last_modified: DateTime.utc_now(),
             original_photo_id: original.id,
-            manual_order: 1
+            manual_order: Gallery.get_next_manual_order()
           },
           [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order]
         )
@@ -946,7 +963,7 @@ defmodule PhotoTagger.GalleryTest do
             folder_id: folder_c.id,
             image_last_modified: DateTime.utc_now(),
             original_photo_id: original.id,
-            manual_order: 1
+            manual_order: Gallery.get_next_manual_order()
           },
           [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order]
         )
@@ -986,7 +1003,7 @@ defmodule PhotoTagger.GalleryTest do
             folder_id: folder_b.id,
             image_last_modified: DateTime.utc_now(),
             original_photo_id: original.id,
-            manual_order: 1
+            manual_order: Gallery.get_next_manual_order()
           },
           [:name, :folder_id, :image_last_modified, :original_photo_id, :manual_order]
         )
@@ -1091,21 +1108,20 @@ defmodule PhotoTagger.GalleryTest do
       assert cross_listing.folder_id == folder_b.id
     end
 
-    test "assigns manual_order appending to end of target folder" do
+    test "assigns manual_order appending to end globally" do
       folder_a = folder_fixture(%{name: "folder_a"})
       folder_b = folder_fixture(%{name: "folder_b"})
 
-      # Create existing photos in folder_b with manual orders 1, 2, 3
       _existing1 = photo_fixture(%{folder_id: folder_b.id, manual_order: 1})
       _existing2 = photo_fixture(%{folder_id: folder_b.id, manual_order: 2})
       _existing3 = photo_fixture(%{folder_id: folder_b.id, manual_order: 3})
 
       original = photo_fixture(%{folder_id: folder_a.id})
+      # original gets auto-assigned manual_order 4 (next global order)
 
       assert {:ok, cross_listing} = Gallery.create_cross_listing(original, folder_b.id)
 
-      # Should be appended after highest manual_order (3)
-      assert cross_listing.manual_order == 4
+      assert cross_listing.manual_order == 5
     end
 
     test "returns error when photo is already a cross-listing" do
