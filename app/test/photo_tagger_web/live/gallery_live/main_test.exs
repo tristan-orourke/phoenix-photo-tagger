@@ -1611,6 +1611,79 @@ defmodule PhotoTaggerWeb.GalleryLive.MainTest do
     end
   end
 
+  describe "REGRESSION: page resets to 1 when gallery filters change" do
+    setup %{conn: conn} do
+      folder = folder_fixture(%{name: "ResetFolder"})
+      folder2 = folder_fixture(%{name: "OtherFolder"})
+      tag = tag_fixture(%{name: "resettest"})
+
+      photos =
+        for i <- 1..15, do: photo_fixture(%{folder_id: folder.id, name: "rp#{i}.jpg"})
+
+      _photo2 = photo_fixture(%{folder_id: folder2.id, name: "other.jpg"})
+
+      Gallery.add_tag_to_photo(hd(photos), tag.name)
+
+      %{conn: conn, folder: folder, folder2: folder2, tag: tag}
+    end
+
+    test "change_sort resets page to 1 with correct photo count", %{conn: conn, folder: folder} do
+      {:ok, view, _html} = live(conn, ~p"/admin/folders/#{folder.name}?pg_size=10")
+      render_click(view, "toggle_collapse_groups", %{})
+
+      html = render_click(view, "change_page", %{"pg" => "2"})
+      assert extract_page_number(html) == 2
+      assert length(extract_photo_ids_from_gallery(html)) == 5
+
+      html = render_click(view, "change_sort", %{"sort" => "date"})
+      assert extract_page_number(html) == 1
+      assert length(extract_photo_ids_from_gallery(html)) == 10
+    end
+
+    test "toggle_sort_direction resets page to 1 with correct photo count", %{conn: conn, folder: folder} do
+      {:ok, view, _html} = live(conn, ~p"/admin/folders/#{folder.name}?pg_size=10")
+      render_click(view, "toggle_collapse_groups", %{})
+
+      html = render_click(view, "change_page", %{"pg" => "2"})
+      assert extract_page_number(html) == 2
+      assert length(extract_photo_ids_from_gallery(html)) == 5
+
+      html = render_click(view, "toggle_sort_direction", %{})
+      assert extract_page_number(html) == 1
+      assert length(extract_photo_ids_from_gallery(html)) == 10
+    end
+
+    test "toggle_tag resets page to 1", %{conn: conn, folder: folder, tag: tag} do
+      {:ok, view, _html} = live(conn, ~p"/admin/folders/#{folder.name}?pg_size=10")
+
+      html = render_click(view, "change_page", %{"pg" => "2"})
+      assert extract_page_number(html) == 2
+
+      html = render_click(view, "toggle_tag", %{"tag" => tag.name})
+      assert extract_page_number(html) == 1
+      # Only 1 photo has the tag, so only 1 should appear
+      render_click(view, "toggle_collapse_groups", %{})
+      html = render(view)
+      assert length(extract_photo_ids_from_gallery(html)) == 1
+    end
+
+    test "change_folder resets page to 1 with correct photo count", %{conn: conn, folder: folder, folder2: folder2} do
+      {:ok, view, _html} = live(conn, ~p"/admin/folders/#{folder.name}?pg_size=10")
+      render_click(view, "toggle_collapse_groups", %{})
+
+      html = render_click(view, "change_page", %{"pg" => "2"})
+      assert extract_page_number(html) == 2
+      assert length(extract_photo_ids_from_gallery(html)) == 5
+
+      html = render_click(view, "change_folder", %{"folder" => folder2.name})
+      assert extract_page_number(html) == 1
+      # OtherFolder has only 1 photo
+      render_click(view, "toggle_collapse_groups", %{})
+      html = render(view)
+      assert length(extract_photo_ids_from_gallery(html)) == 1
+    end
+  end
+
   describe "change_page - scroll behavior" do
     @describetag skip: "Requires assert_push_event/3, unavailable in LiveView 1.0"
     test "triggers scroll to top when changing pages", %{conn: conn} do
