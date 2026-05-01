@@ -8,6 +8,8 @@ Photo Tagger is a Phoenix/Elixir web application for organizing and browsing pho
 
 ## Development Commands
 
+**CRITICAL: Never run `mix ecto.reset`, `mix ecto.drop`, or any destructive database command without `MIX_ENV=test`.** The dev database contains real photo data that cannot be recovered. Always prefix with `MIX_ENV=test` when running destructive DB operations. When in doubt, only use `mix ecto.migrate` against dev.
+
 **Important:** Due to file permissions, all mix commands must be run inside the development Docker container:
 
 ```bash
