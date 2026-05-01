@@ -55,22 +55,27 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
     :counters.put(order_counter, 1, start_order)
 
     Enum.each(folder_dirs, fn folder_name ->
-      folder = find_or_create_folder(folder_name)
-      folder_path = Path.join(uploads_path, folder_name)
+      case find_or_create_folder(folder_name) do
+        {:ok, folder} ->
+          folder_path = Path.join(uploads_path, folder_name)
 
-      original_files =
-        File.ls!(folder_path)
-        |> Enum.filter(&is_original_file?/1)
-        |> Enum.sort()
+          original_files =
+            File.ls!(folder_path)
+            |> Enum.filter(&is_original_file?/1)
+            |> Enum.sort()
 
-      Mix.shell().info("  #{folder_name}: #{length(original_files)} original file(s)")
+          Mix.shell().info("  #{folder_name}: #{length(original_files)} original file(s)")
 
-      Enum.each(original_files, fn filename ->
-        file_path = Path.join(folder_path, filename)
-        :counters.add(order_counter, 1, 1)
-        current_order = :counters.get(order_counter, 1)
-        import_photo(folder, filename, file_path, current_order)
-      end)
+          Enum.each(original_files, fn filename ->
+            file_path = Path.join(folder_path, filename)
+            :counters.add(order_counter, 1, 1)
+            current_order = :counters.get(order_counter, 1)
+            import_photo(folder, filename, file_path, current_order)
+          end)
+
+        {:error, _reason} ->
+          Mix.shell().error("  Skipping folder #{folder_name} due to creation failure.")
+      end
     end)
 
     total = :counters.get(order_counter, 1) - start_order
@@ -94,16 +99,21 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
   defp find_or_create_folder(name) do
     case Repo.get_by(Folder, name: name) do
       nil ->
-        {:ok, folder} =
-          %Folder{}
-          |> Folder.changeset(%{name: name, visibility_type: :private})
-          |> Repo.insert()
+        case %Folder{}
+             |> Folder.changeset(%{name: name, visibility_type: :private})
+             |> Repo.insert() do
+          {:ok, folder} ->
+            Mix.shell().info("  Created folder: #{name}")
+            {:ok, folder}
 
-        Mix.shell().info("  Created folder: #{name}")
-        folder
+          {:error, changeset} ->
+            errors = format_changeset_errors(changeset)
+            Mix.shell().error("  Failed to create folder #{name}: #{errors}")
+            {:error, changeset}
+        end
 
       folder ->
-        folder
+        {:ok, folder}
     end
   end
 
@@ -120,7 +130,7 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
 
       image = %{file_name: filename, updated_at: DateTime.utc_now()}
 
-      {:ok, _photo} =
+      result =
         %Photo{}
         |> cast(
           %{
@@ -135,7 +145,23 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
         |> put_change(:image, image)
         |> Repo.insert()
 
-      Mix.shell().info("    Imported #{filename} (order: #{manual_order})")
+      case result do
+        {:ok, _photo} ->
+          Mix.shell().info("    Imported #{filename} (order: #{manual_order})")
+
+        {:error, changeset} ->
+          errors = format_changeset_errors(changeset)
+          Mix.shell().error("    Failed to import #{filename}: #{errors}")
+      end
     end
+  end
+
+  defp format_changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+    |> Enum.map_join(", ", fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
   end
 end
