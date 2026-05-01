@@ -1,4 +1,4 @@
-defmodule PhotoTagger.Repo.Migrations.AddUniqueIndexOnManualOrder do
+defmodule PhotoTagger.Repo.Migrations.AddUniqueConstraintOnManualOrder do
   use Ecto.Migration
 
   def up do
