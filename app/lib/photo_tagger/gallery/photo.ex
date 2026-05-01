@@ -42,7 +42,7 @@ defmodule PhotoTagger.Gallery.Photo do
       :original_photo_id
     ])
     |> cast_attachments(attrs, [:image], allow_urls: true)
-    |> validate_required([:name, :folder_id, :image, :image_last_modified])
+    |> validate_required([:name, :folder_id, :image, :image_last_modified, :manual_order])
     |> unique_constraint([:name, :folder_id])
     |> unique_constraint(:manual_order, name: :photos_manual_order_unique)
   end

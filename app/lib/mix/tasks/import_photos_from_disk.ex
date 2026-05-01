@@ -16,6 +16,7 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
   import Ecto.Changeset
 
   alias PhotoTagger.Gallery.{Folder, Photo}
+  alias PhotoTagger.Gallery
   alias PhotoTagger.Repo
 
   @uploads_root "priv/static/uploads/images"
@@ -49,8 +50,9 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
 
     Mix.shell().info("Found #{length(folder_dirs)} folder(s): #{Enum.join(folder_dirs, ", ")}")
 
+    start_order = Gallery.get_next_manual_order() - 1
     order_counter = :counters.new(1, [:atomics])
-    :counters.put(order_counter, 1, 0)
+    :counters.put(order_counter, 1, start_order)
 
     Enum.each(folder_dirs, fn folder_name ->
       folder = find_or_create_folder(folder_name)
@@ -71,7 +73,7 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
       end)
     end)
 
-    total = :counters.get(order_counter, 1)
+    total = :counters.get(order_counter, 1) - start_order
     Mix.shell().info("\nImported #{total} photo(s) total.")
   end
 
