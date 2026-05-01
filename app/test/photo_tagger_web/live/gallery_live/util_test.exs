@@ -7,7 +7,7 @@ defmodule PhotoTaggerWeb.GalleryLive.UtilTest do
 
   alias PhotoTaggerWeb.GalleryLive.Util
 
-  describe "build_url/8" do
+  describe "build_url/6" do
     test "generates correct public URLs without admin prefix" do
       url = Util.build_url(nil, [], [], [], false)
       assert url == "/photos"
@@ -74,9 +74,9 @@ defmodule PhotoTaggerWeb.GalleryLive.UtilTest do
     end
 
     test "includes sort param only when :date" do
-      url_manual = Util.build_url(nil, [], [], [], false, nil, :manual)
-      url_date = Util.build_url(nil, [], [], [], false, nil, :date)
-      url_nil = Util.build_url(nil, [], [], [], false, nil, nil)
+      url_manual = Util.build_url(nil, [], [], [], false, sort: :manual)
+      url_date = Util.build_url(nil, [], [], [], false, sort: :date)
+      url_nil = Util.build_url(nil, [], [], [], false)
 
       refute url_manual =~ "sort"
       assert url_date =~ "sort=date"
@@ -84,10 +84,10 @@ defmodule PhotoTaggerWeb.GalleryLive.UtilTest do
     end
 
     test "includes pg param only when greater than 1" do
-      url_nil = Util.build_url(nil, [], [], [], false, nil, nil, nil)
-      url_page1 = Util.build_url(nil, [], [], [], false, nil, nil, 1)
-      url_page2 = Util.build_url(nil, [], [], [], false, nil, nil, 2)
-      url_page5 = Util.build_url(nil, [], [], [], false, nil, nil, 5)
+      url_nil = Util.build_url(nil, [], [], [], false)
+      url_page1 = Util.build_url(nil, [], [], [], false, pg: 1)
+      url_page2 = Util.build_url(nil, [], [], [], false, pg: 2)
+      url_page5 = Util.build_url(nil, [], [], [], false, pg: 5)
 
       refute url_nil =~ "pg"
       refute url_page1 =~ "pg"
@@ -96,17 +96,17 @@ defmodule PhotoTaggerWeb.GalleryLive.UtilTest do
     end
 
     test "handles tail parameter for drift mode" do
-      url = Util.build_url("vacation", [123], [], [], false, "drift")
+      url = Util.build_url("vacation", [123], [], [], false, tail: "drift")
       assert url == "/folders/vacation/photos/123/drift"
     end
 
     test "handles tail parameter without folder" do
-      url = Util.build_url(nil, [789], [], [], false, "drift")
+      url = Util.build_url(nil, [789], [], [], false, tail: "drift")
       assert url == "/photos/789/drift"
     end
 
     test "combines admin prefix with tail" do
-      url = Util.build_url("album", [42], [], [], true, "drift")
+      url = Util.build_url("album", [42], [], [], true, tail: "drift")
       assert url == "/admin/folders/album/photos/42/drift"
     end
 
@@ -118,9 +118,8 @@ defmodule PhotoTaggerWeb.GalleryLive.UtilTest do
           ["beach"],
           ["indoor"],
           true,
-          nil,
-          :date,
-          3
+          sort: :date,
+          pg: 3
         )
 
       assert url =~ "/admin/folders/summer"
