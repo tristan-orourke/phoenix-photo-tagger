@@ -76,16 +76,15 @@ defmodule Mix.Tasks.ImportPhotosFromDisk do
   end
 
   defp is_original_file?(filename) do
-    has_valid_ext =
-      String.downcase(filename)
-      |> then(fn lower ->
-        String.ends_with?(lower, ".jpg") or
-          String.ends_with?(lower, ".jpeg") or
-          String.ends_with?(lower, ".png") or
-          String.ends_with?(lower, ".gif")
-      end)
+    lower = String.downcase(filename)
 
-    not_variant = not Enum.any?(@variant_suffixes, &String.ends_with?(filename, &1))
+    has_valid_ext =
+      String.ends_with?(lower, ".jpg") or
+        String.ends_with?(lower, ".jpeg") or
+        String.ends_with?(lower, ".png") or
+        String.ends_with?(lower, ".gif")
+
+    not_variant = not Enum.any?(@variant_suffixes, &String.ends_with?(lower, &1))
 
     has_valid_ext and not_variant
   end
