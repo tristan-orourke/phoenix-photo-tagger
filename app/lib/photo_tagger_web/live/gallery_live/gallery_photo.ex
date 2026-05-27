@@ -25,6 +25,7 @@ defmodule PhotoTaggerWeb.GalleryLive.GalleryPhoto do
       #{if(@photo_group != nil and !@is_group_collapsed, do: "bg-blue-200", else: "")}
       #{if @is_selected, do: "selected", else: ""}"}
       data-gallery-photo-id={@photo_id}
+      data-group-collapsed={if @photo_group != nil and @is_group_collapsed, do: "true"}
     >
       <div class="aspect-square w-full h-full">
         <button

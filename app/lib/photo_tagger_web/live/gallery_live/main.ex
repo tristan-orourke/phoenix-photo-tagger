@@ -66,6 +66,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
             pg={@pg}
             pg_size={@pg_size}
             show_visibility_outlines={@show_visibility_outlines}
+            sort={@sort}
+            multiselect_active={@multiselect_active}
           />
         </div>
         <div id="photo-section" class="flex-none basis-2/7 overflow-y-auto [scrollbar-gutter:stable]">
@@ -729,6 +731,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
   attr(:pg, :integer, default: 1)
   attr(:pg_size, :integer, default: @default_pg_size)
   attr(:show_visibility_outlines, :boolean, default: false)
+  attr(:sort, :atom, default: :manual)
+  attr(:multiselect_active, :boolean, default: false)
 
   def gallery(assigns) do
     groups = Enum.map(assigns.photos, & &1.group) |> Enum.uniq() |> Enum.reject(&is_nil/1)
@@ -781,6 +785,8 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       <.pagination total_items={@total_items} pg={@pg} pg_size={@pg_size} />
       <ul
         id="gallery-grid"
+        phx-hook="SortableGrid"
+        data-sortable-enabled={to_string(@is_admin and @sort == :manual and not @multiselect_active)}
         data-zoom-level={@zoom_level}
         class={"grid
       #{get_grid_size(@zoom_level, 1)}
@@ -1833,6 +1839,30 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> refresh_filtered_photos()}
   end
 
+  def handle_event("reorder_photo", _params, %{assigns: %{is_admin: false}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("reorder_photo", _params, %{assigns: %{sort: sort}} = socket)
+      when sort != :manual,
+      do: {:noreply, socket}
+
+  def handle_event(
+        "reorder_photo",
+        %{"dragged_photo_id" => dragged_id, "target_photo_id" => target_id},
+        socket
+      ) do
+    dragged_photo = Gallery.get_photo!(dragged_id, include_private: true)
+    target_photo = Gallery.get_photo!(target_id, include_private: true)
+
+    case Gallery.update_photo(dragged_photo, %{"manual_order" => target_photo.manual_order}) do
+      {:ok, _result} ->
+        {:noreply, refresh_filtered_photos(socket)}
+
+      {:error, _failed_op, _failed_value, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to reorder photo.")}
+    end
+  end
+
   def handle_event("update_photo", %{"photo_id" => id, "photo" => photo_params}, socket) do
     photo = Gallery.get_photo!(id, include_private: socket.assigns.is_admin)
     result = Gallery.update_photo(photo, photo_params)
@@ -1872,7 +1902,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
          |> refresh_selected_photos()
          |> put_flash(
            :error,
-           "Failed to update photo. Error #{failed_value} in step #{failed_op}."
+           "Failed to update photo. Error in step #{failed_op}: #{inspect(failed_value)}"
          )}
     end
   end
