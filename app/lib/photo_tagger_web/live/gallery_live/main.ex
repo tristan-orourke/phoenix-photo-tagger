@@ -1839,24 +1839,27 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
      |> refresh_filtered_photos()}
   end
 
+  def handle_event("reorder_photo", _params, %{assigns: %{is_admin: false}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("reorder_photo", _params, %{assigns: %{sort: sort}} = socket)
+      when sort != :manual,
+      do: {:noreply, socket}
+
   def handle_event(
         "reorder_photo",
         %{"dragged_photo_id" => dragged_id, "target_photo_id" => target_id},
         socket
       ) do
-    if !socket.assigns.is_admin or socket.assigns.sort != :manual do
-      {:noreply, socket}
-    else
-      dragged_photo = Gallery.get_photo!(dragged_id, include_private: true)
-      target_photo = Gallery.get_photo!(target_id, include_private: true)
+    dragged_photo = Gallery.get_photo!(dragged_id, include_private: true)
+    target_photo = Gallery.get_photo!(target_id, include_private: true)
 
-      case Gallery.update_photo(dragged_photo, %{"manual_order" => target_photo.manual_order}) do
-        {:ok, _result} ->
-          {:noreply, refresh_filtered_photos(socket)}
+    case Gallery.update_photo(dragged_photo, %{"manual_order" => target_photo.manual_order}) do
+      {:ok, _result} ->
+        {:noreply, refresh_filtered_photos(socket)}
 
-        {:error, _failed_op, _failed_value, _changeset} ->
-          {:noreply, put_flash(socket, :error, "Failed to reorder photo.")}
-      end
+      {:error, _failed_op, _failed_value, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to reorder photo.")}
     end
   end
 

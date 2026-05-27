@@ -7,7 +7,7 @@ const SortableGrid = {
 		this.sortable = Sortable.create(this.el, {
 			animation: 150,
 			delay: 150,
-			delayOnTouchOnly: false,
+			delayOnTouchOnly: true,
 			ghostClass: "sortable-ghost",
 			chosenClass: "sortable-chosen",
 			dragClass: "sortable-drag",
