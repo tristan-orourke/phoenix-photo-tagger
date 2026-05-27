@@ -1,4 +1,4 @@
-import Sortable from "sortablejs"
+import Sortable from "../vendor/sortable.min.js"
 
 /** @type {import("phoenix_live_view").ViewHookInterface} */
 const SortableGrid = {
