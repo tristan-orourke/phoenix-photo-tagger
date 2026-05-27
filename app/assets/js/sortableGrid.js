@@ -4,7 +4,6 @@ import Sortable from "sortablejs"
 const SortableGrid = {
 	mounted() {
 		const enabled = this.el.dataset.sortableEnabled === "true"
-		console.log("[SortableGrid] mounted, enabled:", enabled, "element:", this.el.id)
 		this.sortable = Sortable.create(this.el, {
 			animation: 150,
 			delay: 150,
@@ -16,9 +15,6 @@ const SortableGrid = {
 			filter: "[data-group-collapsed]",
 			preventOnFilter: true,
 			disabled: !enabled,
-			onStart: (evt) => {
-				console.log("[SortableGrid] drag started", evt.item.dataset.galleryPhotoId)
-			},
 			onEnd: (evt) => {
 				if (evt.oldIndex === evt.newIndex) return
 
@@ -33,9 +29,6 @@ const SortableGrid = {
 
 				const targetId = neighborItem.dataset.galleryPhotoId
 				if (!targetId) return
-
-				console.log("[SortableGrid] reorder", draggedId, "->", targetId,
-					"old:", evt.oldIndex, "new:", evt.newIndex)
 
 				this.pushEvent("reorder_photo", {
 					dragged_photo_id: draggedId,
