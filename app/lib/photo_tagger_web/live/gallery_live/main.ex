@@ -1902,7 +1902,7 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
          |> refresh_selected_photos()
          |> put_flash(
            :error,
-           "Failed to update photo. Error #{failed_value} in step #{failed_op}."
+           "Failed to update photo. Error in step #{failed_op}: #{inspect(failed_value)}"
          )}
     end
   end
