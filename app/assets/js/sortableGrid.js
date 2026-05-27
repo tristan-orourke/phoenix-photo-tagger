@@ -23,11 +23,19 @@ const SortableGrid = {
 				if (evt.oldIndex === evt.newIndex) return
 
 				const draggedId = evt.item.dataset.galleryPhotoId
-				const targetItem = this.el.children[evt.newIndex]
-				if (!targetItem) return
+				// After SortableJS moves the DOM, the dragged item is at newIndex.
+				// The displaced neighbor is at oldIndex (if moved forward) or newIndex+1 (if moved backward).
+				const neighborIndex = evt.oldIndex < evt.newIndex
+					? evt.newIndex - 1
+					: evt.newIndex + 1
+				const neighborItem = this.el.children[neighborIndex]
+				if (!neighborItem) return
 
-				const targetId = targetItem.dataset.galleryPhotoId
+				const targetId = neighborItem.dataset.galleryPhotoId
 				if (!targetId) return
+
+				console.log("[SortableGrid] reorder", draggedId, "->", targetId,
+					"old:", evt.oldIndex, "new:", evt.newIndex)
 
 				this.pushEvent("reorder_photo", {
 					dragged_photo_id: draggedId,

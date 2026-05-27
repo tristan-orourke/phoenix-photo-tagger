@@ -1850,16 +1850,12 @@ defmodule PhotoTaggerWeb.GalleryLive.Main do
       dragged_photo = Gallery.get_photo!(dragged_id, include_private: true)
       target_photo = Gallery.get_photo!(target_id, include_private: true)
 
-      if dragged_photo.folder_id != target_photo.folder_id do
-        {:noreply, socket}
-      else
-        case Gallery.update_photo(dragged_photo, %{"manual_order" => target_photo.manual_order}) do
-          {:ok, _result} ->
-            {:noreply, refresh_filtered_photos(socket)}
+      case Gallery.update_photo(dragged_photo, %{"manual_order" => target_photo.manual_order}) do
+        {:ok, _result} ->
+          {:noreply, refresh_filtered_photos(socket)}
 
-          {:error, _failed_op, _failed_value, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Failed to reorder photo.")}
-        end
+        {:error, _failed_op, _failed_value, _changeset} ->
+          {:noreply, put_flash(socket, :error, "Failed to reorder photo.")}
       end
     end
   end
